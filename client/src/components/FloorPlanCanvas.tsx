@@ -123,10 +123,10 @@ const FloorPlanCanvas: React.FC = () => {
   const handleDoubleClick = (e: React.MouseEvent) => {
     if (canvasMode !== 'draw_fiber') return;
     e.preventDefault();
-    if (drawingPoints.length < 2) return;
+    if ((drawingPoints || []).length < 2) return;
 
     const routeId = `fiber_${Date.now()}`;
-    const routeNum = fiberRoutes.length + 1;
+    const routeNum = (fiberRoutes || []).length + 1;
     const newRoute: FiberRoute = {
       id: routeId,
       name: `Fiber Route ${routeNum}`,
@@ -206,68 +206,68 @@ const FloorPlanCanvas: React.FC = () => {
     setIsMovingEquipment(true);
     setDraggedItem(selectedItem);
     if (selectedItem.type === 'camera') {
-      const camera = cameras.find((c) => c.id === selectedItem.id);
+      const camera = (cameras || []).find((c) => c.id === selectedItem.id);
       if (camera) setTempPosition({ x: camera.x, y: camera.y });
     } else if (selectedItem.type === 'rack') {
-      const rack = racks.find((r) => r.id === selectedItem.id);
+      const rack = (racks || []).find((r) => r.id === selectedItem.id);
       if (rack) setTempPosition({ x: rack.x, y: rack.y });
     } else if (selectedItem.type === 'cabinet') {
-      const cabinet = cabinets.find((c) => c.id === selectedItem.id);
-      if (cabinet) setTempPosition({ x: cabinet.x, y: cabinet.y });
-    }
-  };
+      const cabinet = (cabinets || []).find((c) => c.id === selectedItem.id);
+if (cabinet) setTempPosition({ x: cabinet.x, y: cabinet.y });
+}
+};
 
-  const confirmPosition = () => {
-    if (!draggedItem) return;
-    const newX = Math.round(tempPosition.x);
-    const newY = Math.round(tempPosition.y);
+const confirmPosition = () => {
+  if (!draggedItem) return;
+  const newX = Math.round(tempPosition.x);
+  const newY = Math.round(tempPosition.y);
 
-    if (draggedItem.type === 'camera') {
-      const camera = cameras.find((c) => c.id === draggedItem.id);
-      updateCameraPosition(draggedItem.id, newX, newY);
-      if (camera) {
-        addActivityLog({
-          userId: 'Current User',
-          action: `${camera.name} position moved to (${newX}, ${newY})`,
-          equipmentId: camera.id,
-          equipmentName: camera.name,
-          equipmentType: 'camera',
-          changeType: 'position',
-          oldValue: `(${camera.x}, ${camera.y})`,
-          newValue: `(${newX}, ${newY})`,
-        });
-      }
-    } else if (draggedItem.type === 'rack') {
-      const rack = racks.find((r) => r.id === draggedItem.id);
-      updateRackPosition(draggedItem.id, newX, newY);
-      if (rack) {
-        addActivityLog({
-          userId: 'Current User',
-          action: `${rack.name} position moved to (${newX}, ${newY})`,
-          equipmentId: rack.id,
-          equipmentName: rack.name,
-          equipmentType: 'rack',
-          changeType: 'position',
-          oldValue: `(${rack.x}, ${rack.y})`,
-          newValue: `(${newX}, ${newY})`,
-        });
-      }
-    } else if (draggedItem.type === 'cabinet') {
-      const cabinet = cabinets.find((c) => c.id === draggedItem.id);
-      updateCabinetPosition(draggedItem.id, newX, newY);
-      if (cabinet) {
-        addActivityLog({
-          userId: 'Current User',
-          action: `${cabinet.name} position moved to (${newX}, ${newY})`,
-          equipmentId: cabinet.id,
-          equipmentName: cabinet.name,
-          equipmentType: 'cabinet',
-          changeType: 'position',
-          oldValue: `(${cabinet.x}, ${cabinet.y})`,
-          newValue: `(${newX}, ${newY})`,
-        });
-      }
+  if (draggedItem.type === 'camera') {
+    const camera = (cameras || []).find((c) => c.id === draggedItem.id);
+    updateCameraPosition(draggedItem.id, newX, newY);
+    if (camera) {
+      addActivityLog({
+        userId: 'Current User',
+        action: `${camera.name} position moved to (${newX}, ${newY})`,
+        equipmentId: camera.id,
+        equipmentName: camera.name,
+        equipmentType: 'camera',
+        changeType: 'position',
+        oldValue: `(${camera.x}, ${camera.y})`,
+        newValue: `(${newX}, ${newY})`,
+      });
     }
+  } else if (draggedItem.type === 'rack') {
+    const rack = (racks || []).find((r) => r.id === draggedItem.id);
+    updateRackPosition(draggedItem.id, newX, newY);
+    if (rack) {
+      addActivityLog({
+        userId: 'Current User',
+        action: `${rack.name} position moved to (${newX}, ${newY})`,
+        equipmentId: rack.id,
+        equipmentName: rack.name,
+        equipmentType: 'rack',
+        changeType: 'position',
+        oldValue: `(${rack.x}, ${rack.y})`,
+        newValue: `(${newX}, ${newY})`,
+      });
+    }
+  } else if (draggedItem.type === 'cabinet') {
+    const cabinet = (cabinets || []).find((c) => c.id === draggedItem.id);
+    updateCabinetPosition(draggedItem.id, newX, newY);
+    if (cabinet) {
+      addActivityLog({
+        userId: 'Current User',
+        action: `${cabinet.name} position moved to (${newX}, ${newY})`,
+        equipmentId: cabinet.id,
+        equipmentName: cabinet.name,
+        equipmentType: 'cabinet',
+        changeType: 'position',
+        oldValue: `(${cabinet.x}, ${cabinet.y})`,
+        newValue: `(${newX}, ${newY})`,
+      });
+    }
+  }
 
     setShowPositionModal(false);
     setDraggedItem(null);
@@ -283,29 +283,39 @@ const FloorPlanCanvas: React.FC = () => {
     setTempPosition({ x, y });
   };
 
-  const selectedCamera = selectedItem?.type === 'camera' ? cameras.find((c) => c.id === selectedItem.id) : null;
-  const selectedRack = selectedItem?.type === 'rack' ? racks.find((r) => r.id === selectedItem.id) : null;
-  const selectedCabinet = selectedItem?.type === 'cabinet' ? cabinets.find((c) => c.id === selectedItem.id) : null;
+  const selectedCamera = selectedItem?.type === 'camera'
+  ? (cameras || []).find((c) => c.id === selectedItem.id)
+  : null;
+  const selectedRack = selectedItem?.type === 'rack'
+  ? (racks || []).find((r) => r.id === selectedItem.id)
+  : null;
+  const selectedCabinet = selectedItem?.type === 'cabinet'
+  ? (cabinets || []).find((c) => c.id === selectedItem.id)
+  : null;
 
   const getOldPosition = () => {
     if (!draggedItem) return { x: 0, y: 0 };
     if (draggedItem.type === 'camera') {
-      const camera = cameras.find((c) => c.id === draggedItem.id);
-      return { x: camera?.x || 0, y: camera?.y || 0 };
-    } else if (draggedItem.type === 'rack') {
-      const rack = racks.find((r) => r.id === draggedItem.id);
-      return { x: rack?.x || 0, y: rack?.y || 0 };
-    } else {
-      const cabinet = cabinets.find((c) => c.id === draggedItem.id);
-      return { x: cabinet?.x || 0, y: cabinet?.y || 0 };
-    }
+      const camera = (cameras || []).find((c) => c.id === draggedItem.id);
+return { x: camera?.x || 0, y: camera?.y || 0 };
+
+} else if (draggedItem.type === 'rack') {
+
+const rack = (racks || []).find((r) => r.id === draggedItem.id);
+return { x: rack?.x || 0, y: rack?.y || 0 };
+
+} else {
+
+const cabinet = (cabinets || []).find((c) => c.id === draggedItem.id);
+return { x: cabinet?.x || 0, y: cabinet?.y || 0 };
+}
   };
 
   const oldPosition = getOldPosition();
 
   // Build preview path for drawing
   const previewPath = (() => {
-    if (canvasMode !== 'draw_fiber' || drawingPoints.length === 0 || !cursorPos) return null;
+    if (canvasMode !== 'draw_fiber' || (drawingPoints || []).length === 0 || !cursorPos) return null;
     const pts = [...drawingPoints, cursorPos];
     return pts.reduce((acc, pt, i) => (i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`), '');
   })();
@@ -408,7 +418,7 @@ const FloorPlanCanvas: React.FC = () => {
         <rect width="1400" height="900" fill="#FFFFFF" opacity="0.08" />
 
         {/* Fiber Optic Routes */}
-        {fiberRoutes.map((route) => (
+        {(fiberRoutes || []).map((route) => (
           <g
             key={route.id}
             onClick={(e) => { e.stopPropagation(); handleFiberClick(route.id); }}
@@ -441,14 +451,14 @@ const FloorPlanCanvas: React.FC = () => {
               opacity={0.8}
             />
             {/* Points already placed */}
-            {drawingPoints.map((pt, i) => (
+            {(drawingPoints || []).map((pt, i) => (
               <circle key={i} cx={pt.x} cy={pt.y} r={4} fill="#EF4444" stroke="white" strokeWidth={1.5} />
             ))}
           </g>
         )}
 
         {/* Cameras */}
-        {cameras.map((camera) => {
+        {(cameras || []).map((camera) => {
           const isSelected = selectedItem?.type === 'camera' && selectedItem.id === camera.id;
           const isDraggedItem = isMovingEquipment && draggedItem?.type === 'camera' && draggedItem.id === camera.id;
           const displayCamera = isDraggedItem ? { ...camera, x: tempPosition.x, y: tempPosition.y } : camera;
@@ -477,7 +487,7 @@ const FloorPlanCanvas: React.FC = () => {
         })}
 
         {/* Racks */}
-        {racks.map((rack) => {
+        {(racks || []).map((rack) => {
           const isSelected = selectedItem?.type === 'rack' && selectedItem.id === rack.id;
           const isDraggedItem = isMovingEquipment && draggedItem?.type === 'rack' && draggedItem.id === rack.id;
           const displayRack = isDraggedItem ? { ...rack, x: tempPosition.x, y: tempPosition.y } : rack;
@@ -506,7 +516,7 @@ const FloorPlanCanvas: React.FC = () => {
         })}
 
         {/* Cabinets */}
-        {cabinets.map((cabinet) => {
+        {(cabinets || []).map((cabinet) => {
           const isSelected = selectedItem?.type === 'cabinet' && selectedItem.id === cabinet.id;
           const isDraggedItem = isMovingEquipment && draggedItem?.type === 'cabinet' && draggedItem.id === cabinet.id;
           const displayCabinet = isDraggedItem ? { ...cabinet, x: tempPosition.x, y: tempPosition.y } : cabinet;
@@ -579,7 +589,7 @@ const FloorPlanCanvas: React.FC = () => {
       {/* Zoom Info */}
       <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-md px-4 py-2 text-sm text-gray-600">
         {canvasMode === 'draw_fiber'
-          ? `Drawing Fiber · ${drawingPoints.length} point${drawingPoints.length !== 1 ? 's' : ''} placed`
+          ? `Drawing Fiber · ${(drawingPoints || []).length} point${(drawingPoints || []).length !== 1 ? 's' : ''} placed`
           : `Zoom: ${(zoom * 100).toFixed(0)}% | Scroll to zoom, drag to pan`}
       </div>
     </div>
