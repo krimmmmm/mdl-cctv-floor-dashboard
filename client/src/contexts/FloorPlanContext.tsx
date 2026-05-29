@@ -1,10 +1,16 @@
 import React, { createContext, useContext } from "react";
+import {
+  initialCameras,
+  initialRacks,
+  initialCabinets,
+  initialFiberRoutes,
+} from "@/lib/floorPlanData";
 
 const FloorPlanContext = createContext<any>({
-  cameras: [],
-  racks: [],
-  cabinets: [],
-  fiberRoutes: [],
+  cameras: initialCameras || [],
+racks: initialRacks || [],
+cabinets: initialCabinets || [],
+fiberRoutes: initialFiberRoutes || [],
   activityLogs: [],
   isLoading: false,
   hasDbError: false,
@@ -25,10 +31,10 @@ export const FloorPlanProvider = ({
   return (
     <FloorPlanContext.Provider
       value={{
-        cameras: [],
-        racks: [],
-        cabinets: [],
-        fiberRoutes: [],
+  cameras: initialCameras || [],
+  racks: initialRacks || [],
+  cabinets: initialCabinets || [],
+  fiberRoutes: initialFiberRoutes || [],
         activityLogs: [],
         isLoading: false,
         hasDbError: false,
