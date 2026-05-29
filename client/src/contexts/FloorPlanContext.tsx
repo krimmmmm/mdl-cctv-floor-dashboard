@@ -1,10 +1,7 @@
-import React, { createContext, useContext } from "react";
-import {
-  initialCameras,
-  initialRacks,
-  initialCabinets,
-  initialFiberRoutes,
-} from "@/lib/floorPlanData.ts";
+cameras: [],
+racks: [],
+cabinets: [],
+fiberRoutes: [],
 
 const FloorPlanContext = createContext<any>({
   cameras: initialCameras || [],
