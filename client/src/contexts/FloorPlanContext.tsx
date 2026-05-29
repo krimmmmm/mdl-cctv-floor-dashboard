@@ -1,6 +1,21 @@
 import React, { createContext, useContext } from "react";
 
-const FloorPlanContext = createContext({});
+const FloorPlanContext = createContext<any>({
+  cameras: [],
+  racks: [],
+  cabinets: [],
+  fiberRoutes: [],
+  activityLogs: [],
+  isLoading: false,
+  hasDbError: false,
+
+  updateCameraPosition: () => {},
+  updateRackPosition: () => {},
+  updateCabinetPosition: () => {},
+  addActivityLog: () => {},
+  addFiberRoute: () => {},
+  deleteFiberRoute: () => {},
+});
 
 export const FloorPlanProvider = ({
   children,
@@ -8,7 +23,24 @@ export const FloorPlanProvider = ({
   children: React.ReactNode;
 }) => {
   return (
-    <FloorPlanContext.Provider value={{}}>
+    <FloorPlanContext.Provider
+      value={{
+        cameras: [],
+        racks: [],
+        cabinets: [],
+        fiberRoutes: [],
+        activityLogs: [],
+        isLoading: false,
+        hasDbError: false,
+
+        updateCameraPosition: () => {},
+        updateRackPosition: () => {},
+        updateCabinetPosition: () => {},
+        addActivityLog: () => {},
+        addFiberRoute: () => {},
+        deleteFiberRoute: () => {},
+      }}
+    >
       {children}
     </FloorPlanContext.Provider>
   );
