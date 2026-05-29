@@ -8,16 +8,20 @@ const ControlPanel: React.FC = () => {
   const { cameras, racks, cabinets } = useFloorPlan();
 
   const stats = useMemo(() => {
-    const totalCameras = cameras.length;
-    const onlineCameras = cameras.filter((c) => c.status === 'online').length;
-    const type1Cameras = cameras.filter((c) => c.type === 'type1').length;
-    const type2Cameras = cameras.filter((c) => c.type === 'type2').length;
+    const safeCameras = cameras || [];
+const safeRacks = racks || [];
+const safeCabinets = cabinets || [];
 
-    const totalRacks = racks.length;
-    const onlineRacks = racks.filter((r) => r.status === 'online').length;
+const totalCameras = safeCameras.length;
+const onlineCameras = safeCameras.filter((c) => c.status === 'online').length;
+const type1Cameras = safeCameras.filter((c) => c.type === 'type1').length;
+const type2Cameras = safeCameras.filter((c) => c.type === 'type2').length;
 
-    const totalCabinets = cabinets.length;
-    const onlineCabinets = cabinets.filter((c) => c.status === 'online').length;
+const totalRacks = safeRacks.length;
+const onlineRacks = safeRacks.filter((r) => r.status === 'online').length;
+
+const totalCabinets = safeCabinets.length;
+const onlineCabinets = safeCabinets.filter((c) => c.status === 'online').length;
 
     return {
       totalCameras,
@@ -158,12 +162,42 @@ const ControlPanel: React.FC = () => {
         <div className="flex-shrink-0 flex flex-col justify-center min-w-max pl-4 border-l border-gray-200">
           <h3 className="text-sm font-semibold text-gray-700 mb-2">Status Summary</h3>
           <div className="space-y-1 text-xs">
-            <p><span className="font-semibold">Total Cameras:</span> {stats.totalCameras}</p>
-            <p><span className="font-semibold">Cameras Online:</span> <span className="text-green-600 font-bold">{stats.onlineCameras}</span></p>
-            <p><span className="font-semibold">RACK Ready:</span> <span className="text-green-600 font-bold">{stats.onlineRacks}/{stats.totalRacks}</span></p>
-            <p><span className="font-semibold">CABINET Ready:</span> <span className="text-green-600 font-bold">{stats.onlineCabinets}/{stats.totalCabinets}</span></p>
-            <p><span className="font-semibold">Overall Progress:</span> <span className="text-blue-600 font-bold">{Math.round((stats.onlineCameras / stats.totalCameras) * 100)}%</span></p>
-          </div>
+  <p>
+    <span className="font-semibold">Total Cameras:</span>{" "}
+    {stats.totalCameras}
+  </p>
+
+  <p>
+    <span className="font-semibold">Cameras Online:</span>{" "}
+    <span className="text-green-600 font-bold">
+      {stats.onlineCameras}
+    </span>
+  </p>
+
+  <p>
+    <span className="font-semibold">RACK Ready:</span>{" "}
+    <span className="text-green-600 font-bold">
+      {stats.onlineRacks}/{stats.totalRacks}
+    </span>
+  </p>
+
+  <p>
+    <span className="font-semibold">CABINET Ready:</span>{" "}
+    <span className="text-green-600 font-bold">
+      {stats.onlineCabinets}/{stats.totalCabinets}
+    </span>
+  </p>
+
+  <p>
+    <span className="font-semibold">Overall Progress:</span>{" "}
+    <span className="text-blue-600 font-bold">
+      {stats.totalCameras > 0
+        ? Math.round((stats.onlineCameras / stats.totalCameras) * 100)
+        : 0}
+      %
+    </span>
+  </p>
+</div>
         </div>
       </div>
     </div>
