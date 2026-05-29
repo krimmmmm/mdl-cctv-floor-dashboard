@@ -4,7 +4,7 @@ import {
   initialRacks,
   initialCabinets,
   initialFiberRoutes,
-} from "@/lib/floorPlanData";
+} from "@/lib/floorPlanData.ts";
 
 const FloorPlanContext = createContext<any>({
   cameras: initialCameras || [],
