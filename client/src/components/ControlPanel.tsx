@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useFloorPlan } from '@/contexts/FloorPlanContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import StatisticsPanel from './StatisticsPanel';
 import StatusCard from './StatusCard';
 
