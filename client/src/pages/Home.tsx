@@ -13,6 +13,9 @@ export default function Home() {
   const { isLoading, hasDbError } = useFloorPlan();
 
   return (
+    <div>
+      Home Page
+    </div>
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* DB error banner */}
       {hasDbError && !isLoading && (
