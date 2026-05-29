@@ -1,13 +1,10 @@
-cameras: [],
-racks: [],
-cabinets: [],
-fiberRoutes: [],
+import React, { createContext, useContext } from "react";
 
 const FloorPlanContext = createContext<any>({
-  cameras: initialCameras || [],
-racks: initialRacks || [],
-cabinets: initialCabinets || [],
-fiberRoutes: initialFiberRoutes || [],
+  cameras: [],
+  racks: [],
+  cabinets: [],
+  fiberRoutes: [],
   activityLogs: [],
   isLoading: false,
   hasDbError: false,
@@ -28,10 +25,10 @@ export const FloorPlanProvider = ({
   return (
     <FloorPlanContext.Provider
       value={{
-  cameras: initialCameras || [],
-  racks: initialRacks || [],
-  cabinets: initialCabinets || [],
-  fiberRoutes: initialFiberRoutes || [],
+        cameras: [],
+        racks: [],
+        cabinets: [],
+        fiberRoutes: [],
         activityLogs: [],
         isLoading: false,
         hasDbError: false,
