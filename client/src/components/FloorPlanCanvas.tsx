@@ -130,7 +130,7 @@ const FloorPlanCanvas: React.FC = () => {
     const newRoute: FiberRoute = {
       id: routeId,
       name: `Fiber Route ${routeNum}`,
-      points: drawingPoints,
+      points: drawingPoints || [],
       status: 'idle',
       color: '#EF4444',
     };
@@ -316,7 +316,7 @@ return { x: cabinet?.x || 0, y: cabinet?.y || 0 };
   // Build preview path for drawing
   const previewPath = (() => {
     if (canvasMode !== 'draw_fiber' || (drawingPoints || []).length === 0 || !cursorPos) return null;
-    const pts = [...drawingPoints, cursorPos];
+    const pts = [...(drawingPoints || []), cursorPos];
     return pts.reduce((acc, pt, i) => (i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`), '');
   })();
 
@@ -405,7 +405,7 @@ return { x: cabinet?.x || 0, y: cabinet?.y || 0 };
       >
         {/* Floor Plan Background Image */}
         <image
-          href="/manus-storage/floor_plan_2dcc9a6b.webp"
+          href="/floor_plan_2dcc9a6b.webp"
           x="0"
           y="0"
           width="1400"
@@ -426,7 +426,7 @@ return { x: cabinet?.x || 0, y: cabinet?.y || 0 };
           >
             {/* Wider invisible hit area */}
             <path
-              d={route.points.reduce((acc, pt, i) => (i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`), '')}
+              d={(route.points || []).reduce(   (acc, pt, i) =>     i === 0       ? `M ${pt.x} ${pt.y}`       : `${acc} L ${pt.x} ${pt.y}`,   '' )}
               fill="none"
               stroke="transparent"
               strokeWidth={16}
