@@ -231,7 +231,7 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
         >
       {children}
     </FloorPlanContext.Provider>
-  );
+   );
 };
 
-export const useFloorPlan = () => useContext(FloorPlanContext);
+export default CameraStatusModal;
