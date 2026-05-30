@@ -37,6 +37,13 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
 
   const rotation = camera.rotation || 0;
 
+  const completedSteps = [
+  camera.wiringUTP,
+  camera.wallMountingInstalled,
+  camera.domeCameraInstalled,
+].filter(Boolean).length;
+
+const progress = Math.round((completedSteps / 3) * 100);
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[92vw] max-w-[760px] max-h-[88vh] overflow-y-auto !bg-[#050505] !text-white !border-blue-500 rounded-xl p-5 shadow-2xl">
@@ -92,12 +99,17 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
     <Checkbox
       checked={camera.wallMountingInstalled || false}
       onCheckedChange={(checked) => {
-        updateCameraField(
-          camera.id,
-          "wallMountingInstalled",
-          checked
-        );
-      }}
+  updateCameraField(
+    camera.id,
+    "wallMountingInstalled",
+    checked
+  );
+
+  updateCameraInstallationStatus(
+    camera.id,
+    checked ? "in_progress" : "not_started"
+  );
+}}
     />
 
     <div className="flex-1">
@@ -119,12 +131,17 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
     <Checkbox
       checked={camera.domeCameraInstalled || false}
       onCheckedChange={(checked) => {
-        updateCameraField(
-          camera.id,
-          "domeCameraInstalled",
-          checked
-        );
-      }}
+  updateCameraField(
+    camera.id,
+    "domeCameraInstalled",
+    checked
+  );
+
+  updateCameraInstallationStatus(
+    camera.id,
+    checked ? "completed" : "in_progress"
+  );
+}}
     />
 
     <div className="flex-1">
@@ -153,11 +170,11 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
             </div>
 
             <div className="w-full bg-gray-200 h-2 rounded-full mt-3">
-              <div className="bg-green-500 h-2 rounded-full" style={{ width: "0%" }} />
+              <div   className="bg-green-500 h-2 rounded-full"   style={{ width: `${progress}%` }} />
             </div>
 
             <div className="text-center text-3xl font-bold text-gray-400 mt-3">
-              0%
+              {progress}%
             </div>
           </div>
 
