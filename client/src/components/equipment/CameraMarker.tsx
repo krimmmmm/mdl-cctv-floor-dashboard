@@ -9,10 +9,10 @@ const CameraMarker = ({ camera }: any) => {
           {/* Bottom Red */}
           <path
             d={`
-              M ${camera.x - 10} ${camera.y}
-              A 10 10 0 0 0 ${camera.x + 10} ${camera.y}
-              L ${camera.x + 10} ${camera.y - 10}
-              L ${camera.x - 10} ${camera.y - 10}
+              M ${camera.x - 5} ${camera.y}
+              A 5 5 0 0 0 ${camera.x + 5} ${camera.y}
+              L ${camera.x + 5} ${camera.y - 5}
+              L ${camera.x - 5} ${camera.y - 5}
               Z
             `}
             fill="red"
@@ -21,10 +21,10 @@ const CameraMarker = ({ camera }: any) => {
 
           {/* Top Yellow */}
           <rect
-            x={camera.x - 10}
-            y={camera.y - 10}
-            width="20"
-            height="10"
+            x={camera.x - 5}
+            y={camera.y - 5}
+            width="10"
+            height="5"
             fill="yellow"
           />
         </>
@@ -36,10 +36,10 @@ const CameraMarker = ({ camera }: any) => {
           {/* Bottom Blue */}
           <path
             d={`
-              M ${camera.x - 10} ${camera.y}
-              A 10 10 0 0 0 ${camera.x + 10} ${camera.y}
-              L ${camera.x + 10} ${camera.y - 10}
-              L ${camera.x - 10} ${camera.y - 10}
+              M ${camera.x - 5} ${camera.y}
+              A 5 5 0 0 0 ${camera.x + 5} ${camera.y}
+              L ${camera.x + 5} ${camera.y - 5}
+              L ${camera.x - 5} ${camera.y - 5}
               Z
             `}
             fill="#3F48CC"
@@ -48,23 +48,23 @@ const CameraMarker = ({ camera }: any) => {
 
           {/* Top Yellow */}
           <rect
-            x={camera.x - 10}
-            y={camera.y - 10}
-            width="20"
-            height="10"
+            x={camera.x - 5}
+            y={camera.y - 5}
+            width="10"
+            height="5"
             fill="yellow"
           />
         </>
       )}
 
-      {/* Camera Label */}
+      {/* Camera Number Only */}
       <text
-        x={camera.x + 15}
-        y={camera.y}
-        fontSize="12"
+        x={camera.x + 10}
+        y={camera.y + 3}
+        fontSize="8"
         fill="black"
       >
-        {camera.name}
+        {camera.name.replace("Camera ", "")}
       </text>
     </g>
   );
