@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import React, { useState } from "react";
 import { Camera } from "@/lib/floorPlanData";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
@@ -18,9 +19,11 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
   onEditPosition,
 }) => {
   const {
-    updateCameraStatus,
-    updateCameraRotation,
-  } = useFloorPlan();
+  updateCameraStatus,
+  updateCameraRotation,
+  updateCameraField,
+  updateCameraInstallationStatus,
+} = useFloorPlan();
 
   const [photos, setPhotos] = useState<string[]>([]);
 
