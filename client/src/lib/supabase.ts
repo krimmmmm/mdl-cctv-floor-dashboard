@@ -9,4 +9,3 @@ export const supabase = createClient(
   supabaseUrl,
   supabaseKey
 );
-update supabase config
