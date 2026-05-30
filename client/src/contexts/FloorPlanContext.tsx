@@ -13,6 +13,11 @@ const defaultCamera = {
   wallMountingInstalled: false,
   domeCameraInstalled: false,
   rotation: 0,
+  
+  wiringUTPProgress: 0,
+wallMountingProgress: 0,
+domeCameraProgress: 0,
+  
   photo1: "",
   photo2: "",
   photo3: "",
@@ -54,6 +59,11 @@ const toAppCamera = (row: any) => ({
   wallMountingInstalled: row.wall_mounting,
   domeCameraInstalled: row.install_camera,
   rotation: Number(row.rotation || 0),
+
+  wiringUTPProgress: Number(row.wiring_utp_progress || 0),
+wallMountingProgress: Number(row.wall_mounting_progress || 0),
+domeCameraProgress: Number(row.dome_camera_progress || 0),
+  
   photo1: row.photo1 || "",
   photo2: row.photo2 || "",
   photo3: row.photo3 || "",
@@ -72,6 +82,11 @@ const toDbCamera = (camera: any) => ({
   wall_mounting: camera.wallMountingInstalled,
   install_camera: camera.domeCameraInstalled,
   rotation: camera.rotation || 0,
+
+  wiring_utp_progress: camera.wiringUTPProgress || 0,
+wall_mounting_progress: camera.wallMountingProgress || 0,
+dome_camera_progress: camera.domeCameraProgress || 0,
+  
   photo1: camera.photo1 || "",
   photo2: camera.photo2 || "",
   photo3: camera.photo3 || "",
