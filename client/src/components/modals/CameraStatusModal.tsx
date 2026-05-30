@@ -1,8 +1,13 @@
 ```tsx
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
 
 interface CameraStatusModalProps {
   open: boolean;
@@ -29,11 +34,13 @@ const CameraStatusModal = ({
 
       setUploading(true);
 
-      const fileExt = file.name.split('.').pop();
-      const fileName =   camera.id + "-" + Date.now() + "." + fileExt;
+      const fileExt = file.name.split(".").pop();
+
+      const fileName =
+        camera.id + "-" + Date.now() + "." + fileExt;
 
       const { error: uploadError } = await supabase.storage
-        .from('camera-photos')
+        .from("camera-photos")
         .upload(fileName, file);
 
       if (uploadError) {
@@ -43,17 +50,17 @@ const CameraStatusModal = ({
       }
 
       const { data } = supabase.storage
-        .from('camera-photos')
+        .from("camera-photos")
         .getPublicUrl(fileName);
 
       const photoUrl = data.publicUrl;
 
       const { error: updateError } = await supabase
-        .from('cameras')
+        .from("cameras")
         .update({
           photo1: photoUrl,
         })
-        .eq('id', camera.id);
+        .eq("id", camera.id);
 
       if (updateError) {
         console.error(updateError);
@@ -61,12 +68,11 @@ const CameraStatusModal = ({
         return;
       }
 
-      alert('Upload success');
+      alert("Upload success");
 
       if (onUpdate) {
         onUpdate();
       }
-
     } catch (error) {
       console.error(error);
     } finally {
@@ -85,13 +91,10 @@ const CameraStatusModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl bg-black text-white border border-gray-800">
         <DialogHeader>
-          <DialogTitle>
-            Camera Status
-          </DialogTitle>
+          <DialogTitle>Camera Status</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold">
               รูปหน้างาน ({photos.length}/4)
@@ -108,7 +111,9 @@ const CameraStatusModal = ({
 
               <Button asChild>
                 <span>
-                  {uploading ? 'Uploading...' : 'Upload Photo'}
+                  {uploading
+                    ? "Uploading..."
+                    : "Upload Photo"}
                 </span>
               </Button>
             </label>
@@ -147,7 +152,6 @@ const CameraStatusModal = ({
               Close
             </Button>
           </div>
-
         </div>
       </DialogContent>
     </Dialog>
