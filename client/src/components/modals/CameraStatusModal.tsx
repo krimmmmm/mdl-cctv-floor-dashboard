@@ -292,7 +292,18 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
               )}
             </div>
           </div>
-
+<div className="grid grid-cols-2 gap-2 mt-4">
+  {[camera.photo1, camera.photo2, camera.photo3, camera.photo4]
+    .filter(Boolean)
+    .map((photo, index) => (
+      <img
+        key={index}
+        src={photo}
+        alt={`photo-${index}`}
+        className="w-full h-32 object-cover rounded border border-gray-700"
+      />
+    ))}
+</div>
           <div className="flex gap-2 pt-2 col-span-2">
             {onEditPosition && (
               <Button
