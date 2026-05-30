@@ -49,6 +49,8 @@ const FloorPlanContext = createContext<any>({
   deleteFiberRoute: () => {},
 });
 
+setCameraCount: () => {},
+
 const toAppCamera = (row: any) => ({
   id: row.id,
   name: row.name,
@@ -214,6 +216,55 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     updateCamera(id, { installationStatus });
   };
 
+  const setCameraCount = async (
+  targetCount: number
+) => {
+  const currentCount = cameras.length;
+
+  // ADD CAMERA
+  if (targetCount > currentCount) {
+    for (
+      let i = currentCount + 1;
+      i <= targetCount;
+      i++
+    ) {
+      const newCamera = {
+        ...defaultCamera,
+
+        id:
+          "cam-" +
+          String(i).padStart(2, "0"),
+
+        name:
+          "Camera " +
+          String(i).padStart(2, "0"),
+
+        x: 200 + i * 20,
+        y: 200 + i * 20,
+      };
+
+      await saveCamera(newCamera);
+    }
+  }
+
+  // REMOVE CAMERA
+  if (targetCount < currentCount) {
+    const camerasToDelete = [...cameras]
+      .sort((a, b) =>
+        b.id.localeCompare(a.id)
+      )
+      .slice(0, currentCount - targetCount);
+
+    for (const cam of camerasToDelete) {
+      await supabase
+        .from("cameras")
+        .delete()
+        .eq("id", cam.id);
+    }
+  }
+};
+
+  
   return (
     <FloorPlanContext.Provider
       value={{
@@ -231,6 +282,8 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
         updateCameraField,
         updateCameraPhotos,
         updateCameraInstallationStatus,
+
+      setCameraCount,
 
         updateRackPosition: () => {},
         updateCabinetPosition: () => {},
