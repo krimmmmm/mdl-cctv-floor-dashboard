@@ -23,6 +23,7 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
     updateCameraStatus,
     updateCameraRotation,
     updateCameraField,
+    updateCameraPhotos,
     updateCameraInstallationStatus,
   } = useFloorPlan();
 
@@ -43,10 +44,23 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
     const files = e.target.files;
     if (!files) return;
 
+    const currentPhotos = [
+      (camera as any).photo1,
+      (camera as any).photo2,
+      (camera as any).photo3,
+      (camera as any).photo4,
+    ].filter(Boolean);
+
+    const remainingSlots = Math.max(0, 4 - currentPhotos.length);
+    const selectedFiles = Array.from(files).slice(0, remainingSlots);
+
+    if (selectedFiles.length === 0) return;
+
     const uploadedUrls: string[] = [];
 
-    for (const file of Array.from(files).slice(0, 4)) {
-      const fileName = `${camera.id}-${Date.now()}-${file.name}`;
+    for (const file of selectedFiles) {
+      const safeFileName = file.name.replace(/\s+/g, "_");
+      const fileName = `${camera.id}/${Date.now()}-${safeFileName}`;
 
       const { error } = await supabase.storage
         .from("camera-photos")
@@ -66,11 +80,12 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
       uploadedUrls.push(data.publicUrl);
     }
 
-    setPhotos(uploadedUrls);
+    const nextPhotos = [...currentPhotos, ...uploadedUrls].slice(0, 4);
 
-    uploadedUrls.forEach((url, index) => {
-      updateCameraField(camera.id, `photo${index + 1}`, url);
-    });
+    setPhotos(nextPhotos);
+    updateCameraPhotos(camera.id, nextPhotos);
+
+    e.target.value = "";
   };
 
   const rotation = camera.rotation || 0;
@@ -292,18 +307,7 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
               )}
             </div>
           </div>
-<div className="grid grid-cols-2 gap-2 mt-4">
-  {[camera.photo1, camera.photo2, camera.photo3, camera.photo4]
-    .filter(Boolean)
-    .map((photo, index) => (
-      <img
-        key={index}
-        src={photo}
-        alt={`photo-${index}`}
-        className="w-full h-32 object-cover rounded border border-gray-700"
-      />
-    ))}
-</div>
+
           <div className="flex gap-2 pt-2 col-span-2">
             {onEditPosition && (
               <Button
