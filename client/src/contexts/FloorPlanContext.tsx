@@ -1,23 +1,22 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
-const initialCameras = [
-  {
-    id: "cam-01",
-    name: "Camera 01",
-    x: 500,
-    y: 500,
-    type: "type1",
-    status: "offline",
-    installationStatus: "not_started",
-    wiringUTP: false,
-    wallMountingInstalled: false,
-    domeCameraInstalled: false,
-    rotation: 0,
-  },
-];
+const defaultCamera = {
+  id: "cam-01",
+  name: "Camera 01",
+  x: 500,
+  y: 500,
+  type: "type1",
+  status: "offline",
+  installationStatus: "not_started",
+  wiringUTP: false,
+  wallMountingInstalled: false,
+  domeCameraInstalled: false,
+  rotation: 0,
+};
 
 const FloorPlanContext = createContext<any>({
-  cameras: initialCameras,
+  cameras: [],
   racks: [],
   cabinets: [],
   fiberRoutes: [],
@@ -38,54 +37,140 @@ const FloorPlanContext = createContext<any>({
   deleteFiberRoute: () => {},
 });
 
-export const FloorPlanProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
-  const [cameras, setCameras] = useState(initialCameras);
+const toAppCamera = (row: any) => ({
+  id: row.id,
+  name: row.name,
+  x: Number(row.x || 0),
+  y: Number(row.y || 0),
+  type: row.type,
+  status: row.status,
+  installationStatus: row.installation_status,
+  wiringUTP: row.wiring_utp,
+  wallMountingInstalled: row.wall_mounting,
+  domeCameraInstalled: row.install_camera,
+  rotation: Number(row.rotation || 0),
+});
+
+const toDbCamera = (camera: any) => ({
+  id: camera.id,
+  name: camera.name,
+  x: camera.x,
+  y: camera.y,
+  type: camera.type,
+  status: camera.status,
+  installation_status: camera.installationStatus,
+  wiring_utp: camera.wiringUTP,
+  wall_mounting: camera.wallMountingInstalled,
+  install_camera: camera.domeCameraInstalled,
+  rotation: camera.rotation || 0,
+  updated_at: new Date().toISOString(),
+});
+
+export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) => {
+  const [cameras, setCameras] = useState<any[]>([defaultCamera]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasDbError, setHasDbError] = useState(false);
+
+  const saveCamera = async (camera: any) => {
+    const { error } = await supabase
+      .from("cameras")
+      .upsert(toDbCamera(camera), { onConflict: "id" });
+
+    if (error) {
+      console.error("Save camera error:", error);
+      setHasDbError(true);
+    }
+  };
+
+  useEffect(() => {
+    const loadCameras = async () => {
+      setIsLoading(true);
+
+      const { data, error } = await supabase.from("cameras").select("*");
+
+      if (error) {
+        console.error("Load cameras error:", error);
+        setHasDbError(true);
+        setCameras([defaultCamera]);
+      } else if (!data || data.length === 0) {
+        setCameras([defaultCamera]);
+        await saveCamera(defaultCamera);
+      } else {
+        setCameras(data.map(toAppCamera));
+      }
+
+      setIsLoading(false);
+    };
+
+    loadCameras();
+
+    const channel = supabase
+      .channel("cameras-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cameras" },
+        (payload) => {
+          const row = payload.new;
+          if (!row) return;
+
+          const updatedCamera = toAppCamera(row);
+
+          setCameras((prev) => {
+            const exists = prev.some((cam) => cam.id === updatedCamera.id);
+            if (!exists) return [...prev, updatedCamera];
+
+            return prev.map((cam) =>
+              cam.id === updatedCamera.id ? updatedCamera : cam
+            );
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const updateCamera = (id: string, changes: any) => {
+    setCameras((prev) => {
+      const next = prev.map((camera) => {
+        if (camera.id !== id) return camera;
+
+        const updated = {
+          ...camera,
+          ...changes,
+        };
+
+        saveCamera(updated);
+        return updated;
+      });
+
+      return next;
+    });
+  };
 
   const updateCameraPosition = (id: string, x: number, y: number) => {
-    setCameras((prev) =>
-      prev.map((camera) =>
-        camera.id === id ? { ...camera, x, y } : camera
-      )
-    );
+    updateCamera(id, { x, y });
   };
 
   const updateCameraStatus = (id: string, status: string) => {
-    setCameras((prev) =>
-      prev.map((camera) =>
-        camera.id === id ? { ...camera, status } : camera
-      )
-    );
+    updateCamera(id, { status });
   };
 
   const updateCameraRotation = (id: string, rotation: number) => {
-    setCameras((prev) =>
-      prev.map((camera) =>
-        camera.id === id ? { ...camera, rotation } : camera
-      )
-    );
+    updateCamera(id, { rotation });
   };
 
   const updateCameraField = (id: string, field: string, value: boolean) => {
-    setCameras((prev) =>
-      prev.map((camera) =>
-        camera.id === id ? { ...camera, [field]: value } : camera
-      )
-    );
+    updateCamera(id, { [field]: value });
   };
 
   const updateCameraInstallationStatus = (
     id: string,
     installationStatus: string
   ) => {
-    setCameras((prev) =>
-      prev.map((camera) =>
-        camera.id === id ? { ...camera, installationStatus } : camera
-      )
-    );
+    updateCamera(id, { installationStatus });
   };
 
   return (
@@ -96,8 +181,8 @@ export const FloorPlanProvider = ({
         cabinets: [],
         fiberRoutes: [],
         activityLogs: [],
-        isLoading: false,
-        hasDbError: false,
+        isLoading,
+        hasDbError,
 
         updateCameraPosition,
         updateCameraStatus,
