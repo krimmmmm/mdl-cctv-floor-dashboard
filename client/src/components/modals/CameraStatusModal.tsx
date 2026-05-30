@@ -206,7 +206,7 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
             </div>
           </div>
 
-          <div className="col-span-2">
+          <div className="col-span-2 pt-3 border-t border-gray-800">
             <div className="flex items-center justify-between mb-2">
               <div className="font-bold">▧ รูปหน้างาน ({photos.length}/4)</div>
 
