@@ -215,6 +215,8 @@ const FloorPlanCanvas: React.FC = () => {
       const cabinet = (cabinets || []).find((c) => c.id === selectedItem.id);
 if (cabinet) setTempPosition({ x: cabinet.x, y: cabinet.y });
 }
+
+    setSelectedItem(null);
 };
 
 const confirmPosition = () => {
