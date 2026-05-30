@@ -1,8 +1,20 @@
 import React from "react";
 
 const CameraMarker = ({ camera }: any) => {
+  const rotation = camera.rotation || 0;
+
   return (
-    <g>
+    <g
+      transform={
+        "rotate(" +
+        rotation +
+        " " +
+        camera.x +
+        " " +
+        camera.y +
+        ")"
+      }
+    >
       {/* TYPE 1 = Yellow + Red */}
       {camera.type === "type1" && (
         <>
@@ -57,7 +69,7 @@ const CameraMarker = ({ camera }: any) => {
         </>
       )}
 
-      {/* Camera Number Only */}
+      {/* Camera Number */}
       <text
         x={camera.x + 10}
         y={camera.y + 3}
