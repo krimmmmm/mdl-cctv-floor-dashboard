@@ -228,10 +228,10 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
         addFiberRoute: () => {},
         deleteFiberRoute: () => {},
       }}
-    >
+        >
       {children}
     </FloorPlanContext.Provider>
-    );
+  );
 };
 
-export default CameraStatusModal;
+export const useFloorPlan = () => useContext(FloorPlanContext);
