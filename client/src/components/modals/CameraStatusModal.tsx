@@ -1,25 +1,14 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 
 interface CameraStatusModalProps {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  isOpen?: boolean;
-  onClose?: () => void;
+  isOpen: boolean;
+  onClose: () => void;
   camera: any;
   onUpdate?: () => void;
 }
 
 const CameraStatusModal = ({
-  open,
-  onOpenChange,
   isOpen,
   onClose,
   camera,
@@ -27,12 +16,7 @@ const CameraStatusModal = ({
 }: CameraStatusModalProps) => {
   const [uploading, setUploading] = useState(false);
 
-  const modalOpen = open ?? isOpen ?? false;
-
-  const handleOpenChange = (value: boolean) => {
-    if (onOpenChange) onOpenChange(value);
-    if (!value && onClose) onClose();
-  };
+  if (!isOpen) return null;
 
   const handleUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -45,6 +29,7 @@ const CameraStatusModal = ({
       setUploading(true);
 
       const fileExt = file.name.split(".").pop();
+
       const fileName =
         camera.id + "-" + Date.now() + "." + fileExt;
 
@@ -55,7 +40,6 @@ const CameraStatusModal = ({
         });
 
       if (uploadError) {
-        console.error(uploadError);
         alert(uploadError.message);
         return;
       }
@@ -74,14 +58,18 @@ const CameraStatusModal = ({
         .eq("id", camera.id);
 
       if (updateError) {
-        console.error(updateError);
         alert(updateError.message);
         return;
       }
 
       alert("Upload success");
 
-      if (onUpdate) onUpdate();
+      if (onUpdate) {
+        onUpdate();
+      }
+
+      onClose();
+
     } catch (error) {
       console.error(error);
     } finally {
@@ -97,68 +85,147 @@ const CameraStatusModal = ({
   ].filter(Boolean);
 
   return (
-    <Dialog open={modalOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl bg-black text-white border border-gray-800">
-        <DialogHeader>
-          <DialogTitle>Camera Status</DialogTitle>
-        </DialogHeader>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.7)",
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          width: "700px",
+          maxHeight: "90vh",
+          overflow: "auto",
+          background: "#000",
+          color: "#fff",
+          borderRadius: "16px",
+          padding: "24px",
+          border: "1px solid #333",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: "24px",
+            fontWeight: "bold",
+            marginBottom: "20px",
+          }}
+        >
+          Camera Status
+        </h2>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold">
-              รูปหน้างาน ({photos.length}/4)
-            </h3>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "20px",
+          }}
+        >
+          <h3>
+            รูปหน้างาน ({photos.length}/4)
+          </h3>
 
-            <label>
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleUpload}
-                disabled={uploading}
-              />
+          <label>
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleUpload}
+              disabled={uploading}
+            />
 
-              <Button asChild>
-                <span>
-                  {uploading ? "Uploading..." : "Upload Photo"}
-                </span>
-              </Button>
-            </label>
-          </div>
+            <div
+              style={{
+                background: "#2563eb",
+                padding: "10px 18px",
+                borderRadius: "8px",
+                cursor: "pointer",
+              }}
+            >
+              {uploading
+                ? "Uploading..."
+                : "Upload Photo"}
+            </div>
+          </label>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4">
+        {photos.length > 0 ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px",
+            }}
+          >
             {photos.map((photo, index) => (
               <img
                 key={index}
                 src={photo}
                 alt={"photo-" + index}
-                className="w-full h-52 object-cover rounded-lg border border-gray-700"
+                style={{
+                  width: "100%",
+                  height: "220px",
+                  objectFit: "cover",
+                  borderRadius: "12px",
+                  border: "1px solid #333",
+                }}
               />
             ))}
           </div>
-
-          {photos.length === 0 && (
-            <div className="text-center text-gray-500 py-10">
-              ยังไม่มีรูปหน้างาน
-            </div>
-          )}
-
-          <div className="flex gap-2 pt-4">
-            <Button variant="outline" className="flex-1">
-              Edit Position
-            </Button>
-
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => handleOpenChange(false)}
-            >
-              Close
-            </Button>
+        ) : (
+          <div
+            style={{
+              textAlign: "center",
+              color: "#888",
+              padding: "60px 0",
+            }}
+          >
+            ยังไม่มีรูปหน้างาน
           </div>
+        )}
+
+        <div
+          style={{
+            display: "flex",
+            gap: "12px",
+            marginTop: "24px",
+          }}
+        >
+          <button
+            style={{
+              flex: 1,
+              padding: "12px",
+              borderRadius: "10px",
+              background: "#111",
+              color: "#fff",
+              border: "1px solid #333",
+            }}
+          >
+            Edit Position
+          </button>
+
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1,
+              padding: "12px",
+              borderRadius: "10px",
+              background: "#111",
+              color: "#fff",
+              border: "1px solid #333",
+              cursor: "pointer",
+            }}
+          >
+            Close
+          </button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 
