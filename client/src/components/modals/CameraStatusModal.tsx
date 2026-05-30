@@ -46,7 +46,7 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 text-xs">
+        <div className="grid grid-cols-2 gap-4 px-1">
           <div className="bg-white text-gray-800 rounded-lg px-3 py-2">
             <b>Type:</b>{" "}
             {camera.type === "type1"
@@ -54,11 +54,11 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
               : "Replacement (Type 2)"}
           </div>
 
-          <div className="bg-yellow-100 text-yellow-800 rounded-lg px-3 py-2 font-semibold">
+          <div className="bg-yellow-100 text-yellow-800 rounded-lg px-3 py-2 font-semibold col-span-2">
             Installation Status: {camera.installationStatus || "not_started"}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 col-span-2">
   <div className="text-gray-400 text-xs">
     Installation Steps
   </div>
@@ -184,7 +184,7 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
             </div>
           </div>
 
-          <div className="bg-yellow-50 text-black rounded-lg p-3">
+          <div className="bg-yellow-50 text-black rounded-lg p-3 col-span-2">
             <div className="font-semibold text-gray-500 mb-2">
               Camera Direction (Rotation)
             </div>
@@ -206,7 +206,7 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
             </div>
           </div>
 
-          <div>
+          <div className="col-span-2">
             <div className="flex items-center justify-between mb-2">
               <div className="font-bold">▧ รูปหน้างาน ({photos.length}/4)</div>
 
@@ -227,7 +227,7 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
             </div>
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-2 col-span-2">
             {onEditPosition && (
               <Button
                 onClick={onEditPosition}
