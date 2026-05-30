@@ -461,8 +461,14 @@ return { x: cabinet?.x || 0, y: cabinet?.y || 0 };
         {/* Cameras */}
         {(cameras || []).map((camera) => {
           const isSelected = selectedItem?.type === 'camera' && selectedItem.id === camera.id;
-          const isDraggedItem = isMovingEquipment && draggedItem?.type === 'camera' && draggedItem.id === camera.id;
-          const displayCamera = isDraggedItem ? { ...camera, x: tempPosition.x, y: tempPosition.y } : camera;
+          const isDraggedItem =
+  draggedItem?.type === 'camera' &&
+  draggedItem.id === camera.id &&
+  (isMovingEquipment || showPositionModal);
+
+const displayCamera = isDraggedItem
+  ? { ...camera, x: tempPosition.x, y: tempPosition.y }
+  : camera;
 
           return (
             <g
@@ -490,8 +496,14 @@ return { x: cabinet?.x || 0, y: cabinet?.y || 0 };
         {/* Racks */}
         {(racks || []).map((rack) => {
           const isSelected = selectedItem?.type === 'rack' && selectedItem.id === rack.id;
-          const isDraggedItem = isMovingEquipment && draggedItem?.type === 'rack' && draggedItem.id === rack.id;
-          const displayRack = isDraggedItem ? { ...rack, x: tempPosition.x, y: tempPosition.y } : rack;
+          const isDraggedItem =
+  draggedItem?.type === 'rack' &&
+  draggedItem.id === rack.id &&
+  (isMovingEquipment || showPositionModal);
+
+const displayRack = isDraggedItem
+  ? { ...rack, x: tempPosition.x, y: tempPosition.y }
+  : rack;
 
           return (
             <g
@@ -519,8 +531,14 @@ return { x: cabinet?.x || 0, y: cabinet?.y || 0 };
         {/* Cabinets */}
         {(cabinets || []).map((cabinet) => {
           const isSelected = selectedItem?.type === 'cabinet' && selectedItem.id === cabinet.id;
-          const isDraggedItem = isMovingEquipment && draggedItem?.type === 'cabinet' && draggedItem.id === cabinet.id;
-          const displayCabinet = isDraggedItem ? { ...cabinet, x: tempPosition.x, y: tempPosition.y } : cabinet;
+          const isDraggedItem =
+  draggedItem?.type === 'cabinet' &&
+  draggedItem.id === cabinet.id &&
+  (isMovingEquipment || showPositionModal);
+
+const displayCabinet = isDraggedItem
+  ? { ...cabinet, x: tempPosition.x, y: tempPosition.y }
+  : cabinet;
 
           return (
             <g
