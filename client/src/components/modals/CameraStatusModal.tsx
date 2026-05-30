@@ -39,7 +39,7 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[390px] !bg-[#050505] !text-white !border-blue-500 rounded-xl p-4 shadow-2xl">
+      <DialogContent className="w-[92vw] max-w-[760px] max-h-[88vh] overflow-y-auto !bg-[#050505] !text-white !border-blue-500 rounded-xl p-5 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-white">
             {camera.name || "Camera"}
