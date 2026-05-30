@@ -67,6 +67,30 @@ const CameraStatusModal = ({
     window.location.reload();
   };
 
+  const toggleUrgent = async (
+  value: boolean
+) => {
+  updateCameraField(
+    camera.id,
+    "isUrgent",
+    value
+  );
+
+  const { error } = await supabase
+    .from("cameras")
+    .update({
+      is_urgent: value,
+    })
+    .eq("id", camera.id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  await refreshAfterChange();
+};
+  
  const updateStep = async (
   field: string,
   value: boolean
@@ -404,6 +428,21 @@ const updateStepProgress = async (
             </div>
           </div>
 
+    <div style={styles.urgentBox}>
+  <label style={styles.urgentLabel}>
+    <input
+      type="checkbox"
+      checked={Boolean(camera.isUrgent)}
+      onChange={(e) =>
+        toggleUrgent(e.target.checked)
+      }
+      style={styles.urgentCheckbox}
+    />
+
+    🚨 งานเร่งด่วน (Urgent Work)
+  </label>
+</div>
+    
           <div style={styles.rotationBox}>
             <div style={styles.rotationTitle}>
               Camera Direction (Rotation)
@@ -778,6 +817,29 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#fff",
     fontWeight: 700,
   },
+
+  urgentBox: {
+  background: "#ffe4f4",
+  border: "2px solid #ff4db8",
+  borderRadius: "12px",
+  padding: "16px",
+  marginTop: "18px",
+},
+
+urgentLabel: {
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+  color: "#c2185b",
+  fontWeight: 800,
+  fontSize: "18px",
+},
+
+urgentCheckbox: {
+  width: "22px",
+  height: "22px",
+},
+  
   rotationBox: {
     background: "#fffbea",
     color: "#111",
