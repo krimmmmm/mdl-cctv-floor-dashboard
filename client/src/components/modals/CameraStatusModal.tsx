@@ -58,6 +58,90 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
             Installation Status: {camera.installationStatus || "not_started"}
           </div>
 
+          <div className="space-y-2">
+  <div className="text-gray-400 text-xs">
+    Installation Steps
+  </div>
+
+  <div className="border border-gray-700 rounded-lg p-3 bg-black flex items-center gap-3">
+    <Checkbox
+      checked={camera.wiringUTP || false}
+      onCheckedChange={(checked) => {
+        updateCameraField(camera.id, "wiringUTP", checked);
+
+        updateCameraInstallationStatus(
+          camera.id,
+          checked ? "in_progress" : "not_started"
+        );
+      }}
+    />
+
+    <div className="flex-1">
+      <div className="font-bold text-white">Wiring UTP</div>
+      <div className="text-[10px] text-gray-500">
+        Install UTP cable
+      </div>
+    </div>
+
+    <div className="text-green-400 text-lg">
+      {camera.wiringUTP ? "✓" : ""}
+    </div>
+  </div>
+
+  <div className="border border-gray-700 rounded-lg p-3 bg-black flex items-center gap-3">
+    <Checkbox
+      checked={camera.wallMountingInstalled || false}
+      onCheckedChange={(checked) => {
+        updateCameraField(
+          camera.id,
+          "wallMountingInstalled",
+          checked
+        );
+      }}
+    />
+
+    <div className="flex-1">
+      <div className="font-bold text-white">
+        Install Wall Mounting
+      </div>
+
+      <div className="text-[10px] text-gray-500">
+        Mount the bracket on wall
+      </div>
+    </div>
+
+    <div className="text-green-400 text-lg">
+      {camera.wallMountingInstalled ? "✓" : ""}
+    </div>
+  </div>
+
+  <div className="border border-gray-700 rounded-lg p-3 bg-black flex items-center gap-3">
+    <Checkbox
+      checked={camera.domeCameraInstalled || false}
+      onCheckedChange={(checked) => {
+        updateCameraField(
+          camera.id,
+          "domeCameraInstalled",
+          checked
+        );
+      }}
+    />
+
+    <div className="flex-1">
+      <div className="font-bold text-white">
+        Install Dome Camera
+      </div>
+
+      <div className="text-[10px] text-gray-500">
+        Install the dome camera unit
+      </div>
+    </div>
+
+    <div className="text-green-400 text-lg">
+      {camera.domeCameraInstalled ? "✓" : ""}
+    </div>
+  </div>
+</div>
           <div className="bg-green-50 text-black rounded-lg p-3">
             <div className="flex justify-between items-center">
               <span className="font-bold text-green-700">
