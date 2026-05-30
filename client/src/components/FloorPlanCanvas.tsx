@@ -216,7 +216,6 @@ const FloorPlanCanvas: React.FC = () => {
 if (cabinet) setTempPosition({ x: cabinet.x, y: cabinet.y });
 }
 
-    setSelectedItem(null);
 };
 
 const confirmPosition = () => {
@@ -548,8 +547,8 @@ return { x: cabinet?.x || 0, y: cabinet?.y || 0 };
       </svg>
 
       {/* Status Modals */}
-      {selectedCamera && !isMovingEquipment && (
-        <CameraStatusModal
+      {selectedCamera && !isMovingEquipment && !showPositionModal && (
+  <CameraStatusModal
           camera={selectedCamera}
           isOpen={true}
           onClose={() => setSelectedItem(null)}
