@@ -1,7 +1,8 @@
 import { Checkbox } from "@/components/ui/checkbox";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Camera } from "@/lib/floorPlanData";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
+import { supabase } from "@/lib/supabase";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -19,31 +20,69 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
   onEditPosition,
 }) => {
   const {
-  updateCameraStatus,
-  updateCameraRotation,
-  updateCameraField,
-  updateCameraInstallationStatus,
-} = useFloorPlan();
+    updateCameraStatus,
+    updateCameraRotation,
+    updateCameraField,
+    updateCameraInstallationStatus,
+  } = useFloorPlan();
 
   const [photos, setPhotos] = useState<string[]>([]);
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    const existingPhotos = [
+      (camera as any).photo1,
+      (camera as any).photo2,
+      (camera as any).photo3,
+      (camera as any).photo4,
+    ].filter(Boolean);
+
+    setPhotos(existingPhotos);
+  }, [camera]);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    const urls = Array.from(files).map((file) => URL.createObjectURL(file));
-    setPhotos((prev) => [...prev, ...urls].slice(0, 4));
+    const uploadedUrls: string[] = [];
+
+    for (const file of Array.from(files).slice(0, 4)) {
+      const fileName = `${camera.id}-${Date.now()}-${file.name}`;
+
+      const { error } = await supabase.storage
+        .from("camera-photos")
+        .upload(fileName, file, {
+          upsert: true,
+        });
+
+      if (error) {
+        console.error("UPLOAD ERROR:", error);
+        continue;
+      }
+
+      const { data } = supabase.storage
+        .from("camera-photos")
+        .getPublicUrl(fileName);
+
+      uploadedUrls.push(data.publicUrl);
+    }
+
+    setPhotos(uploadedUrls);
+
+    uploadedUrls.forEach((url, index) => {
+      updateCameraField(camera.id, `photo${index + 1}`, url);
+    });
   };
 
   const rotation = camera.rotation || 0;
 
   const completedSteps = [
-  camera.wiringUTP,
-  camera.wallMountingInstalled,
-  camera.domeCameraInstalled,
-].filter(Boolean).length;
+    camera.wiringUTP,
+    camera.wallMountingInstalled,
+    camera.domeCameraInstalled,
+  ].filter(Boolean).length;
 
-const progress = Math.round((completedSteps / 3) * 100);
+  const progress = Math.round((completedSteps / 3) * 100);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[92vw] max-w-[760px] max-h-[88vh] overflow-y-auto !bg-[#050505] !text-white !border-blue-500 rounded-xl p-5 shadow-2xl">
@@ -66,111 +105,106 @@ const progress = Math.round((completedSteps / 3) * 100);
           </div>
 
           <div className="space-y-2 col-span-2">
-  <div className="text-gray-400 text-xs">
-    Installation Steps
-  </div>
+            <div className="text-gray-400 text-xs">Installation Steps</div>
 
-  <div className="border border-gray-700 rounded-lg p-3 bg-black flex items-center gap-3">
-    <Checkbox
-      checked={camera.wiringUTP || false}
-      onCheckedChange={(checked) => {
-        updateCameraField(camera.id, "wiringUTP", checked);
+            <div className="border border-gray-700 rounded-lg p-3 bg-black flex items-center gap-3">
+              <Checkbox
+                checked={camera.wiringUTP || false}
+                onCheckedChange={(checked) => {
+                  const value = Boolean(checked);
+                  updateCameraField(camera.id, "wiringUTP", value);
+                  updateCameraInstallationStatus(
+                    camera.id,
+                    value ? "in_progress" : "not_started"
+                  );
+                }}
+              />
 
-        updateCameraInstallationStatus(
-          camera.id,
-          checked ? "in_progress" : "not_started"
-        );
-      }}
-    />
+              <div className="flex-1">
+                <div className="font-bold text-white">Wiring UTP</div>
+                <div className="text-[10px] text-gray-500">
+                  Install UTP cable
+                </div>
+              </div>
 
-    <div className="flex-1">
-      <div className="font-bold text-white">Wiring UTP</div>
-      <div className="text-[10px] text-gray-500">
-        Install UTP cable
-      </div>
-    </div>
+              <div className="text-green-400 text-lg">
+                {camera.wiringUTP ? "✓" : ""}
+              </div>
+            </div>
 
-    <div className="text-green-400 text-lg">
-      {camera.wiringUTP ? "✓" : ""}
-    </div>
-  </div>
+            <div className="border border-gray-700 rounded-lg p-3 bg-black flex items-center gap-3">
+              <Checkbox
+                checked={camera.wallMountingInstalled || false}
+                onCheckedChange={(checked) => {
+                  const value = Boolean(checked);
+                  updateCameraField(camera.id, "wallMountingInstalled", value);
+                  updateCameraInstallationStatus(
+                    camera.id,
+                    value ? "in_progress" : "not_started"
+                  );
+                }}
+              />
 
-  <div className="border border-gray-700 rounded-lg p-3 bg-black flex items-center gap-3">
-    <Checkbox
-      checked={camera.wallMountingInstalled || false}
-      onCheckedChange={(checked) => {
-  updateCameraField(
-    camera.id,
-    "wallMountingInstalled",
-    checked
-  );
+              <div className="flex-1">
+                <div className="font-bold text-white">
+                  Install Wall Mounting
+                </div>
 
-  updateCameraInstallationStatus(
-    camera.id,
-    checked ? "in_progress" : "not_started"
-  );
-}}
-    />
+                <div className="text-[10px] text-gray-500">
+                  Mount the bracket on wall
+                </div>
+              </div>
 
-    <div className="flex-1">
-      <div className="font-bold text-white">
-        Install Wall Mounting
-      </div>
+              <div className="text-green-400 text-lg">
+                {camera.wallMountingInstalled ? "✓" : ""}
+              </div>
+            </div>
 
-      <div className="text-[10px] text-gray-500">
-        Mount the bracket on wall
-      </div>
-    </div>
+            <div className="border border-gray-700 rounded-lg p-3 bg-black flex items-center gap-3">
+              <Checkbox
+                checked={camera.domeCameraInstalled || false}
+                onCheckedChange={(checked) => {
+                  const value = Boolean(checked);
+                  updateCameraField(camera.id, "domeCameraInstalled", value);
+                  updateCameraInstallationStatus(
+                    camera.id,
+                    value ? "completed" : "in_progress"
+                  );
+                }}
+              />
 
-    <div className="text-green-400 text-lg">
-      {camera.wallMountingInstalled ? "✓" : ""}
-    </div>
-  </div>
+              <div className="flex-1">
+                <div className="font-bold text-white">
+                  Install Dome Camera
+                </div>
 
-  <div className="border border-gray-700 rounded-lg p-3 bg-black flex items-center gap-3">
-    <Checkbox
-      checked={camera.domeCameraInstalled || false}
-      onCheckedChange={(checked) => {
-  updateCameraField(
-    camera.id,
-    "domeCameraInstalled",
-    checked
-  );
+                <div className="text-[10px] text-gray-500">
+                  Install the dome camera unit
+                </div>
+              </div>
 
-  updateCameraInstallationStatus(
-    camera.id,
-    checked ? "completed" : "in_progress"
-  );
-}}
-    />
+              <div className="text-green-400 text-lg">
+                {camera.domeCameraInstalled ? "✓" : ""}
+              </div>
+            </div>
+          </div>
 
-    <div className="flex-1">
-      <div className="font-bold text-white">
-        Install Dome Camera
-      </div>
-
-      <div className="text-[10px] text-gray-500">
-        Install the dome camera unit
-      </div>
-    </div>
-
-    <div className="text-green-400 text-lg">
-      {camera.domeCameraInstalled ? "✓" : ""}
-    </div>
-  </div>
-</div>
           <div className="bg-green-50 text-black rounded-lg p-3">
             <div className="flex justify-between items-center">
               <span className="font-bold text-green-700">
                 Progress การติดตั้งรวม
               </span>
+
               <span className="text-[10px] px-2 py-1 rounded bg-white text-gray-500 font-bold">
                 {camera.installationStatus || "not_started"}
               </span>
             </div>
 
             <div className="w-full bg-gray-200 h-2 rounded-full mt-3">
-              <div   className="bg-green-500 h-2 rounded-full"   style={{ width: `${progress}%` }} />
+              <div
+                className="bg-green-500 h-2 rounded-full"
+                style={{ width: `${progress}%` }}
+              />
             </div>
 
             <div className="text-center text-3xl font-bold text-gray-400 mt-3">
@@ -218,6 +252,7 @@ const progress = Math.round((completedSteps / 3) * 100);
             />
 
             <div className="font-bold">{rotation}°</div>
+
             <div className="text-[10px] text-gray-500">
               0° = Right, 90° = Down, 180° = Left, 270° = Up
             </div>
@@ -229,6 +264,7 @@ const progress = Math.round((completedSteps / 3) * 100);
 
               <label className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs cursor-pointer">
                 Upload Photo
+
                 <input
                   type="file"
                   multiple
@@ -239,8 +275,21 @@ const progress = Math.round((completedSteps / 3) * 100);
               </label>
             </div>
 
-            <div className="text-center text-gray-500 text-xs py-4">
-              {photos.length === 0 ? "ยังไม่มีรูปหน้างาน" : ""}
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {photos.map((photo, index) => (
+                <img
+                  key={index}
+                  src={photo}
+                  alt={`photo-${index}`}
+                  className="w-full h-32 object-cover rounded-lg border border-gray-700"
+                />
+              ))}
+
+              {photos.length === 0 && (
+                <div className="text-center text-gray-500 text-xs py-4 col-span-2">
+                  ยังไม่มีรูปหน้างาน
+                </div>
+              )}
             </div>
           </div>
 
