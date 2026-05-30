@@ -32,6 +32,7 @@ const FloorPlanContext = createContext<any>({
   updateCameraStatus: () => {},
   updateCameraRotation: () => {},
   updateCameraField: () => {},
+  updateCameraPhotos: () => {},
   updateCameraInstallationStatus: () => {},
 
   updateRackPosition: () => {},
@@ -52,11 +53,11 @@ const toAppCamera = (row: any) => ({
   wiringUTP: row.wiring_utp,
   wallMountingInstalled: row.wall_mounting,
   domeCameraInstalled: row.install_camera,
+  rotation: Number(row.rotation || 0),
   photo1: row.photo1 || "",
   photo2: row.photo2 || "",
   photo3: row.photo3 || "",
   photo4: row.photo4 || "",
-  rotation: Number(row.rotation || 0),
 });
 
 const toDbCamera = (camera: any) => ({
@@ -70,11 +71,11 @@ const toDbCamera = (camera: any) => ({
   wiring_utp: camera.wiringUTP,
   wall_mounting: camera.wallMountingInstalled,
   install_camera: camera.domeCameraInstalled,
+  rotation: camera.rotation || 0,
   photo1: camera.photo1 || "",
   photo2: camera.photo2 || "",
   photo3: camera.photo3 || "",
   photo4: camera.photo4 || "",
-  rotation: camera.rotation || 0,
   updated_at: new Date().toISOString(),
 });
 
@@ -145,8 +146,8 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
   }, []);
 
   const updateCamera = (id: string, changes: any) => {
-    setCameras((prev) => {
-      const next = prev.map((camera) => {
+    setCameras((prev) =>
+      prev.map((camera) => {
         if (camera.id !== id) return camera;
 
         const updated = {
@@ -156,10 +157,8 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
 
         saveCamera(updated);
         return updated;
-      });
-
-      return next;
-    });
+      })
+    );
   };
 
   const updateCameraPosition = (id: string, x: number, y: number) => {
@@ -176,6 +175,15 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
 
   const updateCameraField = (id: string, field: string, value: any) => {
     updateCamera(id, { [field]: value });
+  };
+
+  const updateCameraPhotos = (id: string, photos: string[]) => {
+    updateCamera(id, {
+      photo1: photos[0] || "",
+      photo2: photos[1] || "",
+      photo3: photos[2] || "",
+      photo4: photos[3] || "",
+    });
   };
 
   const updateCameraInstallationStatus = (
@@ -200,6 +208,7 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
         updateCameraStatus,
         updateCameraRotation,
         updateCameraField,
+        updateCameraPhotos,
         updateCameraInstallationStatus,
 
         updateRackPosition: () => {},
