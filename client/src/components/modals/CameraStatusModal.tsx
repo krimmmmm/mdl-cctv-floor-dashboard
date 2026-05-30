@@ -1,4 +1,3 @@
-```tsx
 import { useState } from "react";
 import {
   Dialog,
@@ -10,8 +9,10 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 
 interface CameraStatusModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   camera: any;
   onUpdate?: () => void;
 }
@@ -19,10 +20,19 @@ interface CameraStatusModalProps {
 const CameraStatusModal = ({
   open,
   onOpenChange,
+  isOpen,
+  onClose,
   camera,
   onUpdate,
 }: CameraStatusModalProps) => {
   const [uploading, setUploading] = useState(false);
+
+  const modalOpen = open ?? isOpen ?? false;
+
+  const handleOpenChange = (value: boolean) => {
+    if (onOpenChange) onOpenChange(value);
+    if (!value && onClose) onClose();
+  };
 
   const handleUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -35,13 +45,14 @@ const CameraStatusModal = ({
       setUploading(true);
 
       const fileExt = file.name.split(".").pop();
-
       const fileName =
         camera.id + "-" + Date.now() + "." + fileExt;
 
       const { error: uploadError } = await supabase.storage
         .from("camera-photos")
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          upsert: true,
+        });
 
       if (uploadError) {
         console.error(uploadError);
@@ -70,9 +81,7 @@ const CameraStatusModal = ({
 
       alert("Upload success");
 
-      if (onUpdate) {
-        onUpdate();
-      }
+      if (onUpdate) onUpdate();
     } catch (error) {
       console.error(error);
     } finally {
@@ -88,7 +97,7 @@ const CameraStatusModal = ({
   ].filter(Boolean);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={modalOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl bg-black text-white border border-gray-800">
         <DialogHeader>
           <DialogTitle>Camera Status</DialogTitle>
@@ -111,9 +120,7 @@ const CameraStatusModal = ({
 
               <Button asChild>
                 <span>
-                  {uploading
-                    ? "Uploading..."
-                    : "Upload Photo"}
+                  {uploading ? "Uploading..." : "Upload Photo"}
                 </span>
               </Button>
             </label>
@@ -137,17 +144,14 @@ const CameraStatusModal = ({
           )}
 
           <div className="flex gap-2 pt-4">
-            <Button
-              variant="outline"
-              className="flex-1"
-            >
+            <Button variant="outline" className="flex-1">
               Edit Position
             </Button>
 
             <Button
               variant="outline"
               className="flex-1"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
             >
               Close
             </Button>
@@ -159,4 +163,3 @@ const CameraStatusModal = ({
 };
 
 export default CameraStatusModal;
-```
