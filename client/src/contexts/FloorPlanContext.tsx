@@ -1,16 +1,10 @@
 import React, { createContext, useContext } from "react";
 
-import {
-  initialCameras,
-  initialRacks,
-  initialCabinets,
-  initialFiberRoutes,
-} from "@/lib/floorPlanData";
 const FloorPlanContext = createContext<any>({
-  cameras: initialCameras || [],
-racks: initialRacks || [],
-cabinets: initialCabinets || [],
-fiberRoutes: initialFiberRoutes || [],
+  cameras: [],
+  racks: [],
+  cabinets: [],
+  fiberRoutes: [],
   activityLogs: [],
   isLoading: false,
   hasDbError: false,
@@ -23,18 +17,14 @@ fiberRoutes: initialFiberRoutes || [],
   deleteFiberRoute: () => {},
 });
 
-export const FloorPlanProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
+export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <FloorPlanContext.Provider
       value={{
-        cameras: initialCameras || [],
-racks: initialRacks || [],
-cabinets: initialCabinets || [],
-fiberRoutes: initialFiberRoutes || [],
+        cameras: [],
+        racks: [],
+        cabinets: [],
+        fiberRoutes: [],
         activityLogs: [],
         isLoading: false,
         hasDbError: false,
