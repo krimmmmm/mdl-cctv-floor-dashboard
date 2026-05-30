@@ -30,7 +30,7 @@ const CameraStatusModal = ({
       setUploading(true);
 
       const fileExt = file.name.split('.').pop();
-      const fileName = `${camera.id}-${Date.now()}.${fileExt}`;
+      const fileName =   camera.id + "-" + Date.now() + "." + fileExt;
 
       const { error: uploadError } = await supabase.storage
         .from('camera-photos')
