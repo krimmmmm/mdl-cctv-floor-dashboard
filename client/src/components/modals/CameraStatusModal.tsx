@@ -1,237 +1,158 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+```tsx
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
 
-const defaultCamera = {
-  id: "cam-01",
-  name: "Camera 01",
-  x: 500,
-  y: 500,
-  type: "type1",
-  status: "offline",
-  installationStatus: "not_started",
-  wiringUTP: false,
-  wallMountingInstalled: false,
-  domeCameraInstalled: false,
-  rotation: 0,
-  photo1: "",
-  photo2: "",
-  photo3: "",
-  photo4: "",
-};
+interface CameraStatusModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  camera: any;
+  onUpdate?: () => void;
+}
 
-const FloorPlanContext = createContext<any>({
-  cameras: [],
-  racks: [],
-  cabinets: [],
-  fiberRoutes: [],
-  activityLogs: [],
-  isLoading: false,
-  hasDbError: false,
+const CameraStatusModal = ({
+  open,
+  onOpenChange,
+  camera,
+  onUpdate,
+}: CameraStatusModalProps) => {
+  const [uploading, setUploading] = useState(false);
 
-  updateCameraPosition: () => {},
-  updateCameraStatus: () => {},
-  updateCameraRotation: () => {},
-  updateCameraField: () => {},
-  updateCameraPhotos: () => {},
-  updateCameraInstallationStatus: () => {},
+  const handleUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    try {
+      const file = event.target.files?.[0];
 
-  updateRackPosition: () => {},
-  updateCabinetPosition: () => {},
-  addActivityLog: () => {},
-  addFiberRoute: () => {},
-  deleteFiberRoute: () => {},
-});
+      if (!file || !camera?.id) return;
 
-const toAppCamera = (row: any) => ({
-  id: row.id,
-  name: row.name,
-  x: Number(row.x || 0),
-  y: Number(row.y || 0),
-  type: row.type,
-  status: row.status,
-  installationStatus: row.installation_status,
-  wiringUTP: row.wiring_utp,
-  wallMountingInstalled: row.wall_mounting,
-  domeCameraInstalled: row.install_camera,
-  rotation: Number(row.rotation || 0),
-  photo1: row.photo1 || "",
-  photo2: row.photo2 || "",
-  photo3: row.photo3 || "",
-  photo4: row.photo4 || "",
-});
+      setUploading(true);
 
-const toDbCamera = (camera: any) => ({
-  id: camera.id,
-  name: camera.name,
-  x: camera.x,
-  y: camera.y,
-  type: camera.type,
-  status: camera.status,
-  installation_status: camera.installationStatus,
-  wiring_utp: camera.wiringUTP,
-  wall_mounting: camera.wallMountingInstalled,
-  install_camera: camera.domeCameraInstalled,
-  rotation: camera.rotation || 0,
-  photo1: camera.photo1 || "",
-  photo2: camera.photo2 || "",
-  photo3: camera.photo3 || "",
-  photo4: camera.photo4 || "",
-  updated_at: new Date().toISOString(),
-});
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${camera.id}-${Date.now()}.${fileExt}`;
 
-export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) => {
-  const [cameras, setCameras] = useState<any[]>([defaultCamera]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasDbError, setHasDbError] = useState(false);
+      const { error: uploadError } = await supabase.storage
+        .from('camera-photos')
+        .upload(fileName, file);
 
-  const saveCamera = async (camera: any) => {
-    console.log("SAVE CAMERA =>", camera);
+      if (uploadError) {
+        console.error(uploadError);
+        alert(uploadError.message);
+        return;
+      }
 
-    const payload = toDbCamera(camera);
+      const { data } = supabase.storage
+        .from('camera-photos')
+        .getPublicUrl(fileName);
 
-    console.log("DB PAYLOAD =>", payload);
+      const photoUrl = data.publicUrl;
 
-    const { data, error } = await supabase
-      .from("cameras")
-      .upsert(payload, { onConflict: "id" })
-      .select();
+      const { error: updateError } = await supabase
+        .from('cameras')
+        .update({
+          photo1: photoUrl,
+        })
+        .eq('id', camera.id);
 
-    console.log("UPSERT RESULT =>", data);
+      if (updateError) {
+        console.error(updateError);
+        alert(updateError.message);
+        return;
+      }
 
-    if (error) {
-      console.error("Save camera error:", error);
-      setHasDbError(true);
+      alert('Upload success');
+
+      if (onUpdate) {
+        onUpdate();
+      }
+
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setUploading(false);
     }
   };
 
-  useEffect(() => {
-    const loadCameras = async () => {
-      setIsLoading(true);
-
-      const { data, error } = await supabase.from("cameras").select("*");
-
-      if (error) {
-        console.error("Load cameras error:", error);
-        setHasDbError(true);
-        setCameras([defaultCamera]);
-      } else if (!data || data.length === 0) {
-        setCameras([defaultCamera]);
-        await saveCamera(defaultCamera);
-      } else {
-        setCameras(data.map(toAppCamera));
-      }
-
-      setIsLoading(false);
-    };
-
-    loadCameras();
-
-    const channel = supabase
-      .channel("cameras-sync")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "cameras" },
-        (payload) => {
-          const row = payload.new;
-          if (!row) return;
-
-          const updatedCamera = toAppCamera(row);
-
-          setCameras((prev) => {
-            const exists = prev.some((cam) => cam.id === updatedCamera.id);
-            if (!exists) return [...prev, updatedCamera];
-
-            return prev.map((cam) =>
-              cam.id === updatedCamera.id ? updatedCamera : cam
-            );
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const updateCamera = (id: string, changes: any) => {
-    setCameras((prev) =>
-      prev.map((camera) => {
-        if (camera.id !== id) return camera;
-
-        const updated = {
-          ...camera,
-          ...changes,
-        };
-
-        saveCamera(updated);
-        return updated;
-      })
-    );
-  };
-
-  const updateCameraPosition = (id: string, x: number, y: number) => {
-    updateCamera(id, { x, y });
-  };
-
-  const updateCameraStatus = (id: string, status: string) => {
-    updateCamera(id, { status });
-  };
-
-  const updateCameraRotation = (id: string, rotation: number) => {
-    updateCamera(id, { rotation });
-  };
-
-  const updateCameraField = (id: string, field: string, value: any) => {
-    updateCamera(id, { [field]: value });
-  };
-
-  const updateCameraPhotos = (id: string, photos: string[]) => {
-    console.log("UPDATE CAMERA PHOTOS =>", id, photos);
-
-    updateCamera(id, {
-      photo1: photos[0] || "",
-      photo2: photos[1] || "",
-      photo3: photos[2] || "",
-      photo4: photos[3] || "",
-    });
-  };
-
-  const updateCameraInstallationStatus = (
-    id: string,
-    installationStatus: string
-  ) => {
-    updateCamera(id, { installationStatus });
-  };
+  const photos = [
+    camera?.photo1,
+    camera?.photo2,
+    camera?.photo3,
+    camera?.photo4,
+  ].filter(Boolean);
 
   return (
-    <FloorPlanContext.Provider
-      value={{
-        cameras,
-        racks: [],
-        cabinets: [],
-        fiberRoutes: [],
-        activityLogs: [],
-        isLoading,
-        hasDbError,
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl bg-black text-white border border-gray-800">
+        <DialogHeader>
+          <DialogTitle>
+            Camera Status
+          </DialogTitle>
+        </DialogHeader>
 
-        updateCameraPosition,
-        updateCameraStatus,
-        updateCameraRotation,
-        updateCameraField,
-        updateCameraPhotos,
-        updateCameraInstallationStatus,
+        <div className="space-y-4">
 
-        updateRackPosition: () => {},
-        updateCabinetPosition: () => {},
-        addActivityLog: () => {},
-        addFiberRoute: () => {},
-        deleteFiberRoute: () => {},
-      }}
-        >
-      {children}
-    </FloorPlanContext.Provider>
-   );
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold">
+              รูปหน้างาน ({photos.length}/4)
+            </h3>
+
+            <label>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleUpload}
+                disabled={uploading}
+              />
+
+              <Button asChild>
+                <span>
+                  {uploading ? 'Uploading...' : 'Upload Photo'}
+                </span>
+              </Button>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {photos.map((photo, index) => (
+              <img
+                key={index}
+                src={photo}
+                alt={`photo-${index}`}
+                className="w-full h-52 object-cover rounded-lg border border-gray-700"
+              />
+            ))}
+          </div>
+
+          {photos.length === 0 && (
+            <div className="text-center text-gray-500 py-10">
+              ยังไม่มีรูปหน้างาน
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-4">
+            <Button
+              variant="outline"
+              className="flex-1"
+            >
+              Edit Position
+            </Button>
+
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => onOpenChange(false)}
+            >
+              Close
+            </Button>
+          </div>
+
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 export default CameraStatusModal;
+```
