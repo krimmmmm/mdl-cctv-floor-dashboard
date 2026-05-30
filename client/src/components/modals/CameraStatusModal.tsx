@@ -65,10 +65,10 @@ const CameraStatusModal = ({
       alert("Upload success");
 
       if (onUpdate) {
-        onUpdate();
-      }
+  await onUpdate();
+}
 
-      onClose();
+window.location.reload();
 
     } catch (error) {
       console.error(error);
