@@ -13,6 +13,10 @@ const defaultCamera = {
   wallMountingInstalled: false,
   domeCameraInstalled: false,
   rotation: 0,
+  photo1: "",
+  photo2: "",
+  photo3: "",
+  photo4: "",
 };
 
 const FloorPlanContext = createContext<any>({
@@ -48,6 +52,10 @@ const toAppCamera = (row: any) => ({
   wiringUTP: row.wiring_utp,
   wallMountingInstalled: row.wall_mounting,
   domeCameraInstalled: row.install_camera,
+  photo1: row.photo1 || "",
+  photo2: row.photo2 || "",
+  photo3: row.photo3 || "",
+  photo4: row.photo4 || "",
   rotation: Number(row.rotation || 0),
 });
 
@@ -62,6 +70,10 @@ const toDbCamera = (camera: any) => ({
   wiring_utp: camera.wiringUTP,
   wall_mounting: camera.wallMountingInstalled,
   install_camera: camera.domeCameraInstalled,
+  photo1: camera.photo1 || "",
+  photo2: camera.photo2 || "",
+  photo3: camera.photo3 || "",
+  photo4: camera.photo4 || "",
   rotation: camera.rotation || 0,
   updated_at: new Date().toISOString(),
 });
@@ -162,7 +174,7 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     updateCamera(id, { rotation });
   };
 
-  const updateCameraField = (id: string, field: string, value: boolean) => {
+  const updateCameraField = (id: string, field: string, value: any) => {
     updateCamera(id, { [field]: value });
   };
 
