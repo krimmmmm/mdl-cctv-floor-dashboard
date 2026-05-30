@@ -235,3 +235,4 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
 };
 
 export const useFloorPlan = () => useContext(FloorPlanContext);
+export default CameraStatusModal;
