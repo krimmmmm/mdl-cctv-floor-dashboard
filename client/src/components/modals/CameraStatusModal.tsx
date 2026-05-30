@@ -60,35 +60,227 @@ const CameraStatusModal = ({
     window.location.reload();
   };
 
-  const updateStep = async (field: string, value: boolean) => {
-    updateCameraField(camera.id, field, value);
+ const updateStep = async (
+  field: string,
+  value: boolean
+) => {
+  updateCameraField(camera.id, field, value);
 
-    const next = {
-      wiringUTP: camera.wiringUTP,
-      wallMountingInstalled: camera.wallMountingInstalled,
-      domeCameraInstalled: camera.domeCameraInstalled,
-      [field]: value,
-    };
+  const next = {
+    wiringUTP:
+      field === "wiringUTP"
+        ? value
+        : camera.wiringUTP,
 
-    const doneCount = [
-      next.wiringUTP,
-      next.wallMountingInstalled,
-      next.domeCameraInstalled,
-    ].filter(Boolean).length;
+    wallMountingInstalled:
+      field === "wallMountingInstalled"
+        ? value
+        : camera.wallMountingInstalled,
 
-    if (doneCount === 0) {
-      updateCameraInstallationStatus(camera.id, "not_started");
-    } else if (doneCount === 3) {
-      updateCameraInstallationStatus(camera.id, "completed");
-    } else {
-      updateCameraInstallationStatus(camera.id, "in_progress");
-    }
+    domeCameraInstalled:
+      field === "domeCameraInstalled"
+        ? value
+        : camera.domeCameraInstalled,
   };
 
-  const updateStepProgress = (field: string, value: number) => {
-    const safeValue = Math.min(100, Math.max(0, Number(value || 0)));
-    updateCameraField(camera.id, field, safeValue);
+  // sync progress auto
+  if (field === "wiringUTP") {
+    updateCameraField(
+      camera.id,
+      "wiringUTPProgress",
+      value ? 100 : 0
+    );
+  }
+
+  if (field === "wallMountingInstalled") {
+    updateCameraField(
+      camera.id,
+      "wallMountingProgress",
+      value ? 100 : 0
+    );
+  }
+
+  if (field === "domeCameraInstalled") {
+    updateCameraField(
+      camera.id,
+      "domeCameraProgress",
+      value ? 100 : 0
+    );
+  }
+
+  const nextProgress = {
+    wiring:
+      field === "wiringUTP"
+        ? value
+          ? 100
+          : 0
+        : Number(camera.wiringUTPProgress || 0),
+
+    wall:
+      field === "wallMountingInstalled"
+        ? value
+          ? 100
+          : 0
+        : Number(camera.wallMountingProgress || 0),
+
+    dome:
+      field === "domeCameraInstalled"
+        ? value
+          ? 100
+          : 0
+        : Number(camera.domeCameraProgress || 0),
   };
+
+  const totalProgress = Math.round(
+    (
+      nextProgress.wiring +
+      nextProgress.wall +
+      nextProgress.dome
+    ) / 3
+  );
+
+  if (totalProgress <= 0) {
+    updateCameraInstallationStatus(
+      camera.id,
+      "not_started"
+    );
+  } else if (totalProgress >= 100) {
+    updateCameraInstallationStatus(
+      camera.id,
+      "completed"
+    );
+  } else {
+    updateCameraInstallationStatus(
+      camera.id,
+      "in_progress"
+    );
+  }
+};
+
+const updateStepProgress = async (
+  field: string,
+  value: number
+) => {
+  const safeValue = Math.min(
+    100,
+    Math.max(0, Number(value || 0))
+  );
+
+  updateCameraField(camera.id, field, safeValue);
+
+  // auto sync checkbox
+  if (field === "wiringUTPProgress") {
+    updateCameraField(
+      camera.id,
+      "wiringUTP",
+      safeValue >= 100
+    );
+  }
+
+  if (field === "wallMountingProgress") {
+    updateCameraField(
+      camera.id,
+      "wallMountingInstalled",
+      safeValue >= 100
+    );
+  }
+
+  if (field === "domeCameraProgress") {
+    updateCameraField(
+      camera.id,
+      "domeCameraInstalled",
+      safeValue >= 100
+    );
+  }
+
+  const nextProgress = {
+    wiring:
+      field === "wiringUTPProgress"
+        ? safeValue
+        : Number(camera.wiringUTPProgress || 0),
+
+    wall:
+      field === "wallMountingProgress"
+        ? safeValue
+        : Number(camera.wallMountingProgress || 0),
+
+    dome:
+      field === "domeCameraProgress"
+        ? safeValue
+        : Number(camera.domeCameraProgress || 0),
+  };
+
+  const totalProgress = Math.round(
+    (
+      nextProgress.wiring +
+      nextProgress.wall +
+      nextProgress.dome
+    ) / 3
+  );
+
+  // STATUS LOGIC ใหม่
+  if (totalProgress <= 0) {
+    updateCameraInstallationStatus(
+      camera.id,
+      "not_started"
+    );
+  } else if (totalProgress >= 100) {
+    updateCameraInstallationStatus(
+      camera.id,
+      "completed"
+    );
+  } else {
+    updateCameraInstallationStatus(
+      camera.id,
+      "in_progress"
+    );
+  }
+};
+
+  updateCameraField(camera.id, field, safeValue);
+
+  const nextProgress = {
+    wiringUTPProgress:
+      field === "wiringUTPProgress"
+        ? safeValue
+        : Number(camera.wiringUTPProgress || 0),
+
+    wallMountingProgress:
+      field === "wallMountingProgress"
+        ? safeValue
+        : Number(camera.wallMountingProgress || 0),
+
+    domeCameraProgress:
+      field === "domeCameraProgress"
+        ? safeValue
+        : Number(camera.domeCameraProgress || 0),
+  };
+
+  const totalProgress = Math.round(
+    (
+      nextProgress.wiringUTPProgress +
+      nextProgress.wallMountingProgress +
+      nextProgress.domeCameraProgress
+    ) / 3
+  );
+
+  if (totalProgress <= 0) {
+    updateCameraInstallationStatus(
+      camera.id,
+      "not_started"
+    );
+  } else if (totalProgress >= 100) {
+    updateCameraInstallationStatus(
+      camera.id,
+      "completed"
+    );
+  } else {
+    updateCameraInstallationStatus(
+      camera.id,
+      "in_progress"
+    );
+  }
+};
 
   const handleUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
