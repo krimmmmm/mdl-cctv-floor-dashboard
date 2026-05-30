@@ -36,7 +36,7 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[390px] bg-black text-white border border-blue-500 rounded-xl p-4">
+      <DialogContent className="max-w-[390px] !bg-[#050505] !text-white !border-blue-500 rounded-xl p-4 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-base font-bold text-white">
             {camera.name || "Camera"}
@@ -145,7 +145,7 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
               <Button
                 onClick={onEditPosition}
                 variant="outline"
-                className="flex-1 bg-black text-white border-gray-700"
+                className="flex-1 !bg-black !text-white !border-gray-700"
               >
                 Edit Position
               </Button>
@@ -154,7 +154,7 @@ const CameraStatusModal: React.FC<CameraStatusModalProps> = ({
             <Button
               onClick={onClose}
               variant="outline"
-              className="flex-1 bg-black text-white border-gray-700"
+              className="flex-1 !bg-black !text-white !border-gray-700"
             >
               Close
             </Button>
