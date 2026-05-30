@@ -47,13 +47,13 @@ const CameraStatusModal = ({
     { url: camera.photo4, field: "photo4" },
   ].filter((item) => item.url);
 
-  const completedSteps = [
-    camera.wiringUTP,
-    camera.wallMountingInstalled,
-    camera.domeCameraInstalled,
-  ].filter(Boolean).length;
+  const wiringProgress = Number(camera.wiringUTPProgress || 0);
+  const wallProgress = Number(camera.wallMountingProgress || 0);
+  const domeProgress = Number(camera.domeCameraProgress || 0);
 
-  const progress = Math.round((completedSteps / 3) * 100);
+  const progress = Math.round(
+    (wiringProgress + wallProgress + domeProgress) / 3
+  );
 
   const refreshAfterChange = async () => {
     if (onUpdate) await onUpdate();
@@ -83,6 +83,11 @@ const CameraStatusModal = ({
     } else {
       updateCameraInstallationStatus(camera.id, "in_progress");
     }
+  };
+
+  const updateStepProgress = (field: string, value: number) => {
+    const safeValue = Math.min(100, Math.max(0, Number(value || 0)));
+    updateCameraField(camera.id, field, safeValue);
   };
 
   const handleUpload = async (
@@ -179,50 +184,72 @@ const CameraStatusModal = ({
 
           <StepCard
             checked={Boolean(camera.wiringUTP)}
+            progress={wiringProgress}
             title="Wiring UTP"
             subTitle="Install UTP cable"
             onChange={(value) => updateStep("wiringUTP", value)}
+            onProgressChange={(value) =>
+              updateStepProgress("wiringUTPProgress", value)
+            }
           />
 
           <StepCard
             checked={Boolean(camera.wallMountingInstalled)}
+            progress={wallProgress}
             title="Install Wall Mounting"
             subTitle="Mount the bracket on wall"
-            onChange={(value) =>
-              updateStep("wallMountingInstalled", value)
+            onChange={(value) => updateStep("wallMountingInstalled", value)}
+            onProgressChange={(value) =>
+              updateStepProgress("wallMountingProgress", value)
             }
           />
 
           <StepCard
             checked={Boolean(camera.domeCameraInstalled)}
+            progress={domeProgress}
             title="Install Dome Camera"
             subTitle="Install the dome camera unit"
-            onChange={(value) =>
-              updateStep("domeCameraInstalled", value)
+            onChange={(value) => updateStep("domeCameraInstalled", value)}
+            onProgressChange={(value) =>
+              updateStepProgress("domeCameraProgress", value)
             }
           />
 
-          <div style={styles.twoCol}>
-            <div style={styles.progressBox}>
-              <div style={styles.progressHeader}>
-                <b>Progress การติดตั้งรวม</b>
-                <span style={styles.badge}>
-                  {camera.installationStatus || "not_started"}
-                </span>
-              </div>
-
-              <div style={styles.progressTrack}>
-                <div
-                  style={{
-                    ...styles.progressFill,
-                    width: String(progress) + "%",
-                  }}
-                />
-              </div>
-
-              <div style={styles.progressText}>{progress}%</div>
+          <div style={styles.progressBox}>
+            <div style={styles.progressHeader}>
+              <b>Progress การติดตั้งรวม</b>
+              <span style={styles.badge}>
+                {camera.installationStatus === "completed"
+                  ? "Completed"
+                  : camera.installationStatus === "in_progress"
+                  ? "In Progress"
+                  : "Not Started"}
+              </span>
             </div>
 
+            <div style={styles.progressTrack}>
+              <div
+                style={{
+                  ...styles.progressFill,
+                  width: String(progress) + "%",
+                }}
+              />
+            </div>
+
+            <div style={styles.progressText}>{progress}%</div>
+
+            <div style={styles.averageText}>
+              คำนวณอัตโนมัติจากค่าเฉลี่ย step progress
+            </div>
+
+            <div style={styles.progressDetail}>
+              <ProgressRow label="Wiring UTP" value={wiringProgress} />
+              <ProgressRow label="Wall Mounting" value={wallProgress} />
+              <ProgressRow label="Dome Camera" value={domeProgress} />
+            </div>
+          </div>
+
+          <div style={styles.twoCol}>
             <div style={styles.currentStatusBox}>
               <div style={styles.currentStatusText}>
                 Current Status: {camera.status || "offline"}
@@ -231,18 +258,14 @@ const CameraStatusModal = ({
               <div style={styles.buttonRow}>
                 <button
                   style={styles.whiteButton}
-                  onClick={() =>
-                    updateCameraStatus(camera.id, "online")
-                  }
+                  onClick={() => updateCameraStatus(camera.id, "online")}
                 >
                   Mark as Online
                 </button>
 
                 <button
                   style={styles.blueButton}
-                  onClick={() =>
-                    updateCameraStatus(camera.id, "idle")
-                  }
+                  onClick={() => updateCameraStatus(camera.id, "idle")}
                 >
                   Mark as Idle
                 </button>
@@ -261,17 +284,12 @@ const CameraStatusModal = ({
               max="360"
               value={camera.rotation || 0}
               onChange={(e) =>
-                updateCameraRotation(
-                  camera.id,
-                  Number(e.target.value)
-                )
+                updateCameraRotation(camera.id, Number(e.target.value))
               }
               style={{ width: "100%" }}
             />
 
-            <div style={styles.rotationValue}>
-              {camera.rotation || 0}°
-            </div>
+            <div style={styles.rotationValue}>{camera.rotation || 0}°</div>
 
             <div style={styles.rotationHint}>
               0° = Right, 90° = Down, 180° = Left, 270° = Up
@@ -317,24 +335,16 @@ const CameraStatusModal = ({
                 ))}
               </div>
             ) : (
-              <div style={styles.emptyPhoto}>
-                ยังไม่มีรูปหน้างาน
-              </div>
+              <div style={styles.emptyPhoto}>ยังไม่มีรูปหน้างาน</div>
             )}
           </div>
 
           <div style={styles.footer}>
-            <button
-              style={styles.footerButton}
-              onClick={onEditPosition}
-            >
+            <button style={styles.footerButton} onClick={onEditPosition}>
               Edit Position
             </button>
 
-            <button
-              style={styles.footerButton}
-              onClick={closeModal}
-            >
+            <button style={styles.footerButton} onClick={closeModal}>
               Close
             </button>
           </div>
@@ -346,11 +356,7 @@ const CameraStatusModal = ({
           style={styles.previewOverlay}
           onClick={() => setPreviewImage(null)}
         >
-          <img
-            src={previewImage}
-            alt="preview"
-            style={styles.previewImage}
-          />
+          <img src={previewImage} alt="preview" style={styles.previewImage} />
         </div>
       )}
     </>
@@ -359,14 +365,18 @@ const CameraStatusModal = ({
 
 const StepCard = ({
   checked,
+  progress,
   title,
   subTitle,
   onChange,
+  onProgressChange,
 }: {
   checked: boolean;
+  progress: number;
   title: string;
   subTitle: string;
   onChange: (value: boolean) => void;
+  onProgressChange: (value: number) => void;
 }) => {
   return (
     <div style={styles.stepCard}>
@@ -383,6 +393,48 @@ const StepCard = ({
       </div>
 
       <div style={styles.checkMark}>{checked ? "✓" : ""}</div>
+
+      <div style={styles.progressInputWrap}>
+        <input
+          type="number"
+          min="0"
+          max="100"
+          value={progress}
+          onChange={(e) =>
+            onProgressChange(
+              Math.min(100, Math.max(0, Number(e.target.value)))
+            )
+          }
+          style={styles.progressInput}
+        />
+
+        <span style={styles.percentText}>%</span>
+      </div>
+    </div>
+  );
+};
+
+const ProgressRow = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) => {
+  return (
+    <div style={styles.progressRow}>
+      <span>{label}</span>
+
+      <div style={styles.smallProgressTrack}>
+        <div
+          style={{
+            ...styles.smallProgressFill,
+            width: String(value) + "%",
+          }}
+        />
+      </div>
+
+      <b>{value}%</b>
     </div>
   );
 };
@@ -399,7 +451,7 @@ const styles: Record<string, React.CSSProperties> = {
     paddingTop: "40px",
   },
   modal: {
-    width: "560px",
+    width: "760px",
     maxHeight: "88vh",
     overflowY: "auto",
     background: "#030303",
@@ -442,7 +494,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid #334155",
     borderRadius: "12px",
     padding: "14px",
-    marginBottom: "10px",
+    marginBottom: "12px",
     background: "#020202",
   },
   checkbox: {
@@ -454,16 +506,37 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "17px",
   },
   stepSubTitle: {
-    fontSize: "11px",
+    fontSize: "13px",
     color: "#64748b",
   },
   checkMark: {
     color: "#00ff66",
     fontSize: "22px",
+    width: "26px",
+    textAlign: "center",
+  },
+  progressInputWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  progressInput: {
+    width: "78px",
+    padding: "8px",
+    borderRadius: "8px",
+    border: "1px solid #cbd5e1",
+    textAlign: "center",
+    fontWeight: 700,
+    fontSize: "18px",
+  },
+  percentText: {
+    color: "#94a3b8",
+    fontWeight: 700,
+    fontSize: "18px",
   },
   twoCol: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "1fr",
     gap: "14px",
     marginTop: "16px",
   },
@@ -471,37 +544,70 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#ecfdf3",
     color: "#111",
     borderRadius: "12px",
-    padding: "14px",
+    padding: "20px",
+    marginTop: "22px",
   },
   progressHeader: {
     display: "flex",
     justifyContent: "space-between",
+    alignItems: "center",
     color: "#00843d",
+    fontSize: "22px",
   },
   badge: {
-    background: "#fff",
-    color: "#64748b",
-    padding: "5px 10px",
-    borderRadius: "6px",
-    fontSize: "11px",
+    background: "#fff1a8",
+    color: "#b45309",
+    padding: "8px 14px",
+    borderRadius: "999px",
+    fontSize: "18px",
+    fontWeight: 700,
   },
   progressTrack: {
-    height: "8px",
+    height: "20px",
     background: "#e5e7eb",
     borderRadius: "999px",
     marginTop: "18px",
   },
   progressFill: {
-    height: "8px",
-    background: "#22c55e",
+    height: "20px",
+    background: "#d68a00",
     borderRadius: "999px",
   },
   progressText: {
     textAlign: "center",
-    fontSize: "34px",
+    fontSize: "48px",
     fontWeight: 800,
-    color: "#9ca3af",
-    marginTop: "12px",
+    color: "#d68a00",
+    marginTop: "20px",
+  },
+  averageText: {
+    color: "#64748b",
+    textAlign: "center",
+    fontSize: "18px",
+    marginBottom: "16px",
+  },
+  progressDetail: {
+    borderTop: "1px solid #bbf7d0",
+    paddingTop: "14px",
+  },
+  progressRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 140px 54px",
+    alignItems: "center",
+    gap: "12px",
+    color: "#64748b",
+    fontSize: "18px",
+    marginBottom: "8px",
+  },
+  smallProgressTrack: {
+    height: "10px",
+    background: "#e5e7eb",
+    borderRadius: "999px",
+  },
+  smallProgressFill: {
+    height: "10px",
+    background: "#d68a00",
+    borderRadius: "999px",
   },
   currentStatusBox: {
     background: "#eff6ff",
