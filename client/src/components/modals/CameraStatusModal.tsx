@@ -119,7 +119,7 @@ const CameraStatusModal = ({
               <img
                 key={index}
                 src={photo}
-                alt={`photo-${index}`}
+                alt={"photo-" + index}
                 className="w-full h-52 object-cover rounded-lg border border-gray-700"
               />
             ))}
