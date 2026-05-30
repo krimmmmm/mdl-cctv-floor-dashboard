@@ -293,8 +293,11 @@ const updateStepProgress = async (
 
   return (
     <>
-      <div style={styles.overlay}>
-        <div style={styles.modal}>
+      <div style={styles.overlay} onClick={closeModal}>
+  <div
+    style={styles.modal}
+    onClick={(e) => e.stopPropagation()}
+  >
           <h2 style={styles.title}>{camera.name || "Camera"}</h2>
 
           <div style={styles.typeBox}>
@@ -468,9 +471,15 @@ const updateStepProgress = async (
           </div>
 
           <div style={styles.footer}>
-            <button style={styles.footerButton} onClick={onEditPosition}>
-              Edit Position
-            </button>
+            <button
+  style={styles.footerButton}
+  onClick={() => {
+    closeModal();
+    if (onEditPosition) onEditPosition();
+  }}
+>
+  Edit Position
+</button>
 
             <button style={styles.footerButton} onClick={closeModal}>
               Close
