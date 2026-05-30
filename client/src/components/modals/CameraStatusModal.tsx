@@ -55,6 +55,13 @@ const CameraStatusModal = ({
     (wiringProgress + wallProgress + domeProgress) / 3
   );
 
+  const computedInstallationStatus =
+  progress <= 0
+    ? "not_started"
+    : progress >= 100
+    ? "completed"
+    : "in_progress";
+  
   const refreshAfterChange = async () => {
     if (onUpdate) await onUpdate();
     window.location.reload();
@@ -298,8 +305,8 @@ const updateStepProgress = async (
           </div>
 
           <div style={styles.statusBox}>
-            Installation Status: {camera.installationStatus || "not_started"}
-          </div>
+  Installation Status: {computedInstallationStatus}
+</div>
 
           <div style={styles.sectionLabel}>Installation Steps</div>
 
@@ -340,12 +347,12 @@ const updateStepProgress = async (
             <div style={styles.progressHeader}>
               <b>Progress การติดตั้งรวม</b>
               <span style={styles.badge}>
-                {camera.installationStatus === "completed"
-                  ? "Completed"
-                  : camera.installationStatus === "in_progress"
-                  ? "In Progress"
-                  : "Not Started"}
-              </span>
+  {computedInstallationStatus === "completed"
+    ? "Completed"
+    : computedInstallationStatus === "in_progress"
+    ? "In Progress"
+    : "Not Started"}
+</span>
             </div>
 
             <div style={styles.progressTrack}>
