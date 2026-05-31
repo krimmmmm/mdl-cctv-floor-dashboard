@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import StatusCard from "./StatusCard";
 
 const ControlPanel: React.FC = () => {
-  const { cameras, racks, cabinets } = useFloorPlan();
+  const { cameras, racks, cabinets, fiberRoutes } = useFloorPlan();
 
   const stats = useMemo(() => {
     const safeCameras = cameras || [];
     const safeRacks = racks || [];
     const safeCabinets = cabinets || [];
+    const safeFiberRoutes = fiberRoutes || [];
 
     const totalCameras = safeCameras.length;
     const onlineCameras = safeCameras.filter(
@@ -42,6 +43,28 @@ const ControlPanel: React.FC = () => {
       (c) => c.status === "online"
     ).length;
 
+    const totalFiberRoutes = safeFiberRoutes.length;
+
+    const completedFiberRoutes = safeFiberRoutes.filter(
+      (f) => (f.progress || 0) >= 100
+    ).length;
+
+    const inProgressFiberRoutes = safeFiberRoutes.filter(
+      (f) =>
+        (f.progress || 0) > 0 &&
+        (f.progress || 0) < 100
+    ).length;
+
+    const totalFiberProgress =
+      totalFiberRoutes > 0
+        ? Math.round(
+            safeFiberRoutes.reduce(
+              (sum, f) => sum + (f.progress || 0),
+              0
+            ) / totalFiberRoutes
+          )
+        : 0;
+
     return {
       totalCameras,
       onlineCameras,
@@ -53,8 +76,13 @@ const ControlPanel: React.FC = () => {
       oldRacks,
       totalCabinets,
       onlineCabinets,
+      totalFiberRoutes,
+      completedFiberRoutes,
+      inProgressFiberRoutes,
+      totalFiberProgress,
+      safeFiberRoutes,
     };
-  }, [cameras, racks, cabinets]);
+  }, [cameras, racks, cabinets, fiberRoutes]);
 
   return (
     <div className="w-full bg-white">
@@ -180,6 +208,81 @@ const ControlPanel: React.FC = () => {
           </CardContent>
         </Card>
 
+        <Card className="border-0 bg-green-50 flex-shrink-0 min-w-[420px]">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="text-sm font-semibold text-gray-700">
+                Fiber Optic Progress
+              </CardTitle>
+
+              <div className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 text-sm font-bold">
+                รวม {stats.totalFiberProgress}%
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-4 text-sm">
+              <div>
+                ทั้งหมด{" "}
+                <span className="font-bold">
+                  {stats.totalFiberRoutes}
+                </span>{" "}
+                เส้น
+              </div>
+
+              <div className="text-green-600 font-bold">
+                เสร็จ {stats.completedFiberRoutes}
+              </div>
+
+              <div className="text-yellow-600 font-bold">
+                กำลังทำ {stats.inProgressFiberRoutes}
+              </div>
+            </div>
+
+            <div className="w-full h-3 rounded-full bg-gray-200 overflow-hidden">
+              <div
+                className="h-full bg-yellow-500 rounded-full"
+                style={{
+                  width: `${stats.totalFiberProgress}%`,
+                }}
+              />
+            </div>
+
+            <div className="space-y-2 max-h-[180px] overflow-auto pr-1">
+              {stats.safeFiberRoutes.length > 0 ? (
+                stats.safeFiberRoutes.map((fiber) => (
+                  <div
+                    key={fiber.id}
+                    className="grid grid-cols-[120px_1fr_50px] gap-3 items-center"
+                  >
+                    <div className="text-sm text-gray-700 truncate">
+                      {fiber.name || fiber.label || "Fiber Route"}
+                    </div>
+
+                    <div className="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
+                      <div
+                        className="h-full bg-yellow-500 rounded-full"
+                        style={{
+                          width: `${fiber.progress || 0}%`,
+                        }}
+                      />
+                    </div>
+
+                    <div className="text-sm font-bold text-yellow-700 text-right">
+                      {fiber.progress || 0}%
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-xs text-gray-500">
+                  ยังไม่มี Fiber Route
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="border-0 bg-gray-50 flex-shrink-0 min-w-max">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold text-gray-700">
@@ -264,6 +367,13 @@ const ControlPanel: React.FC = () => {
               <span className="font-semibold">CABINET Ready:</span>{" "}
               <span className="text-green-600 font-bold">
                 {stats.onlineCabinets}/{stats.totalCabinets}
+              </span>
+            </p>
+
+            <p>
+              <span className="font-semibold">Fiber Progress:</span>{" "}
+              <span className="text-yellow-600 font-bold">
+                {stats.totalFiberProgress}%
               </span>
             </p>
 
