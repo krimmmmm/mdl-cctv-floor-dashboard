@@ -1,16 +1,13 @@
 import React, { useMemo } from "react";
 import { Rack, RackStatus } from "@/lib/floorPlanData";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
+
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 
 interface RackStatusModalProps {
   rack: Rack;
@@ -29,146 +26,91 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
     updateRackStatus,
     updateRackField,
     updateRackInstallationStatus,
-    addActivityLog,
     updateRackPhotos,
   } = useFloorPlan();
 
-  const handleStatusUpdate = (
-    status: RackStatus
+  const steps = [
+    {
+      key: "acPower",
+      title: "AC POWER",
+      desc: "Power supply installed",
+      progressKey: "acPowerProgress",
+      progress: rack.acPowerProgress || 0,
+      checked: rack.acPower,
+    },
+
+    {
+      key: "utp",
+      title: "UTP",
+      desc: "Network cable installed",
+      progressKey: "utpProgress",
+      progress: rack.utpProgress || 0,
+      checked: rack.utp,
+    },
+
+    {
+      key: "poeSwitch",
+      title: "POE SWITCH",
+      desc: "Switch installed",
+      progressKey: "poeSwitchProgress",
+      progress: rack.poeSwitchProgress || 0,
+      checked: rack.poeSwitch,
+    },
+
+    {
+      key: "fiberOptic",
+      title: "FIBER OPTIC",
+      desc: "Fiber optic connected",
+      progressKey: "fiberOpticProgress",
+      progress: rack.fiberOpticProgress || 0,
+      checked: rack.fiberOptic,
+    },
+
+    {
+      key: "ready",
+      title: "READY",
+      desc: "Rack ready for use",
+      progressKey: "readyProgress",
+      progress: rack.readyProgress || 0,
+      checked: rack.ready,
+    },
+  ];
+
+  const totalProgress = useMemo(() => {
+    const total =
+      steps.reduce(
+        (sum, item) =>
+          sum + (item.progress || 0),
+        0
+      ) / steps.length;
+
+    return Math.round(total);
+  }, [rack]);
+
+  const installationStatus =
+    totalProgress === 0
+      ? "Not Started"
+      : totalProgress === 100
+      ? "Completed"
+      : "In Progress";
+
+  const handleProgress = (
+    field: string,
+    value: number
   ) => {
-    updateRackStatus(rack.id, status);
+    updateRackField(
+      rack.id,
+      field,
+      Math.max(0, Math.min(100, value))
+    );
   };
 
-  const handleFieldUpdate = (
-    field: keyof Omit<
-      Rack,
-      "id" | "type" | "x" | "y" | "name" | "status"
-    >,
+  const handleCheck = (
+    field: string,
     value: boolean
   ) => {
     updateRackField(rack.id, field, value);
-
-    const updated = {
-      acPower:
-        field === "acPower"
-          ? value
-          : rack.acPower,
-
-      utp:
-        field === "utp"
-          ? value
-          : rack.utp,
-
-      poeSwitch:
-        field === "poeSwitch"
-          ? value
-          : rack.poeSwitch,
-
-      fiberOptic:
-        field === "fiberOptic"
-          ? value
-          : rack.fiberOptic,
-
-      ready:
-        field === "ready"
-          ? value
-          : rack.ready,
-    };
-
-    const checkedCount =
-      Object.values(updated).filter(Boolean)
-        .length;
-
-    if (checkedCount === 0) {
-      updateRackInstallationStatus(
-        rack.id,
-        "not_started"
-      );
-    } else if (checkedCount === 5) {
-      updateRackInstallationStatus(
-        rack.id,
-        "completed"
-      );
-    } else {
-      updateRackInstallationStatus(
-        rack.id,
-        "in_progress"
-      );
-    }
   };
-
-  const handleOnlineClick = () => {
-    if (
-      rack.acPower &&
-      rack.utp &&
-      rack.ready
-    ) {
-      handleStatusUpdate("online");
-
-      updateRackInstallationStatus(
-        rack.id,
-        "completed"
-      );
-
-      addActivityLog({
-        userId: "current_user",
-        equipmentId: rack.id,
-        equipmentName: rack.name,
-        equipmentType: "rack",
-        changeType: "status",
-        action: `${rack.name} marked as Online`,
-        oldValue: "idle",
-        newValue: "online",
-      });
-    }
-  };
-
-  const allConditionsMet =
-    rack.acPower &&
-    rack.utp &&
-    rack.ready;
-
-  const checkedCount = [
-    rack.acPower,
-    rack.utp,
-    rack.poeSwitch,
-    rack.fiberOptic,
-    rack.ready,
-  ].filter(Boolean).length;
-
-  const totalProgress = useMemo(() => {
-    return Math.round(
-      (checkedCount / 5) * 100
-    );
-  }, [checkedCount]);
-
-  const getInstallationStatusDisplay =
-    () => {
-      if (checkedCount === 0)
-        return "Not Started";
-
-      if (checkedCount === 5)
-        return "Completed";
-
-      return "In Progress";
-    };
-
-  const getStatusColor = () => {
-    if (checkedCount === 0)
-      return "bg-yellow-100 text-yellow-800";
-
-    if (checkedCount === 5)
-      return "bg-green-100 text-green-700";
-
-    return "bg-orange-100 text-orange-700";
-  };
-
-  const photoList = [
-    rack.photo1,
-    rack.photo2,
-    rack.photo3,
-    rack.photo4,
-  ].filter(Boolean);
 
   const handlePhotoUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
@@ -211,150 +153,189 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
       open={isOpen}
       onOpenChange={onClose}
     >
-      <DialogContent className="max-w-2xl bg-black border border-blue-500 text-white overflow-y-auto max-h-[95vh]">
-        <DialogHeader>
-          <DialogTitle className="text-3xl font-bold text-white">
-            {rack.name}
-          </DialogTitle>
-        </DialogHeader>
-
+      <DialogContent className="bg-black border border-cyan-500 text-white max-w-4xl overflow-y-auto max-h-[95vh]">
         <div className="space-y-5">
-          {/* TYPE */}
-          <div className="bg-white text-black rounded-xl p-4">
-            <p className="font-bold">
-              Type:{" "}
-              {rack.type === "type2" ||
-              rack.type === "old"
-                ? "Old RACK (Existing)"
-                : 'New RACK (WALL RACK 19" GERMAN 6U)'}
-            </p>
-          </div>
 
-          {/* STATUS */}
-          <div
-            className={`rounded-xl p-4 font-bold text-lg ${getStatusColor()}`}
-          >
-            Installation Status:{" "}
-            {getInstallationStatusDisplay()}
-          </div>
-
-          {/* ITEMS */}
-          <div className="space-y-4">
-            <h3 className="text-blue-300 text-lg font-semibold">
-              Installation Steps
-            </h3>
-
-            {[
-              {
-                key: "acPower",
-                title: "AC POWER",
-                desc: "Power supply installed",
-                checked: rack.acPower,
-              },
-
-              {
-                key: "utp",
-                title: "UTP",
-                desc: "Network cable installed",
-                checked: rack.utp,
-              },
-
-              {
-                key: "poeSwitch",
-                title: "POE SWITCH",
-                desc: "Switch installed",
-                checked: rack.poeSwitch,
-              },
-
-              {
-                key: "fiberOptic",
-                title: "FIBER OPTIC",
-                desc: "Fiber optic connected",
-                checked: rack.fiberOptic,
-              },
-
-              {
-                key: "ready",
-                title: "READY",
-                desc: "Rack ready for use",
-                checked: rack.ready,
-              },
-            ].map((item) => (
-              <div
-                key={item.key}
-                className="border border-blue-900 rounded-xl p-4 bg-black"
-              >
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    checked={item.checked}
-                    onCheckedChange={(
-                      checked
-                    ) =>
-                      handleFieldUpdate(
-                        item.key as any,
-                        checked as boolean
-                      )
-                    }
-                  />
-
-                  <div className="flex-1">
-                    <div className="font-bold text-xl">
-                      {item.title}
-                    </div>
-
-                    <div className="text-gray-400 text-sm">
-                      {item.desc}
-                    </div>
-                  </div>
-
-                  {item.checked && (
-                    <div className="text-green-400 text-2xl">
-                      ✓
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* TOTAL PROGRESS */}
-          <div className="bg-[#dff0e5] rounded-2xl p-5">
-            <div className="flex justify-between items-center">
-              <div className="text-3xl font-bold text-green-700">
-                Progress รวม
+          {/* HEADER */}
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-4xl font-bold">
+                {rack.name}
               </div>
 
-              <div
-                className={`px-4 py-2 rounded-full text-lg font-bold ${
-                  totalProgress === 100
-                    ? "bg-green-200 text-green-700"
-                    : totalProgress === 0
-                    ? "bg-yellow-200 text-yellow-700"
-                    : "bg-orange-200 text-orange-700"
-                }`}
-              >
-                {getInstallationStatusDisplay()}
+              <div className="text-cyan-400 font-bold mt-2">
+                Type:{" "}
+                {rack.type === "type2"
+                  ? "Old RACK (Existing)"
+                  : 'New RACK (WALL RACK 19" GERMAN 6U)'}
               </div>
             </div>
 
-            <div className="w-full h-5 bg-gray-300 rounded-full mt-5 overflow-hidden">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={rack.isUrgent || false}
+                onChange={(e) =>
+                  updateRackField(
+                    rack.id,
+                    "isUrgent",
+                    e.target.checked
+                  )
+                }
+              />
+
+              <div className="text-yellow-400 font-bold">
+                URGENT
+              </div>
+            </div>
+          </div>
+
+          {/* STATUS */}
+          <div className="flex gap-4">
+            <div className="flex-1 border border-yellow-600 rounded-xl p-4 bg-[#221900]">
+              <div className="text-yellow-400 text-2xl font-bold">
+                Installation Status :{" "}
+                {installationStatus}
+              </div>
+            </div>
+
+            <select
+              value={rack.installationStatus}
+              onChange={(e) =>
+                updateRackInstallationStatus(
+                  rack.id,
+                  e.target.value
+                )
+              }
+              className="bg-black border border-cyan-500 rounded-xl px-5 text-xl"
+            >
+              <option value="not_started">
+                Not Started
+              </option>
+
+              <option value="in_progress">
+                In Progress
+              </option>
+
+              <option value="completed">
+                Completed
+              </option>
+            </select>
+          </div>
+
+          {/* INSTALLATION */}
+          <div>
+            <div className="text-cyan-400 text-2xl font-bold mb-4 border-b border-cyan-700 pb-2">
+              INSTALLATION STEPS
+            </div>
+
+            <div className="border border-cyan-800 rounded-xl overflow-hidden">
+              {steps.map((item) => (
+                <div
+                  key={item.key}
+                  className="border-b border-cyan-900 p-4 bg-black"
+                >
+                  <div className="grid grid-cols-[50px_1fr_220px_60px] gap-4 items-center">
+
+                    {/* CHECK */}
+                    <input
+                      type="checkbox"
+                      checked={item.checked}
+                      onChange={(e) =>
+                        handleCheck(
+                          item.key,
+                          e.target.checked
+                        )
+                      }
+                      className="w-6 h-6"
+                    />
+
+                    {/* TITLE */}
+                    <div>
+                      <div className="text-3xl font-bold">
+                        {item.title}
+                      </div>
+
+                      <div className="text-gray-400">
+                        {item.desc}
+                      </div>
+                    </div>
+
+                    {/* PROGRESS */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="bg-red-700 px-4 py-2 rounded-lg text-xl"
+                        onClick={() =>
+                          handleProgress(
+                            item.progressKey,
+                            item.progress - 10
+                          )
+                        }
+                      >
+                        -
+                      </button>
+
+                      <div className="bg-[#182234] w-full rounded-lg h-12 flex items-center justify-center text-2xl font-bold">
+                        {item.progress} %
+                      </div>
+
+                      <button
+                        className="bg-green-700 px-4 py-2 rounded-lg text-xl"
+                        onClick={() =>
+                          handleProgress(
+                            item.progressKey,
+                            item.progress + 10
+                          )
+                        }
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    {/* STATUS */}
+                    <div className="text-center text-3xl">
+                      {item.progress >= 100
+                        ? "✅"
+                        : item.progress > 0
+                        ? "🟡"
+                        : "⚪"}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* TOTAL */}
+          <div className="bg-[#dff0e5] rounded-2xl p-6">
+            <div className="flex justify-between">
+              <div className="text-green-700 text-5xl font-bold">
+                ความคืบหน้ารวม
+              </div>
+
+              <div className="bg-yellow-300 text-yellow-900 rounded-full px-5 py-2 text-2xl font-bold">
+                {installationStatus}
+              </div>
+            </div>
+
+            <div className="bg-gray-300 rounded-full h-8 mt-6 overflow-hidden">
               <div
-                className="h-full bg-orange-500 transition-all duration-500"
+                className="bg-orange-500 h-full transition-all duration-500"
                 style={{
                   width: `${totalProgress}%`,
                 }}
               />
             </div>
 
-            <div className="text-center text-6xl font-extrabold text-orange-600 mt-6">
+            <div className="text-center text-8xl font-extrabold text-orange-600 mt-8">
               {totalProgress}%
             </div>
           </div>
 
-          {/* PHOTO UPLOAD */}
-          <div className="space-y-4">
-            <div className="text-xl font-bold text-blue-300">
-              Upload Rack Photos
+          {/* PHOTOS */}
+          <div>
+            <div className="text-cyan-400 text-2xl font-bold mb-4 border-b border-cyan-700 pb-2">
+              UPLOAD RACK PHOTOS
             </div>
 
             <input
@@ -362,60 +343,55 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
               multiple
               accept="image/*"
               onChange={handlePhotoUpload}
-              className="w-full bg-white text-black rounded-lg p-3"
+              className="mb-5"
             />
 
-            {photoList.length > 0 && (
-              <div className="grid grid-cols-2 gap-4">
-                {photoList.map(
-                  (photo, index) => (
-                    <img
-                      key={index}
-                      src={photo}
-                      alt={`rack-${index}`}
-                      className="rounded-xl border border-blue-500"
-                    />
-                  )
-                )}
-              </div>
-            )}
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                rack.photo1,
+                rack.photo2,
+                rack.photo3,
+                rack.photo4,
+              ]
+                .filter(Boolean)
+                .map((photo, index) => (
+                  <img
+                    key={index}
+                    src={photo}
+                    className="rounded-xl border border-cyan-500 h-40 w-full object-cover"
+                  />
+                ))}
+            </div>
           </div>
 
-          {/* STATUS BUTTONS */}
-          <div className="bg-blue-50 border border-blue-300 rounded-xl p-4">
-            <p className="text-black font-semibold mb-4">
-              Current Status:{" "}
+          {/* STATUS */}
+          <div className="border border-cyan-700 rounded-xl p-5">
+            <div className="text-cyan-400 text-2xl font-bold mb-4">
+              CURRENT STATUS :{" "}
               {rack.status}
-            </p>
+            </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               <Button
-                onClick={
-                  handleOnlineClick
+                className="flex-1 bg-green-700 hover:bg-green-800 text-2xl h-16"
+                onClick={() =>
+                  updateRackStatus(
+                    rack.id,
+                    "online"
+                  )
                 }
-                disabled={
-                  !allConditionsMet
-                }
-                className={`flex-1 ${
-                  allConditionsMet
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-gray-400"
-                }`}
               >
-                {rack.status ===
-                "online"
-                  ? "✓ Online"
-                  : "Mark as Online"}
+                ✓ Mark as Online
               </Button>
 
               <Button
+                className="flex-1 bg-gray-900 border border-gray-600 text-2xl h-16"
                 onClick={() =>
-                  handleStatusUpdate(
+                  updateRackStatus(
+                    rack.id,
                     "idle"
                   )
                 }
-                variant="outline"
-                className="flex-1 text-black"
               >
                 Mark as Idle
               </Button>
@@ -423,22 +399,21 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
           </div>
 
           {/* BUTTONS */}
-          {onEditPosition && (
+          <div className="grid grid-cols-2 gap-4">
             <Button
+              className="h-16 text-2xl bg-[#111827]"
               onClick={onEditPosition}
-              className="w-full bg-gray-700 hover:bg-gray-600"
             >
-              Edit Position
+              ✥ Edit Position
             </Button>
-          )}
 
-          <Button
-            onClick={onClose}
-            variant="outline"
-            className="w-full text-black"
-          >
-            Close
-          </Button>
+            <Button
+              className="h-16 text-2xl bg-black border border-gray-500"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
