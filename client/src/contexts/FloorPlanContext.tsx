@@ -142,27 +142,62 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     loadCameras();
 
     const channel = supabase
-      .channel("cameras-sync")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "cameras" },
-        (payload) => {
-          const row = payload.new;
-          if (!row) return;
+  .channel("cameras-sync")
+  .on(
+    "postgres_changes",
+    {
+      event: "*",
+      schema: "public",
+      table: "cameras",
+    },
+    (payload) => {
 
-          const updatedCamera = toAppCamera(row);
+      // DELETE
+      if (payload.eventType === "DELETE") {
 
-          setCameras((prev) => {
-            const exists = prev.some((cam) => cam.id === updatedCamera.id);
-            if (!exists) return [...prev, updatedCamera];
+        const deletedId =
+          payload.old?.id;
 
-            return prev.map((cam) =>
-              cam.id === updatedCamera.id ? updatedCamera : cam
-            );
-          });
+        setCameras((prev) =>
+          prev.filter(
+            (cam) =>
+              cam.id !== deletedId
+          )
+        );
+
+        return;
+      }
+
+      const row = payload.new;
+
+      if (!row) return;
+
+      const updatedCamera =
+        toAppCamera(row);
+
+      setCameras((prev) => {
+
+        const exists = prev.some(
+          (cam) =>
+            cam.id === updatedCamera.id
+        );
+
+        if (!exists) {
+          return [
+            ...prev,
+            updatedCamera,
+          ];
         }
-      )
-      .subscribe();
+
+        return prev.map((cam) =>
+          cam.id === updatedCamera.id
+            ? updatedCamera
+            : cam
+        );
+      });
+    }
+  )
+  .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -237,13 +272,6 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
       i++
     ) {
 
-      const allSameType = cameras.filter(
-        (cam) => cam.type === cameraType
-      );
-
-      const runningNumber =
-        allSameType.length + i;
-
       const newCamera = {
         ...defaultCamera,
 
@@ -260,7 +288,7 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
           (cameraType === "type1"
             ? "Camera T1 "
             : "Camera T2 ") +
-          String(runningNumber).padStart(2, "0"),
+          String(i).padStart(2, "0"),
 
         x: 250 + i * 20,
         y: 250 + i * 20,
@@ -274,38 +302,10 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
   if (targetCount < currentCount) {
 
     const camerasToDelete =
-      camerasByType
-        .sort((a, b) =>
-          b.id.localeCompare(a.id)
-        )
-        .slice(
-          0,
-          currentCount - targetCount
-        );
+      camerasByType.slice(targetCount);
 
     for (const cam of camerasToDelete) {
 
-      await supabase
-        .from("cameras")
-        .delete()
-        .eq("id", cam.id);
-    }
-  }
-};
-  
-      await saveCamera(newCamera);
-    }
-  }
-
-  // REMOVE CAMERA
-  if (targetCount < currentCount) {
-    const camerasToDelete = [...cameras]
-      .sort((a, b) =>
-        b.id.localeCompare(a.id)
-      )
-      .slice(0, currentCount - targetCount);
-
-    for (const cam of camerasToDelete) {
       await supabase
         .from("cameras")
         .delete()
