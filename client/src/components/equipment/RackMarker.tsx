@@ -42,38 +42,38 @@ const RackMarker: React.FC<RackMarkerProps> = ({
       style={{ cursor: "pointer" }}
     >
       <rect
-        x={x - 28}
-        y={y - 34}
-        width={56}
-        height={72}
+        x={x - 24}
+        y={y - 28}
+        width={48}
+        height={62}
         fill="transparent"
         pointerEvents="all"
       />
 
       {isInProgress && (
         <rect
-          x={x - 20}
-          y={y - 24}
-          width={40}
-          height={48}
-          rx={6}
+          x={x - w / 2 - 4}
+          y={y - h / 2 - 4}
+          width={w + 8}
+          height={h + 8}
+          rx={5}
           fill="none"
           stroke="#eab308"
-          strokeWidth={4}
+          strokeWidth={3}
           className="animate-pulse"
         />
       )}
 
       {isCompleted && (
         <rect
-          x={x - 20}
-          y={y - 24}
-          width={40}
-          height={48}
-          rx={6}
+          x={x - w / 2 - 4}
+          y={y - h / 2 - 4}
+          width={w + 8}
+          height={h + 8}
+          rx={5}
           fill="none"
           stroke="#22c55e"
-          strokeWidth={4}
+          strokeWidth={3}
           className="animate-pulse"
         />
       )}
@@ -82,7 +82,7 @@ const RackMarker: React.FC<RackMarkerProps> = ({
         <circle
           cx={x}
           cy={y}
-          r={34}
+          r={26}
           fill="none"
           stroke="#ff4db8"
           strokeWidth={4}
@@ -94,7 +94,7 @@ const RackMarker: React.FC<RackMarkerProps> = ({
         <circle
           cx={x}
           cy={y}
-          r={30}
+          r={23}
           fill="none"
           stroke="#22c55e"
           strokeWidth={2}
@@ -153,30 +153,10 @@ const RackMarker: React.FC<RackMarkerProps> = ({
 
         {[6, 14, 22].map((yy) => (
           <g key={yy}>
-            <circle
-              cx={8}
-              cy={yy + 0.5}
-              r={1}
-              fill={rackColor}
-            />
-            <circle
-              cx={12}
-              cy={yy + 0.5}
-              r={1}
-              fill={rackColor}
-            />
-            <circle
-              cx={16}
-              cy={yy + 0.5}
-              r={1}
-              fill={rackColor}
-            />
-            <circle
-              cx={21}
-              cy={yy + 0.5}
-              r={1.5}
-              fill={rackColor}
-            />
+            <circle cx={8} cy={yy + 0.5} r={1} fill={rackColor} />
+            <circle cx={12} cy={yy + 0.5} r={1} fill={rackColor} />
+            <circle cx={16} cy={yy + 0.5} r={1} fill={rackColor} />
+            <circle cx={21} cy={yy + 0.5} r={1.5} fill={rackColor} />
           </g>
         ))}
 
@@ -193,10 +173,10 @@ const RackMarker: React.FC<RackMarkerProps> = ({
 
       {isSelected && (
         <rect
-          x={x - 22}
-          y={y - 26}
-          width={44}
-          height={52}
+          x={x - w / 2 - 6}
+          y={y - h / 2 - 6}
+          width={w + 12}
+          height={h + 12}
           rx={6}
           fill="none"
           stroke="#0066cc"
@@ -226,8 +206,7 @@ const RackMarker: React.FC<RackMarkerProps> = ({
         {"\n"}Installation:{" "}
         {rack.installationStatus === "completed"
           ? "Completed"
-          : rack.installationStatus ===
-            "in_progress"
+          : rack.installationStatus === "in_progress"
           ? "In Progress"
           : "Not Started"}
       </title>
