@@ -1,13 +1,6 @@
-import React, { useMemo } from "react";
-import { Rack, RackStatus } from "@/lib/floorPlanData";
+import React, { useMemo, useState } from "react";
+import { Rack } from "@/lib/floorPlanData";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
-
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
-
-import { Button } from "@/components/ui/button";
 
 interface RackStatusModalProps {
   rack: Rack;
@@ -29,112 +22,149 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
     updateRackPhotos,
   } = useFloorPlan();
 
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  if (!isOpen || !rack) return null;
+
   const steps = [
     {
       key: "acPower",
       title: "AC POWER",
       desc: "Power supply installed",
       progressKey: "acPowerProgress",
-      progress: rack.acPowerProgress || 0,
-      checked: rack.acPower,
+      progress: Number((rack as any).acPowerProgress || 0),
+      checked: Boolean((rack as any).acPower),
     },
-
     {
       key: "utp",
       title: "UTP",
       desc: "Network cable installed",
       progressKey: "utpProgress",
-      progress: rack.utpProgress || 0,
-      checked: rack.utp,
+      progress: Number((rack as any).utpProgress || 0),
+      checked: Boolean((rack as any).utp),
     },
-
     {
       key: "poeSwitch",
       title: "POE SWITCH",
       desc: "Switch installed",
       progressKey: "poeSwitchProgress",
-      progress: rack.poeSwitchProgress || 0,
-      checked: rack.poeSwitch,
+      progress: Number((rack as any).poeSwitchProgress || 0),
+      checked: Boolean((rack as any).poeSwitch),
     },
-
     {
       key: "fiberOptic",
       title: "FIBER OPTIC",
       desc: "Fiber optic connected",
       progressKey: "fiberOpticProgress",
-      progress: rack.fiberOpticProgress || 0,
-      checked: rack.fiberOptic,
+      progress: Number((rack as any).fiberOpticProgress || 0),
+      checked: Boolean((rack as any).fiberOptic),
     },
-
     {
       key: "ready",
       title: "READY",
       desc: "Rack ready for use",
       progressKey: "readyProgress",
-      progress: rack.readyProgress || 0,
-      checked: rack.ready,
+      progress: Number((rack as any).readyProgress || 0),
+      checked: Boolean((rack as any).ready),
     },
   ];
 
   const totalProgress = useMemo(() => {
-    const total =
-      steps.reduce(
-        (sum, item) =>
-          sum + (item.progress || 0),
-        0
-      ) / steps.length;
-
-    return Math.round(total);
+    return Math.round(
+      steps.reduce((sum, item) => sum + item.progress, 0) / steps.length
+    );
   }, [rack]);
 
-  const installationStatus =
-    totalProgress === 0
-      ? "Not Started"
-      : totalProgress === 100
+  const computedStatus =
+    totalProgress <= 0
+      ? "not_started"
+      : totalProgress >= 100
+      ? "completed"
+      : "in_progress";
+
+  const statusText =
+    computedStatus === "completed"
       ? "Completed"
-      : "In Progress";
+      : computedStatus === "in_progress"
+      ? "In Progress"
+      : "Not Started";
 
-  const handleProgress = (
-    field: string,
-    value: number
-  ) => {
-    updateRackField(
-      rack.id,
-      field,
-      Math.max(0, Math.min(100, value))
+  const syncStatus = (progressValue: number) => {
+    const nextStatus =
+      progressValue <= 0
+        ? "not_started"
+        : progressValue >= 100
+        ? "completed"
+        : "in_progress";
+
+    updateRackInstallationStatus(rack.id, nextStatus);
+  };
+
+  const updateStepProgress = (progressKey: string, stepKey: string, value: number) => {
+    const safeValue = Math.min(100, Math.max(0, Number(value || 0)));
+
+    updateRackField(rack.id, progressKey, safeValue);
+    updateRackField(rack.id, stepKey, safeValue > 0);
+
+    const nextSteps = steps.map((step) =>
+      step.progressKey === progressKey
+        ? { ...step, progress: safeValue }
+        : step
     );
+
+    const nextTotal = Math.round(
+      nextSteps.reduce((sum, item) => sum + item.progress, 0) / nextSteps.length
+    );
+
+    syncStatus(nextTotal);
   };
 
-  const handleCheck = (
-    field: string,
-    value: boolean
-  ) => {
-    updateRackField(rack.id, field, value);
+  const updateStepCheck = (stepKey: string, progressKey: string, checked: boolean) => {
+    updateRackField(rack.id, stepKey, checked);
+    updateRackField(rack.id, progressKey, checked ? 100 : 0);
+
+    const nextSteps = steps.map((step) =>
+      step.key === stepKey
+        ? { ...step, progress: checked ? 100 : 0 }
+        : step
+    );
+
+    const nextTotal = Math.round(
+      nextSteps.reduce((sum, item) => sum + item.progress, 0) / nextSteps.length
+    );
+
+    syncStatus(nextTotal);
   };
 
-  const handlePhotoUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const photos = [
+    (rack as any).photo1,
+    (rack as any).photo2,
+    (rack as any).photo3,
+    (rack as any).photo4,
+  ].filter(Boolean);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-
     if (!files) return;
 
-    const uploadedPhotos: string[] = [];
+    const currentPhotos = [
+      (rack as any).photo1 || "",
+      (rack as any).photo2 || "",
+      (rack as any).photo3 || "",
+      (rack as any).photo4 || "",
+    ].filter(Boolean);
 
-    for (
-      let i = 0;
-      i < files.length;
-      i++
-    ) {
-      const file = files[i];
+    const remaining = 4 - currentPhotos.length;
+    const selectedFiles = Array.from(files).slice(0, remaining);
 
+    const newPhotos: string[] = [];
+
+    for (const file of selectedFiles) {
       const reader = new FileReader();
 
       await new Promise<void>((resolve) => {
         reader.onloadend = () => {
-          uploadedPhotos.push(
-            reader.result as string
-          );
+          newPhotos.push(reader.result as string);
           resolve();
         };
 
@@ -142,282 +172,445 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
       });
     }
 
-    updateRackPhotos(
-      rack.id,
-      uploadedPhotos
-    );
+    updateRackPhotos(rack.id, [...currentPhotos, ...newPhotos]);
+  };
+
+  const deletePhoto = (index: number) => {
+    const nextPhotos = [
+      (rack as any).photo1 || "",
+      (rack as any).photo2 || "",
+      (rack as any).photo3 || "",
+      (rack as any).photo4 || "",
+    ];
+
+    nextPhotos[index] = "";
+    updateRackPhotos(rack.id, nextPhotos);
   };
 
   return (
-    <Dialog
-      open={isOpen}
-      onOpenChange={onClose}
-    >
-      <DialogContent className="bg-black border border-cyan-500 text-white max-w-4xl overflow-y-auto max-h-[95vh]">
-        <div className="space-y-5">
+    <>
+      <div style={styles.overlay} onClick={onClose}>
+        <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <h2 style={styles.title}>{rack.name}</h2>
 
-          {/* HEADER */}
-          <div className="flex justify-between items-center">
-            <div>
-              <div className="text-4xl font-bold">
-                {rack.name}
-              </div>
+          <div style={styles.typeBox}>
+            <b>Type:</b>{" "}
+            {rack.type === "type2" || rack.type === "old"
+              ? "Old RACK (Existing)"
+              : 'New RACK (WALL RACK 19" GERMAN 6U)'}
+          </div>
 
-              <div className="text-cyan-400 font-bold mt-2">
-                Type:{" "}
-                {rack.type === "type2"
-                  ? "Old RACK (Existing)"
-                  : 'New RACK (WALL RACK 19" GERMAN 6U)'}
-              </div>
-            </div>
+          <div style={styles.statusBox}>
+            Installation Status: {statusText}
+          </div>
 
-            <div className="flex items-center gap-3">
+          <label style={styles.urgentBox}>
+            <input
+              type="checkbox"
+              checked={Boolean((rack as any).isUrgent)}
+              onChange={(e) =>
+                updateRackField(rack.id, "isUrgent", e.target.checked)
+              }
+            />
+            🚨 งานเร่งด่วน (Urgent Work)
+          </label>
+
+          <div style={styles.sectionLabel}>Installation Steps</div>
+
+          {steps.map((step) => (
+            <div key={step.key} style={styles.stepCard}>
               <input
                 type="checkbox"
-                checked={rack.isUrgent || false}
+                checked={step.checked}
                 onChange={(e) =>
-                  updateRackField(
-                    rack.id,
-                    "isUrgent",
-                    e.target.checked
-                  )
+                  updateStepCheck(step.key, step.progressKey, e.target.checked)
                 }
+                style={styles.checkbox}
               />
 
-              <div className="text-yellow-400 font-bold">
-                URGENT
-              </div>
-            </div>
-          </div>
-
-          {/* STATUS */}
-          <div className="flex gap-4">
-            <div className="flex-1 border border-yellow-600 rounded-xl p-4 bg-[#221900]">
-              <div className="text-yellow-400 text-2xl font-bold">
-                Installation Status :{" "}
-                {installationStatus}
-              </div>
-            </div>
-
-            <select
-              value={rack.installationStatus}
-              onChange={(e) =>
-                updateRackInstallationStatus(
-                  rack.id,
-                  e.target.value
-                )
-              }
-              className="bg-black border border-cyan-500 rounded-xl px-5 text-xl"
-            >
-              <option value="not_started">
-                Not Started
-              </option>
-
-              <option value="in_progress">
-                In Progress
-              </option>
-
-              <option value="completed">
-                Completed
-              </option>
-            </select>
-          </div>
-
-          {/* INSTALLATION */}
-          <div>
-            <div className="text-cyan-400 text-2xl font-bold mb-4 border-b border-cyan-700 pb-2">
-              INSTALLATION STEPS
-            </div>
-
-            <div className="border border-cyan-800 rounded-xl overflow-hidden">
-              {steps.map((item) => (
-                <div
-                  key={item.key}
-                  className="border-b border-cyan-900 p-4 bg-black"
-                >
-                  <div className="grid grid-cols-[50px_1fr_220px_60px] gap-4 items-center">
-
-                    {/* CHECK */}
-                    <input
-                      type="checkbox"
-                      checked={item.checked}
-                      onChange={(e) =>
-                        handleCheck(
-                          item.key,
-                          e.target.checked
-                        )
-                      }
-                      className="w-6 h-6"
-                    />
-
-                    {/* TITLE */}
-                    <div>
-                      <div className="text-3xl font-bold">
-                        {item.title}
-                      </div>
-
-                      <div className="text-gray-400">
-                        {item.desc}
-                      </div>
-                    </div>
-
-                    {/* PROGRESS */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="bg-red-700 px-4 py-2 rounded-lg text-xl"
-                        onClick={() =>
-                          handleProgress(
-                            item.progressKey,
-                            item.progress - 10
-                          )
-                        }
-                      >
-                        -
-                      </button>
-
-                      <div className="bg-[#182234] w-full rounded-lg h-12 flex items-center justify-center text-2xl font-bold">
-                        {item.progress} %
-                      </div>
-
-                      <button
-                        className="bg-green-700 px-4 py-2 rounded-lg text-xl"
-                        onClick={() =>
-                          handleProgress(
-                            item.progressKey,
-                            item.progress + 10
-                          )
-                        }
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    {/* STATUS */}
-                    <div className="text-center text-3xl">
-                      {item.progress >= 100
-                        ? "✅"
-                        : item.progress > 0
-                        ? "🟡"
-                        : "⚪"}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* TOTAL */}
-          <div className="bg-[#dff0e5] rounded-2xl p-6">
-            <div className="flex justify-between">
-              <div className="text-green-700 text-5xl font-bold">
-                ความคืบหน้ารวม
+              <div style={{ flex: 1 }}>
+                <div style={styles.stepTitle}>{step.title}</div>
+                <div style={styles.stepSub}>{step.desc}</div>
               </div>
 
-              <div className="bg-yellow-300 text-yellow-900 rounded-full px-5 py-2 text-2xl font-bold">
-                {installationStatus}
+              <div style={styles.checkMark}>
+                {step.progress >= 100 ? "✓" : step.progress > 0 ? "◔" : ""}
               </div>
+
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={step.progress}
+                onChange={(e) =>
+                  updateStepProgress(
+                    step.progressKey,
+                    step.key,
+                    Number(e.target.value)
+                  )
+                }
+                style={styles.progressInput}
+              />
+              <span style={styles.percent}>%</span>
+            </div>
+          ))}
+
+          <div style={styles.progressBox}>
+            <div style={styles.progressHeader}>
+              <b>Progress การติดตั้งรวม</b>
+              <span style={styles.badge}>{statusText}</span>
             </div>
 
-            <div className="bg-gray-300 rounded-full h-8 mt-6 overflow-hidden">
+            <div style={styles.track}>
               <div
-                className="bg-orange-500 h-full transition-all duration-500"
                 style={{
+                  ...styles.fill,
                   width: `${totalProgress}%`,
                 }}
               />
             </div>
 
-            <div className="text-center text-8xl font-extrabold text-orange-600 mt-8">
-              {totalProgress}%
+            <div style={styles.progressText}>{totalProgress}%</div>
+            <div style={styles.averageText}>
+              คำนวณอัตโนมัติจากค่าเฉลี่ย step progress
             </div>
           </div>
 
-          {/* PHOTOS */}
-          <div>
-            <div className="text-cyan-400 text-2xl font-bold mb-4 border-b border-cyan-700 pb-2">
-              UPLOAD RACK PHOTOS
-            </div>
+          <div style={styles.photoSection}>
+            <div style={styles.photoHeader}>
+              <b>▧ รูปหน้างาน Rack ({photos.length}/4)</b>
 
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="mb-5"
-            />
-
-            <div className="grid grid-cols-4 gap-4">
-              {[
-                rack.photo1,
-                rack.photo2,
-                rack.photo3,
-                rack.photo4,
-              ]
-                .filter(Boolean)
-                .map((photo, index) => (
-                  <img
-                    key={index}
-                    src={photo}
-                    className="rounded-xl border border-cyan-500 h-40 w-full object-cover"
+              {photos.length < 4 && (
+                <label style={styles.uploadButton}>
+                  Upload Photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoUpload}
+                    style={{ display: "none" }}
                   />
-                ))}
+                </label>
+              )}
             </div>
+
+            {photos.length > 0 ? (
+              <div style={styles.photoGrid}>
+                {photos.map((photo, index) => (
+                  <div key={index} style={styles.photoWrap}>
+                    <button
+                      style={styles.deleteButton}
+                      onClick={() => deletePhoto(index)}
+                    >
+                      ×
+                    </button>
+
+                    <img
+                      src={photo}
+                      style={styles.photo}
+                      onClick={() => setPreviewImage(photo)}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={styles.emptyPhoto}>ยังไม่มีรูปหน้างาน</div>
+            )}
           </div>
 
-          {/* STATUS */}
-          <div className="border border-cyan-700 rounded-xl p-5">
-            <div className="text-cyan-400 text-2xl font-bold mb-4">
-              CURRENT STATUS :{" "}
-              {rack.status}
-            </div>
+          <div style={styles.statusPanel}>
+            <b>Current Status:</b> {rack.status || "offline"}
 
-            <div className="flex gap-4">
-              <Button
-                className="flex-1 bg-green-700 hover:bg-green-800 text-2xl h-16"
-                onClick={() =>
-                  updateRackStatus(
-                    rack.id,
-                    "online"
-                  )
-                }
+            <div style={styles.buttonRow}>
+              <button
+                style={styles.onlineButton}
+                onClick={() => updateRackStatus(rack.id, "online")}
               >
-                ✓ Mark as Online
-              </Button>
+                Mark as Online
+              </button>
 
-              <Button
-                className="flex-1 bg-gray-900 border border-gray-600 text-2xl h-16"
-                onClick={() =>
-                  updateRackStatus(
-                    rack.id,
-                    "idle"
-                  )
-                }
+              <button
+                style={styles.idleButton}
+                onClick={() => updateRackStatus(rack.id, "idle")}
               >
                 Mark as Idle
-              </Button>
+              </button>
             </div>
           </div>
 
-          {/* BUTTONS */}
-          <div className="grid grid-cols-2 gap-4">
-            <Button
-              className="h-16 text-2xl bg-[#111827]"
-              onClick={onEditPosition}
-            >
-              ✥ Edit Position
-            </Button>
+          <div style={styles.footer}>
+            <button style={styles.footerButton} onClick={onEditPosition}>
+              Edit Position
+            </button>
 
-            <Button
-              className="h-16 text-2xl bg-black border border-gray-500"
-              onClick={onClose}
-            >
+            <button style={styles.footerButton} onClick={onClose}>
               Close
-            </Button>
+            </button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      {previewImage && (
+        <div style={styles.previewOverlay} onClick={() => setPreviewImage(null)}>
+          <img src={previewImage} style={styles.previewImage} />
+        </div>
+      )}
+    </>
   );
+};
+
+const styles: Record<string, React.CSSProperties> = {
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.45)",
+    zIndex: 9999,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "flex-start",
+    paddingTop: 35,
+  },
+  modal: {
+    width: 760,
+    maxHeight: "90vh",
+    overflowY: "auto",
+    background: "#030303",
+    color: "#fff",
+    borderRadius: 16,
+    border: "1px solid #2563eb",
+    padding: 24,
+    boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 800,
+    marginBottom: 18,
+  },
+  typeBox: {
+    background: "#fff",
+    color: "#111",
+    padding: "12px 16px",
+    borderRadius: 12,
+    width: 330,
+    marginBottom: 16,
+  },
+  statusBox: {
+    background: "#fff7bf",
+    color: "#8a4b00",
+    padding: "14px 16px",
+    borderRadius: 12,
+    fontWeight: 800,
+    marginBottom: 16,
+  },
+  urgentBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    background: "#ffe4f4",
+    color: "#c2185b",
+    border: "2px solid #ff4db8",
+    borderRadius: 12,
+    padding: 14,
+    fontWeight: 800,
+    marginBottom: 18,
+  },
+  sectionLabel: {
+    color: "#94a3b8",
+    marginBottom: 8,
+  },
+  stepCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    border: "1px solid #334155",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    background: "#020202",
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+  },
+  stepTitle: {
+    fontSize: 18,
+    fontWeight: 800,
+  },
+  stepSub: {
+    fontSize: 13,
+    color: "#64748b",
+  },
+  checkMark: {
+    color: "#00ff66",
+    fontSize: 22,
+    width: 26,
+    textAlign: "center",
+  },
+  progressInput: {
+    width: 78,
+    padding: 8,
+    borderRadius: 8,
+    border: "1px solid #cbd5e1",
+    textAlign: "center",
+    fontWeight: 800,
+    fontSize: 18,
+  },
+  percent: {
+    color: "#94a3b8",
+    fontWeight: 800,
+  },
+  progressBox: {
+    background: "#ecfdf3",
+    color: "#111",
+    borderRadius: 12,
+    padding: 20,
+    marginTop: 22,
+  },
+  progressHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    color: "#00843d",
+    fontSize: 22,
+  },
+  badge: {
+    background: "#fff1a8",
+    color: "#b45309",
+    padding: "8px 14px",
+    borderRadius: 999,
+    fontWeight: 800,
+  },
+  track: {
+    height: 20,
+    background: "#e5e7eb",
+    borderRadius: 999,
+    marginTop: 18,
+  },
+  fill: {
+    height: 20,
+    background: "#d68a00",
+    borderRadius: 999,
+  },
+  progressText: {
+    textAlign: "center",
+    fontSize: 48,
+    fontWeight: 900,
+    color: "#d68a00",
+    marginTop: 20,
+  },
+  averageText: {
+    color: "#64748b",
+    textAlign: "center",
+    fontSize: 16,
+  },
+  photoSection: {
+    borderTop: "1px solid #1f2937",
+    marginTop: 22,
+    paddingTop: 14,
+  },
+  photoHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  uploadButton: {
+    background: "#2563eb",
+    color: "#fff",
+    padding: "9px 16px",
+    borderRadius: 8,
+    cursor: "pointer",
+  },
+  photoGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 12,
+    marginTop: 16,
+  },
+  photoWrap: {
+    position: "relative",
+  },
+  photo: {
+    width: "100%",
+    height: 180,
+    objectFit: "cover",
+    borderRadius: 12,
+    cursor: "pointer",
+  },
+  deleteButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 30,
+    height: 30,
+    borderRadius: "50%",
+    border: "none",
+    background: "#ef4444",
+    color: "#fff",
+    fontWeight: 900,
+    cursor: "pointer",
+  },
+  emptyPhoto: {
+    color: "#64748b",
+    textAlign: "center",
+    padding: 32,
+  },
+  statusPanel: {
+    background: "#eff6ff",
+    color: "#111",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 18,
+  },
+  buttonRow: {
+    display: "flex",
+    gap: 10,
+    marginTop: 12,
+  },
+  onlineButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    border: "none",
+    background: "#2563eb",
+    color: "#fff",
+    fontWeight: 800,
+  },
+  idleButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    border: "1px solid #ddd",
+    background: "#fff",
+    fontWeight: 800,
+  },
+  footer: {
+    display: "flex",
+    gap: 12,
+    marginTop: 20,
+  },
+  footerButton: {
+    flex: 1,
+    background: "#111",
+    color: "#fff",
+    border: "1px solid #334155",
+    borderRadius: 10,
+    padding: 12,
+    cursor: "pointer",
+  },
+  previewOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.95)",
+    zIndex: 10000,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    cursor: "pointer",
+  },
+  previewImage: {
+    maxWidth: "95vw",
+    maxHeight: "95vh",
+    objectFit: "contain",
+  },
 };
 
 export default RackStatusModal;
