@@ -35,6 +35,8 @@ const FloorPlanContext = createContext<any>({
   isLoading: false,
   hasDbError: false,
 
+setCameraCount: () => {},
+  
   updateCameraPosition: () => {},
   updateCameraStatus: () => {},
   updateCameraRotation: () => {},
@@ -49,7 +51,6 @@ const FloorPlanContext = createContext<any>({
   deleteFiberRoute: () => {},
 });
 
-setCameraCount: () => {},
 
 const toAppCamera = (row: any) => ({
   id: row.id,
