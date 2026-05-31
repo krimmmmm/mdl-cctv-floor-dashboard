@@ -1,5 +1,5 @@
-import React from 'react';
-import { Cabinet } from '@/lib/floorPlanData';
+import React from "react";
+import { Cabinet } from "@/lib/floorPlanData";
 
 interface CabinetMarkerProps {
   cabinet: Cabinet;
@@ -7,109 +7,264 @@ interface CabinetMarkerProps {
   onClick: () => void;
 }
 
-const CabinetMarker: React.FC<CabinetMarkerProps> = ({ cabinet, isSelected, onClick }) => {
-  const isOnline = cabinet.status === 'online';
-  const isInProgress = cabinet.installationStatus === 'in_progress';
-  const size = 23;
+const CabinetMarker: React.FC<CabinetMarkerProps> = ({
+  cabinet,
+  isSelected,
+  onClick,
+}) => {
   const x = cabinet.x;
   const y = cabinet.y;
 
-  const borderColor = '#F59E0B';
-  const borderWidth = isSelected ? 3 : 2;
+  const isOnline = cabinet.status === "online";
+  const isInProgress =
+    cabinet.installationStatus === "in_progress";
+  const isCompleted =
+    cabinet.installationStatus === "completed";
+  const isUrgent =
+    Boolean((cabinet as any).isUrgent);
 
-  const renderMarker = () => {
-    if (cabinet.installCabinet) {
-      // CCTV OUTDOOR STEEL CABINET representation
-      return (
-        <g>
-          {/* Cabinet body */}
-          <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="none" stroke={borderColor} strokeWidth={borderWidth} />
-
-          {/* Cabinet door */}
-          <rect x={x - size / 2 + 3} y={y - size / 2 + 3} width={size - 6} height={size - 6} fill="none" stroke={borderColor} strokeWidth={1} />
-
-          {/* Door handle */}
-          <circle cx={x + size / 2 - 8} cy={y} r={3} fill="none" stroke={borderColor} strokeWidth={1} />
-
-          {/* Ventilation slots */}
-          {Array.from({ length: 3 }).map((_, i) => (
-            <line key={i} x1={x - size / 2 + 10} y1={y - size / 2 + 15 + i * 15} x2={x - size / 2 + 20} y2={y - size / 2 + 15 + i * 15} stroke={borderColor} strokeWidth={1} />
-          ))}
-
-          {/* Mounting feet */}
-          <line x1={x - size / 2 + 5} y1={y + size / 2} x2={x - size / 2 + 10} y2={y + size / 2 + 5} stroke={borderColor} strokeWidth={1} />
-          <line x1={x + size / 2 - 5} y1={y + size / 2} x2={x + size / 2 - 10} y2={y + size / 2 + 5} stroke={borderColor} strokeWidth={1} />
-        </g>
-      );
-    } else {
-      // Default cabinet indicator (just square)
-      return (
-        <rect x={x - size / 2} y={y - size / 2} width={size} height={size} fill="none" stroke={borderColor} strokeWidth={borderWidth} />
-      );
-    }
-  };
+  const cabinetColor = "#f97316";
+  const w = 28;
+  const h = 38;
 
   return (
-    <g onClick={onClick} style={{ cursor: 'pointer' }}>
-      {/* Invisible click area - much larger for easy clicking */}
-      <rect x={x - size / 2 - 20} y={y - size / 2 - 20} width={size + 40} height={size + 40} fill="none" stroke="none" pointerEvents="all" />
+    <g
+      onClick={onClick}
+      style={{ cursor: "pointer" }}
+    >
+      {/* Click Area */}
+      <rect
+        x={x - 28}
+        y={y - 34}
+        width={56}
+        height={76}
+        fill="transparent"
+        pointerEvents="all"
+      />
 
-      {/* Online pulse animation */}
-      {isOnline && (
-        <>
-          <style>{`
-            @keyframes pulse-cabinet {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0.3; }
-            }
-            .pulse-cabinet-${cabinet.id} {
-              animation: pulse-cabinet 1.5s infinite;
-            }
-          `}</style>
-          <rect x={x - size / 2 - 8} y={y - size / 2 - 8} width={size + 16} height={size + 16} fill="none" stroke="#22C55E" strokeWidth={2} className={`pulse-cabinet-${cabinet.id}`} />
-        </>
-      )}
-
-      {/* In Progress yellow blinking border */}
+      {/* In Progress */}
       {isInProgress && (
-        <>
-          <style>{`
-            @keyframes blink-yellow-cabinet {
-              0%, 100% { opacity: 1; }
-              50% { opacity: 0; }
-            }
-            .blink-cabinet-${cabinet.id} {
-              animation: blink-yellow-cabinet 1s infinite;
-            }
-          `}</style>
-          <rect
-            x={x - size / 2 - 6}
-            y={y - size / 2 - 6}
-            width={size + 12}
-            height={size + 12}
-            fill="none"
-            stroke="#EAB308"
-            strokeWidth={2.5}
-            className={`blink-cabinet-${cabinet.id}`}
-          />
-        </>
+        <rect
+          x={x - w / 2 - 4}
+          y={y - h / 2 - 4}
+          width={w + 8}
+          height={h + 8}
+          rx={6}
+          fill="none"
+          stroke="#eab308"
+          strokeWidth={3}
+          className="animate-pulse"
+        />
       )}
 
-      {/* Main marker */}
-      {renderMarker()}
+      {/* Completed */}
+      {isCompleted && (
+        <rect
+          x={x - w / 2 - 4}
+          y={y - h / 2 - 4}
+          width={w + 8}
+          height={h + 8}
+          rx={6}
+          fill="none"
+          stroke="#22c55e"
+          strokeWidth={3}
+          className="animate-pulse"
+        />
+      )}
 
-      {/* Selection highlight */}
+      {/* Urgent */}
+      {isUrgent && (
+        <circle
+          cx={x}
+          cy={y}
+          r={30}
+          fill="none"
+          stroke="#ff4db8"
+          strokeWidth={4}
+          className="animate-pulse"
+        />
+      )}
+
+      {/* Online */}
+      {isOnline && (
+        <circle
+          cx={x}
+          cy={y}
+          r={26}
+          fill="none"
+          stroke="#22c55e"
+          strokeWidth={2}
+          className="animate-pulse"
+        />
+      )}
+
+      {/* Cabinet Icon */}
+      <g
+        transform={`translate(${x - w / 2}, ${
+          y - h / 2
+        })`}
+      >
+        {/* Top yellow cover */}
+        <path
+          d={`
+            M 0 2
+            L 4 -4
+            L ${w - 4} -4
+            L ${w} 2
+            L ${w} 7
+            L 0 7
+            Z
+          `}
+          fill="#fbbf24"
+          stroke="#f59e0b"
+          strokeWidth={1.5}
+        />
+
+        {/* Cabinet body */}
+        <rect
+          x={2}
+          y={7}
+          width={w - 4}
+          height={h - 7}
+          rx={2}
+          fill="#d1d5db"
+          stroke="#4b5563"
+          strokeWidth={1.6}
+        />
+
+        {/* Inner door */}
+        <rect
+          x={6}
+          y={12}
+          width={w - 12}
+          height={h - 15}
+          rx={2}
+          fill="#cfd4d7"
+          stroke="#6b7280"
+          strokeWidth={1}
+        />
+
+        {/* Display panel */}
+        <rect
+          x={7}
+          y={12}
+          width={w - 14}
+          height={7}
+          rx={1.5}
+          fill="#111827"
+          stroke="#374151"
+          strokeWidth={1}
+        />
+
+        {/* Vent dots */}
+        {[0, 1, 2].map((row) =>
+          [0, 1, 2].map((col) => (
+            <circle
+              key={`${row}-${col}`}
+              cx={11 + col * 3}
+              cy={14 + row * 1.6}
+              r={0.65}
+              fill="#e5e7eb"
+            />
+          ))
+        )}
+
+        {/* Status lights */}
+        <circle
+          cx={w - 8}
+          cy={14}
+          r={1.5}
+          fill="#ef4444"
+        />
+        <circle
+          cx={w - 8}
+          cy={18}
+          r={1.5}
+          fill="#22c55e"
+        />
+
+        {/* Warning triangle */}
+        <path
+          d={`
+            M ${w / 2} 22
+            L ${w / 2 - 5} 31
+            L ${w / 2 + 5} 31
+            Z
+          `}
+          fill="#facc15"
+          stroke="#92400e"
+          strokeWidth={1}
+        />
+
+        <text
+          x={w / 2}
+          y={30}
+          textAnchor="middle"
+          fontSize="8"
+          fill="#111827"
+          fontWeight="900"
+        >
+          !
+        </text>
+
+        {/* Door handle */}
+        <rect
+          x={6}
+          y={25}
+          width={2}
+          height={8}
+          rx={1}
+          fill="#9ca3af"
+        />
+
+        {/* Base */}
+        <rect
+          x={3}
+          y={h - 2}
+          width={w - 6}
+          height={3}
+          fill="#4b5563"
+        />
+      </g>
+
+      {/* Selected */}
       {isSelected && (
-        <rect x={x - size / 2 - 8} y={y - size / 2 - 8} width={size + 16} height={size + 16} fill="none" stroke="#0066CC" strokeWidth={2} strokeDasharray="4,4" />
+        <rect
+          x={x - w / 2 - 6}
+          y={y - h / 2 - 8}
+          width={w + 12}
+          height={h + 14}
+          rx={6}
+          fill="none"
+          stroke="#0066cc"
+          strokeWidth={2}
+          strokeDasharray="4,4"
+        />
       )}
 
-      {/* Label - above the box */}
-      <text x={x} y={y - size / 2 - 6} textAnchor="middle" fontSize="11" fill="#333333" fontWeight="600">
-        {cabinet.name}
+      {/* Label */}
+      <text
+        x={x}
+        y={y + 34}
+        textAnchor="middle"
+        fontSize="12"
+        fill={cabinetColor}
+        fontWeight="800"
+      >
+        CAB
       </text>
 
-      {/* Tooltip */}
-      <title>{cabinet.name}\nStatus: {cabinet.status}\nInstallation: {cabinet.installationStatus === 'completed' ? 'Completed' : cabinet.installationStatus === 'in_progress' ? 'In Progress' : 'Not Started'}</title>
+      <title>
+        {cabinet.name}
+        {"\n"}Status: {cabinet.status}
+        {"\n"}Installation:{" "}
+        {cabinet.installationStatus === "completed"
+          ? "Completed"
+          : cabinet.installationStatus ===
+            "in_progress"
+          ? "In Progress"
+          : "Not Started"}
+      </title>
     </g>
   );
 };
