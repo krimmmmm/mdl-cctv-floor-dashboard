@@ -28,8 +28,8 @@ const RackMarker: React.FC<RackMarkerProps> = ({
     rack.type === "old";
 
   const rackColor = isType2
-    ? "#2563eb" // Type2 Old RACK = Blue
-    : "#16a34a"; // Type1 New RACK = Green
+    ? "#2563eb"
+    : "#16a34a";
 
   const label = isType2 ? "R2" : "R1";
 
@@ -50,13 +50,6 @@ const RackMarker: React.FC<RackMarkerProps> = ({
         pointerEvents="all"
       />
 
-      <style>{`
-        @keyframes rack-blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.25; }
-        }
-      `}</style>
-
       {isInProgress && (
         <rect
           x={x - 20}
@@ -67,10 +60,7 @@ const RackMarker: React.FC<RackMarkerProps> = ({
           fill="none"
           stroke="#eab308"
           strokeWidth={4}
-          style={{
-            animation:
-              "rack-blink 1s infinite",
-          }}
+          className="animate-pulse"
         />
       )}
 
@@ -84,10 +74,7 @@ const RackMarker: React.FC<RackMarkerProps> = ({
           fill="none"
           stroke="#22c55e"
           strokeWidth={4}
-          style={{
-            animation:
-              "rack-blink 1s infinite",
-          }}
+          className="animate-pulse"
         />
       )}
 
@@ -99,10 +86,7 @@ const RackMarker: React.FC<RackMarkerProps> = ({
           fill="none"
           stroke="#ff4db8"
           strokeWidth={4}
-          style={{
-            animation:
-              "rack-blink 0.8s infinite",
-          }}
+          className="animate-pulse"
         />
       )}
 
@@ -114,14 +98,10 @@ const RackMarker: React.FC<RackMarkerProps> = ({
           fill="none"
           stroke="#22c55e"
           strokeWidth={2}
-          style={{
-            animation:
-              "rack-blink 1.5s infinite",
-          }}
+          className="animate-pulse"
         />
       )}
 
-      {/* Rack Icon Body */}
       <g
         transform={`translate(${x - w / 2}, ${
           y - h / 2
