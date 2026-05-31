@@ -25,6 +25,17 @@ const defaultCamera = {
   photo4: "",
 };
 
+const defaultRack = {
+  id: "rack-01",
+  name: "Rack 01",
+  x: 700,
+  y: 400,
+  type: "type1",
+  status: "offline",
+  installationStatus: "not_started",
+  isUrgent: false,
+};
+
 const FloorPlanContext = createContext<any>({
   cameras: [],
   racks: [],
@@ -35,6 +46,7 @@ const FloorPlanContext = createContext<any>({
   hasDbError: false,
 
   setCameraCountByType: () => {},
+  setRackCountByType: () => {},
 
   updateCameraPosition: () => {},
   updateCameraStatus: () => {},
@@ -99,8 +111,32 @@ const toDbCamera = (camera: any) => ({
   updated_at: new Date().toISOString(),
 });
 
+const toAppRack = (row: any) => ({
+  id: row.id,
+  name: row.name,
+  x: Number(row.x || 0),
+  y: Number(row.y || 0),
+  type: row.type || "type1",
+  status: row.status || "offline",
+  installationStatus: row.installation_status || "not_started",
+  isUrgent: Boolean(row.is_urgent),
+});
+
+const toDbRack = (rack: any) => ({
+  id: rack.id,
+  name: rack.name,
+  x: rack.x,
+  y: rack.y,
+  type: rack.type,
+  status: rack.status,
+  installation_status: rack.installationStatus || "not_started",
+  is_urgent: rack.isUrgent || false,
+  updated_at: new Date().toISOString(),
+});
+
 export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) => {
   const [cameras, setCameras] = useState<any[]>([defaultCamera]);
+  const [racks, setRacks] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasDbError, setHasDbError] = useState(false);
 
@@ -119,29 +155,57 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     return true;
   };
 
+  const saveRack = async (rack: any) => {
+    const { error } = await supabase
+      .from("racks")
+      .upsert(toDbRack(rack), { onConflict: "id" });
+
+    if (error) {
+      console.error("Save rack error:", error);
+      setHasDbError(true);
+      alert(error.message);
+      return false;
+    }
+
+    return true;
+  };
+
   useEffect(() => {
-    const loadCameras = async () => {
+    const loadData = async () => {
       setIsLoading(true);
 
-      const { data, error } = await supabase.from("cameras").select("*");
+      const { data: cameraData, error: cameraError } = await supabase
+        .from("cameras")
+        .select("*");
 
-      if (error) {
-        console.error("Load cameras error:", error);
+      if (cameraError) {
+        console.error("Load cameras error:", cameraError);
         setHasDbError(true);
         setCameras([defaultCamera]);
-      } else if (!data || data.length === 0) {
+      } else if (!cameraData || cameraData.length === 0) {
         setCameras([defaultCamera]);
         await saveCamera(defaultCamera);
       } else {
-        setCameras(data.map(toAppCamera));
+        setCameras(cameraData.map(toAppCamera));
+      }
+
+      const { data: rackData, error: rackError } = await supabase
+        .from("racks")
+        .select("*");
+
+      if (rackError) {
+        console.error("Load racks error:", rackError);
+        setRacks([]);
+      } else {
+        setRacks((rackData || []).map(toAppRack));
       }
 
       setIsLoading(false);
     };
 
-    loadCameras();
+    loadData();
 
-    const channel = supabase
+    const cameraChannel = supabase
       .channel("cameras-sync")
       .on(
         "postgres_changes",
@@ -161,9 +225,7 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
           setCameras((prev) => {
             const exists = prev.some((cam) => cam.id === updatedCamera.id);
 
-            if (!exists) {
-              return [...prev, updatedCamera];
-            }
+            if (!exists) return [...prev, updatedCamera];
 
             return prev.map((cam) =>
               cam.id === updatedCamera.id ? updatedCamera : cam
@@ -173,8 +235,39 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
       )
       .subscribe();
 
+    const rackChannel = supabase
+      .channel("racks-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "racks" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const deletedId = payload.old?.id;
+            setRacks((prev) => prev.filter((rack) => rack.id !== deletedId));
+            return;
+          }
+
+          const row = payload.new;
+          if (!row) return;
+
+          const updatedRack = toAppRack(row);
+
+          setRacks((prev) => {
+            const exists = prev.some((rack) => rack.id === updatedRack.id);
+
+            if (!exists) return [...prev, updatedRack];
+
+            return prev.map((rack) =>
+              rack.id === updatedRack.id ? updatedRack : rack
+            );
+          });
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(cameraChannel);
+      supabase.removeChannel(rackChannel);
     };
   }, []);
 
@@ -189,6 +282,22 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
         };
 
         saveCamera(updated);
+        return updated;
+      })
+    );
+  };
+
+  const updateRack = (id: string, changes: any) => {
+    setRacks((prev) =>
+      prev.map((rack) => {
+        if (rack.id !== id) return rack;
+
+        const updated = {
+          ...rack,
+          ...changes,
+        };
+
+        saveRack(updated);
         return updated;
       })
     );
@@ -226,6 +335,10 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     updateCamera(id, { installationStatus });
   };
 
+  const updateRackPosition = (id: string, x: number, y: number) => {
+    updateRack(id, { x, y });
+  };
+
   const setCameraCountByType = async (
     cameraType: string,
     targetCount: number
@@ -251,8 +364,14 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
           name:
             (cameraType === "type1" ? "Camera T1 " : "Camera T2 ") +
             String(runningNumber).padStart(2, "0"),
-          x: cameraType === "type1" ? 420 + runningNumber * 20 : 560 + runningNumber * 20,
-          y: cameraType === "type1" ? 330 + runningNumber * 20 : 520 + runningNumber * 20,
+          x:
+            cameraType === "type1"
+              ? 420 + runningNumber * 20
+              : 560 + runningNumber * 20,
+          y:
+            cameraType === "type1"
+              ? 330 + runningNumber * 20
+              : 520 + runningNumber * 20,
         };
 
         const success = await saveCamera(newCamera);
@@ -291,11 +410,82 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     }
   };
 
+  const setRackCountByType = async (
+    rackType: string,
+    targetCount: number
+  ) => {
+    const safeTarget = Math.max(0, targetCount);
+
+    const racksByType = racks
+      .filter((rack) => rack.type === rackType)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const currentCount = racksByType.length;
+
+    if (safeTarget > currentCount) {
+      const addAmount = safeTarget - currentCount;
+
+      for (let i = 1; i <= addAmount; i++) {
+        const runningNumber = currentCount + i;
+
+        const newRack = {
+          ...defaultRack,
+          id: `${rackType}-${Date.now()}-${i}`,
+          type: rackType,
+          name:
+            (rackType === "type1" ? "Rack T1 " : "Rack T2 ") +
+            String(runningNumber).padStart(2, "0"),
+          x:
+            rackType === "type1"
+              ? 300 + runningNumber * 25
+              : 700 + runningNumber * 25,
+          y:
+            rackType === "type1"
+              ? 250 + runningNumber * 25
+              : 500 + runningNumber * 25,
+        };
+
+        const success = await saveRack(newRack);
+
+        if (success) {
+          setRacks((prev) => {
+            const exists = prev.some((rack) => rack.id === newRack.id);
+            if (exists) return prev;
+            return [...prev, newRack];
+          });
+        }
+      }
+    }
+
+    if (safeTarget < currentCount) {
+      const deleteAmount = currentCount - safeTarget;
+
+      const racksToDelete = [...racksByType]
+        .sort((a, b) => b.name.localeCompare(a.name))
+        .slice(0, deleteAmount);
+
+      for (const rack of racksToDelete) {
+        const { error } = await supabase
+          .from("racks")
+          .delete()
+          .eq("id", rack.id);
+
+        if (error) {
+          console.error("Delete rack error:", error);
+          alert(error.message);
+          continue;
+        }
+
+        setRacks((prev) => prev.filter((item) => item.id !== rack.id));
+      }
+    }
+  };
+
   return (
     <FloorPlanContext.Provider
       value={{
         cameras,
-        racks: [],
+        racks,
         cabinets: [],
         fiberRoutes: [],
         activityLogs: [],
@@ -310,8 +500,10 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
         updateCameraInstallationStatus,
 
         setCameraCountByType,
+        setRackCountByType,
 
-        updateRackPosition: () => {},
+        updateRackPosition,
+
         updateCabinetPosition: () => {},
         addActivityLog: () => {},
         addFiberRoute: () => {},
