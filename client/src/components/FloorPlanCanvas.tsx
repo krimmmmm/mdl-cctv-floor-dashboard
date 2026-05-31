@@ -66,18 +66,32 @@ const FloorPlanCanvas: React.FC = () => {
 
   const screenToSvg = useCallback(
     (clientX: number, clientY: number) => {
-      if (!svgRef.current) return { x: 0, y: 0 };
+      const svg = svgRef.current;
+      if (!svg) return { x: 0, y: 0 };
 
-      const rect = svgRef.current.getBoundingClientRect();
-      const x = (clientX - rect.left) / zoom - pan.x / zoom;
-      const y = (clientY - rect.top) / zoom - pan.y / zoom;
+      const ctm = svg.getScreenCTM();
+
+      if (ctm) {
+        const point = svg.createSVGPoint();
+        point.x = clientX;
+        point.y = clientY;
+
+        const svgPoint = point.matrixTransform(ctm.inverse());
+
+        return {
+          x: Math.max(0, Math.min(1400, svgPoint.x)),
+          y: Math.max(0, Math.min(900, svgPoint.y)),
+        };
+      }
+
+      const rect = svg.getBoundingClientRect();
 
       return {
-        x: Math.max(0, Math.min(1400, x)),
-        y: Math.max(0, Math.min(900, y)),
+        x: Math.max(0, Math.min(1400, (clientX - rect.left) / zoom)),
+        y: Math.max(0, Math.min(900, (clientY - rect.top) / zoom)),
       };
     },
-    [zoom, pan]
+    [zoom]
   );
 
   const handleWheel = (e: React.WheelEvent) => {
@@ -275,6 +289,7 @@ const FloorPlanCanvas: React.FC = () => {
 
   const startMovingEquipment = () => {
     if (!selectedItem) return;
+    setIsDragging(false);
     setIsMovingEquipment(true);
     setDraggedItem(selectedItem);
 
