@@ -14,11 +14,9 @@ const defaultCamera = {
   domeCameraInstalled: false,
   rotation: 0,
   isUrgent: false,
-
   wiringUTPProgress: 0,
   wallMountingProgress: 0,
   domeCameraProgress: 0,
-
   photo1: "",
   photo2: "",
   photo3: "",
@@ -34,6 +32,20 @@ const defaultRack = {
   status: "offline",
   installationStatus: "not_started",
   isUrgent: false,
+  acPower: false,
+  utp: false,
+  poeSwitch: false,
+  fiberOptic: false,
+  ready: false,
+  acPowerProgress: 0,
+  utpProgress: 0,
+  poeSwitchProgress: 0,
+  fiberOpticProgress: 0,
+  readyProgress: 0,
+  photo1: "",
+  photo2: "",
+  photo3: "",
+  photo4: "",
 };
 
 const FloorPlanContext = createContext<any>({
@@ -56,6 +68,11 @@ const FloorPlanContext = createContext<any>({
   updateCameraInstallationStatus: () => {},
 
   updateRackPosition: () => {},
+  updateRackStatus: () => {},
+  updateRackField: () => {},
+  updateRackInstallationStatus: () => {},
+  updateRackPhotos: () => {},
+
   updateCabinetPosition: () => {},
   addActivityLog: () => {},
   addFiberRoute: () => {},
@@ -75,11 +92,9 @@ const toAppCamera = (row: any) => ({
   domeCameraInstalled: Boolean(row.install_camera),
   rotation: Number(row.rotation || 0),
   isUrgent: Boolean(row.is_urgent),
-
   wiringUTPProgress: Number(row.wiring_utp_progress || 0),
   wallMountingProgress: Number(row.wall_mounting_progress || 0),
   domeCameraProgress: Number(row.dome_camera_progress || 0),
-
   photo1: row.photo1 || "",
   photo2: row.photo2 || "",
   photo3: row.photo3 || "",
@@ -99,11 +114,9 @@ const toDbCamera = (camera: any) => ({
   install_camera: camera.domeCameraInstalled,
   rotation: camera.rotation || 0,
   is_urgent: camera.isUrgent || false,
-
   wiring_utp_progress: camera.wiringUTPProgress || 0,
   wall_mounting_progress: camera.wallMountingProgress || 0,
   dome_camera_progress: camera.domeCameraProgress || 0,
-
   photo1: camera.photo1 || "",
   photo2: camera.photo2 || "",
   photo3: camera.photo3 || "",
@@ -120,6 +133,23 @@ const toAppRack = (row: any) => ({
   status: row.status || "offline",
   installationStatus: row.installation_status || "not_started",
   isUrgent: Boolean(row.is_urgent),
+
+  acPower: Boolean(row.ac_power),
+  utp: Boolean(row.utp),
+  poeSwitch: Boolean(row.poe_switch),
+  fiberOptic: Boolean(row.fiber_optic),
+  ready: Boolean(row.ready),
+
+  acPowerProgress: Number(row.ac_power_progress || 0),
+  utpProgress: Number(row.utp_progress || 0),
+  poeSwitchProgress: Number(row.poe_switch_progress || 0),
+  fiberOpticProgress: Number(row.fiber_optic_progress || 0),
+  readyProgress: Number(row.ready_progress || 0),
+
+  photo1: row.photo1 || "",
+  photo2: row.photo2 || "",
+  photo3: row.photo3 || "",
+  photo4: row.photo4 || "",
 });
 
 const toDbRack = (rack: any) => ({
@@ -131,6 +161,23 @@ const toDbRack = (rack: any) => ({
   status: rack.status,
   installation_status: rack.installationStatus || "not_started",
   is_urgent: rack.isUrgent || false,
+
+  ac_power: rack.acPower || false,
+  utp: rack.utp || false,
+  poe_switch: rack.poeSwitch || false,
+  fiber_optic: rack.fiberOptic || false,
+  ready: rack.ready || false,
+
+  ac_power_progress: rack.acPowerProgress || 0,
+  utp_progress: rack.utpProgress || 0,
+  poe_switch_progress: rack.poeSwitchProgress || 0,
+  fiber_optic_progress: rack.fiberOpticProgress || 0,
+  ready_progress: rack.readyProgress || 0,
+
+  photo1: rack.photo1 || "",
+  photo2: rack.photo2 || "",
+  photo3: rack.photo3 || "",
+  photo4: rack.photo4 || "",
   updated_at: new Date().toISOString(),
 });
 
@@ -224,7 +271,6 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
 
           setCameras((prev) => {
             const exists = prev.some((cam) => cam.id === updatedCamera.id);
-
             if (!exists) return [...prev, updatedCamera];
 
             return prev.map((cam) =>
@@ -254,7 +300,6 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
 
           setRacks((prev) => {
             const exists = prev.some((rack) => rack.id === updatedRack.id);
-
             if (!exists) return [...prev, updatedRack];
 
             return prev.map((rack) =>
@@ -275,12 +320,7 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     setCameras((prev) =>
       prev.map((camera) => {
         if (camera.id !== id) return camera;
-
-        const updated = {
-          ...camera,
-          ...changes,
-        };
-
+        const updated = { ...camera, ...changes };
         saveCamera(updated);
         return updated;
       })
@@ -291,12 +331,7 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     setRacks((prev) =>
       prev.map((rack) => {
         if (rack.id !== id) return rack;
-
-        const updated = {
-          ...rack,
-          ...changes,
-        };
-
+        const updated = { ...rack, ...changes };
         saveRack(updated);
         return updated;
       })
@@ -337,6 +372,30 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
 
   const updateRackPosition = (id: string, x: number, y: number) => {
     updateRack(id, { x, y });
+  };
+
+  const updateRackStatus = (id: string, status: string) => {
+    updateRack(id, { status });
+  };
+
+  const updateRackField = (id: string, field: string, value: any) => {
+    updateRack(id, { [field]: value });
+  };
+
+  const updateRackInstallationStatus = (
+    id: string,
+    installationStatus: string
+  ) => {
+    updateRack(id, { installationStatus });
+  };
+
+  const updateRackPhotos = (id: string, photos: string[]) => {
+    updateRack(id, {
+      photo1: photos[0] || "",
+      photo2: photos[1] || "",
+      photo3: photos[2] || "",
+      photo4: photos[3] || "",
+    });
   };
 
   const setCameraCountByType = async (
@@ -410,10 +469,7 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     }
   };
 
-  const setRackCountByType = async (
-    rackType: string,
-    targetCount: number
-  ) => {
+  const setRackCountByType = async (rackType: string, targetCount: number) => {
     const safeTarget = Math.max(0, targetCount);
 
     const racksByType = racks
@@ -435,14 +491,8 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
           name:
             (rackType === "type1" ? "Rack T1 " : "Rack T2 ") +
             String(runningNumber).padStart(2, "0"),
-          x:
-            rackType === "type1"
-              ? 300 + runningNumber * 25
-              : 700 + runningNumber * 25,
-          y:
-            rackType === "type1"
-              ? 250 + runningNumber * 25
-              : 500 + runningNumber * 25,
+          x: rackType === "type1" ? 300 + runningNumber * 25 : 700 + runningNumber * 25,
+          y: rackType === "type1" ? 250 + runningNumber * 25 : 500 + runningNumber * 25,
         };
 
         const success = await saveRack(newRack);
@@ -503,6 +553,10 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
         setRackCountByType,
 
         updateRackPosition,
+        updateRackStatus,
+        updateRackField,
+        updateRackInstallationStatus,
+        updateRackPhotos,
 
         updateCabinetPosition: () => {},
         addActivityLog: () => {},
