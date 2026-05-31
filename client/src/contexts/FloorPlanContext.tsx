@@ -129,6 +129,9 @@ const toAppCamera = (row: any) => ({
   wiringUTPProgress: Number(row.wiring_utp_progress || 0),
   wallMountingProgress: Number(row.wall_mounting_progress || 0),
   domeCameraProgress: Number(row.dome_camera_progress || 0),
+  onlineProgress: Number(
+  row.online_progress || 0
+),
   photo1: row.photo1 || "",
   photo2: row.photo2 || "",
   photo3: row.photo3 || "",
@@ -151,6 +154,8 @@ const toDbCamera = (camera: any) => ({
   wiring_utp_progress: camera.wiringUTPProgress || 0,
   wall_mounting_progress: camera.wallMountingProgress || 0,
   dome_camera_progress: camera.domeCameraProgress || 0,
+  online_progress:
+  camera.onlineProgress || 0,
   photo1: camera.photo1 || "",
   photo2: camera.photo2 || "",
   photo3: camera.photo3 || "",
