@@ -109,6 +109,7 @@ const FloorPlanContext = createContext<any>({
 
   addActivityLog: () => {},
   addFiberRoute: () => {},
+  updateFiberRoute: () => {},
   deleteFiberRoute: () => {},
 });
 
@@ -166,19 +167,16 @@ const toAppRack = (row: any) => ({
   status: row.status || "offline",
   installationStatus: row.installation_status || "not_started",
   isUrgent: Boolean(row.is_urgent),
-
   acPower: Boolean(row.ac_power),
   utp: Boolean(row.utp),
   poeSwitch: Boolean(row.poe_switch),
   fiberOptic: Boolean(row.fiber_optic),
   ready: Boolean(row.ready),
-
   acPowerProgress: Number(row.ac_power_progress || 0),
   utpProgress: Number(row.utp_progress || 0),
   poeSwitchProgress: Number(row.poe_switch_progress || 0),
   fiberOpticProgress: Number(row.fiber_optic_progress || 0),
   readyProgress: Number(row.ready_progress || 0),
-
   photo1: row.photo1 || "",
   photo2: row.photo2 || "",
   photo3: row.photo3 || "",
@@ -194,19 +192,16 @@ const toDbRack = (rack: any) => ({
   status: rack.status,
   installation_status: rack.installationStatus || "not_started",
   is_urgent: rack.isUrgent || false,
-
   ac_power: rack.acPower || false,
   utp: rack.utp || false,
   poe_switch: rack.poeSwitch || false,
   fiber_optic: rack.fiberOptic || false,
   ready: rack.ready || false,
-
   ac_power_progress: rack.acPowerProgress || 0,
   utp_progress: rack.utpProgress || 0,
   poe_switch_progress: rack.poeSwitchProgress || 0,
   fiber_optic_progress: rack.fiberOpticProgress || 0,
   ready_progress: rack.readyProgress || 0,
-
   photo1: rack.photo1 || "",
   photo2: rack.photo2 || "",
   photo3: rack.photo3 || "",
@@ -223,21 +218,18 @@ const toAppCabinet = (row: any) => ({
   status: row.status || "offline",
   installationStatus: row.installation_status || "not_started",
   isUrgent: Boolean(row.is_urgent),
-
   installCabinet: Boolean(row.install_cabinet),
   acPower: Boolean(row.ac_power),
   utp: Boolean(row.utp),
   poeSwitch: Boolean(row.poe_switch),
   fiberOptic: Boolean(row.fiber_optic),
   ready: Boolean(row.ready),
-
   installCabinetProgress: Number(row.install_cabinet_progress || 0),
   acPowerProgress: Number(row.ac_power_progress || 0),
   utpProgress: Number(row.utp_progress || 0),
   poeSwitchProgress: Number(row.poe_switch_progress || 0),
   fiberOpticProgress: Number(row.fiber_optic_progress || 0),
   readyProgress: Number(row.ready_progress || 0),
-
   photo1: row.photo1 || "",
   photo2: row.photo2 || "",
   photo3: row.photo3 || "",
@@ -253,21 +245,18 @@ const toDbCabinet = (cabinet: any) => ({
   status: cabinet.status,
   installation_status: cabinet.installationStatus || "not_started",
   is_urgent: cabinet.isUrgent || false,
-
   install_cabinet: cabinet.installCabinet || false,
   ac_power: cabinet.acPower || false,
   utp: cabinet.utp || false,
   poe_switch: cabinet.poeSwitch || false,
   fiber_optic: cabinet.fiberOptic || false,
   ready: cabinet.ready || false,
-
   install_cabinet_progress: cabinet.installCabinetProgress || 0,
   ac_power_progress: cabinet.acPowerProgress || 0,
   utp_progress: cabinet.utpProgress || 0,
   poe_switch_progress: cabinet.poeSwitchProgress || 0,
   fiber_optic_progress: cabinet.fiberOpticProgress || 0,
   ready_progress: cabinet.readyProgress || 0,
-
   photo1: cabinet.photo1 || "",
   photo2: cabinet.photo2 || "",
   photo3: cabinet.photo3 || "",
@@ -282,6 +271,27 @@ const toAppFiberRoute = (row: any) => ({
   status: row.status || "active",
   color: row.color || "#ef4444",
   label: row.label || row.name || "Fiber Route",
+  progress: Number(row.progress || 0),
+  progressDirection: row.progress_direction || "start",
+  photo1: row.photo1 || "",
+  photo2: row.photo2 || "",
+  photo3: row.photo3 || "",
+  photo4: row.photo4 || "",
+});
+
+const toDbFiberRoute = (route: any) => ({
+  id: route.id,
+  points: route.points || [],
+  color: route.color || "#ef4444",
+  label: route.label || route.name || "Fiber Route",
+  status: route.status || "active",
+  progress: route.progress || 0,
+  progress_direction: route.progressDirection || "start",
+  photo1: route.photo1 || "",
+  photo2: route.photo2 || "",
+  photo3: route.photo3 || "",
+  photo4: route.photo4 || "",
+  updated_at: new Date().toISOString(),
 });
 
 export const FloorPlanProvider = ({
@@ -498,9 +508,11 @@ export const FloorPlanProvider = ({
         (payload) => {
           if (payload.eventType === "DELETE") {
             const deletedId = payload.old?.id;
+
             setFiberRoutes((prev) =>
               prev.filter((route) => route.id !== deletedId)
             );
+
             return;
           }
 
@@ -660,20 +672,49 @@ export const FloorPlanProvider = ({
       color: "#ef4444",
       status: route.status || "active",
       points: route.points || [],
+      progress: route.progress || 0,
+      progressDirection: route.progressDirection || "start",
+      photo1: route.photo1 || "",
+      photo2: route.photo2 || "",
+      photo3: route.photo3 || "",
+      photo4: route.photo4 || "",
     };
 
     setFiberRoutes((prev) => [...prev, newRoute]);
 
-    const { error } = await supabase.from("fiber_routes").insert({
-      id: newRoute.id,
-      points: newRoute.points,
-      color: "#ef4444",
-      label: newRoute.label,
-      status: newRoute.status,
-    });
+    const { error } = await supabase.from("fiber_routes").insert(
+      toDbFiberRoute(newRoute)
+    );
 
     if (error) {
       console.error("Save fiber route error:", error);
+      alert(error.message);
+    }
+  };
+
+  const updateFiberRoute = async (id: string, changes: any) => {
+    const dbChanges: any = { ...changes };
+
+    if ("progressDirection" in dbChanges) {
+      dbChanges.progress_direction = dbChanges.progressDirection;
+      delete dbChanges.progressDirection;
+    }
+
+    dbChanges.updated_at = new Date().toISOString();
+
+    setFiberRoutes((prev) =>
+      prev.map((route) =>
+        route.id === id ? { ...route, ...changes } : route
+      )
+    );
+
+    const { error } = await supabase
+      .from("fiber_routes")
+      .update(dbChanges)
+      .eq("id", id);
+
+    if (error) {
+      console.error("Update fiber route error:", error);
       alert(error.message);
     }
   };
@@ -880,9 +921,7 @@ export const FloorPlanProvider = ({
           continue;
         }
 
-        setCabinets((prev) =>
-          prev.filter((item) => item.id !== cabinet.id)
-        );
+        setCabinets((prev) => prev.filter((item) => item.id !== cabinet.id));
       }
     }
   };
@@ -923,6 +962,7 @@ export const FloorPlanProvider = ({
 
         addActivityLog: () => {},
         addFiberRoute,
+        updateFiberRoute,
         deleteFiberRoute,
       }}
     >
