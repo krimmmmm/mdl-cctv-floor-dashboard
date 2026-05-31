@@ -275,6 +275,15 @@ const toDbCabinet = (cabinet: any) => ({
   updated_at: new Date().toISOString(),
 });
 
+const toAppFiberRoute = (row: any) => ({
+  id: row.id,
+  name: row.name || row.label || "Fiber Route",
+  points: row.points || [],
+  status: row.status || "active",
+  color: row.color || "#ef4444",
+  label: row.label || row.name || "Fiber Route",
+});
+
 export const FloorPlanProvider = ({
   children,
 }: {
@@ -283,6 +292,7 @@ export const FloorPlanProvider = ({
   const [cameras, setCameras] = useState<any[]>([defaultCamera]);
   const [racks, setRacks] = useState<any[]>([]);
   const [cabinets, setCabinets] = useState<any[]>([]);
+  const [fiberRoutes, setFiberRoutes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasDbError, setHasDbError] = useState(false);
 
@@ -370,6 +380,17 @@ export const FloorPlanProvider = ({
         setCabinets([]);
       } else {
         setCabinets((cabinetData || []).map(toAppCabinet));
+      }
+
+      const { data: fiberData, error: fiberError } = await supabase
+        .from("fiber_routes")
+        .select("*");
+
+      if (fiberError) {
+        console.error("Load fiber routes error:", fiberError);
+        setFiberRoutes([]);
+      } else {
+        setFiberRoutes((fiberData || []).map(toAppFiberRoute));
       }
 
       setIsLoading(false);
@@ -469,10 +490,43 @@ export const FloorPlanProvider = ({
       )
       .subscribe();
 
+    const fiberChannel = supabase
+      .channel("fiber-routes-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "fiber_routes" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const deletedId = payload.old?.id;
+            setFiberRoutes((prev) =>
+              prev.filter((route) => route.id !== deletedId)
+            );
+            return;
+          }
+
+          const row = payload.new;
+          if (!row) return;
+
+          const updatedRoute = toAppFiberRoute(row);
+
+          setFiberRoutes((prev) => {
+            const exists = prev.some((route) => route.id === updatedRoute.id);
+
+            if (!exists) return [...prev, updatedRoute];
+
+            return prev.map((route) =>
+              route.id === updatedRoute.id ? updatedRoute : route
+            );
+          });
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(cameraChannel);
       supabase.removeChannel(rackChannel);
       supabase.removeChannel(cabinetChannel);
+      supabase.removeChannel(fiberChannel);
     };
   }, []);
 
@@ -595,6 +649,47 @@ export const FloorPlanProvider = ({
       photo3: photos[2] || "",
       photo4: photos[3] || "",
     });
+  };
+
+  const addFiberRoute = async (route: any) => {
+    const newRoute = {
+      ...route,
+      id: route.id || `fiber-${Date.now()}`,
+      name: route.name || route.label || `Fiber Route ${fiberRoutes.length + 1}`,
+      label: route.label || route.name || `Fiber Route ${fiberRoutes.length + 1}`,
+      color: "#ef4444",
+      status: route.status || "active",
+      points: route.points || [],
+    };
+
+    setFiberRoutes((prev) => [...prev, newRoute]);
+
+    const { error } = await supabase.from("fiber_routes").insert({
+      id: newRoute.id,
+      points: newRoute.points,
+      color: "#ef4444",
+      label: newRoute.label,
+      status: newRoute.status,
+    });
+
+    if (error) {
+      console.error("Save fiber route error:", error);
+      alert(error.message);
+    }
+  };
+
+  const deleteFiberRoute = async (id: string) => {
+    setFiberRoutes((prev) => prev.filter((route) => route.id !== id));
+
+    const { error } = await supabase
+      .from("fiber_routes")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Delete fiber route error:", error);
+      alert(error.message);
+    }
   };
 
   const setCameraCountByType = async (
@@ -798,7 +893,7 @@ export const FloorPlanProvider = ({
         cameras,
         racks,
         cabinets,
-        fiberRoutes: [],
+        fiberRoutes,
         activityLogs: [],
         isLoading,
         hasDbError,
@@ -827,8 +922,8 @@ export const FloorPlanProvider = ({
         updateCabinetPhotos,
 
         addActivityLog: () => {},
-        addFiberRoute: () => {},
-        deleteFiberRoute: () => {},
+        addFiberRoute,
+        deleteFiberRoute,
       }}
     >
       {children}
