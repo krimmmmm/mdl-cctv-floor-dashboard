@@ -11,10 +11,23 @@ const StatusCard: React.FC = () => {
     const safeRacks = racks || [];
     const safeCabinets = cabinets || [];
 
+    const getCameraOnlineProgress = (camera: any) =>
+      Number(camera.onlineProgress || 0);
+
     const cameraStatus = {
-      not_started: safeCameras.filter((c) => c.installationStatus === 'not_started').length,
-      in_progress: safeCameras.filter((c) => c.installationStatus === 'in_progress').length,
-      completed: safeCameras.filter((c) => c.installationStatus === 'completed').length,
+      not_started: safeCameras.filter(
+        (c) => getCameraOnlineProgress(c) <= 0
+      ).length,
+
+      in_progress: safeCameras.filter(
+        (c) =>
+          getCameraOnlineProgress(c) > 0 &&
+          getCameraOnlineProgress(c) < 100
+      ).length,
+
+      completed: safeCameras.filter(
+        (c) => getCameraOnlineProgress(c) >= 100
+      ).length,
     };
 
     const rackStatus = {
@@ -50,13 +63,22 @@ const StatusCard: React.FC = () => {
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold text-gray-700">Installation Status</CardTitle>
       </CardHeader>
+
       <CardContent className="space-y-3">
         <div>
           <p className="text-xs font-semibold text-gray-600 mb-1">Cameras</p>
           <div className="flex gap-2">
-            <Badge className={`${getStatusColor('not_started')} border-0`}>Not Started: {statusCounts.cameraStatus.not_started}</Badge>
-            <Badge className={`${getStatusColor('in_progress')} border-0`}>In Progress: {statusCounts.cameraStatus.in_progress}</Badge>
-            <Badge className={`${getStatusColor('completed')} border-0`}>Completed: {statusCounts.cameraStatus.completed}</Badge>
+            <Badge className={`${getStatusColor('not_started')} border-0`}>
+              Not Started: {statusCounts.cameraStatus.not_started}
+            </Badge>
+
+            <Badge className={`${getStatusColor('in_progress')} border-0`}>
+              In Progress: {statusCounts.cameraStatus.in_progress}
+            </Badge>
+
+            <Badge className={`${getStatusColor('completed')} border-0`}>
+              Completed: {statusCounts.cameraStatus.completed}
+            </Badge>
           </div>
         </div>
 
