@@ -111,8 +111,15 @@ const FloorPlanCanvas: React.FC = () => {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (canvasMode === 'draw_fiber') {
-      if (e.button === 0) {
+    
+if (canvasMode === 'draw_fiber') {
+
+  if (e.detail === 2) {
+    return;
+  }
+
+  if (e.button === 0) {
+  
         e.preventDefault();
 
         const pos = screenToSvg(e.clientX, e.clientY);
@@ -196,19 +203,32 @@ const FloorPlanCanvas: React.FC = () => {
     const routeId = `fiber_${Date.now()}`;
     const routeNum = (fiberRoutes || []).length + 1;
 
-    const newRoute: FiberRoute = {
-      id: routeId,
-      name: `Fiber Route ${routeNum}`,
-      points: drawingPoints || [],
-      status: 'idle',
-      color: '#EF4444',
-    };
+const clickedPos = screenToSvg(e.clientX, e.clientY);
 
-    addFiberRoute(newRoute);
-    setDrawingPoints([]);
-    setCursorPos(null);
-    setCanvasMode('normal');
-  };
+const finalPoints = [
+  ...(drawingPoints || []),
+  clickedPos,
+];
+
+const newRoute: FiberRoute = {
+  id: routeId,
+  name: `Fiber Route ${routeNum}`,
+  points: finalPoints,
+  status: 'idle',
+  color: '#ff0000',
+};
+
+console.log('SAVE FIBER ROUTE', newRoute);
+
+addFiberRoute(newRoute);
+
+setTimeout(() => {
+  setDrawingPoints([]);
+  setCursorPos(null);
+  setCanvasMode('normal');
+}, 100);
+
+};
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
