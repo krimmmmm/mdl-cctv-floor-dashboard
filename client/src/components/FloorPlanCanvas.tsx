@@ -55,6 +55,10 @@ const FloorPlanCanvas: React.FC = () => {
   const [isMovingEquipment, setIsMovingEquipment] = useState(false);
   const [draggedItem, setDraggedItem] = useState<SelectedItem>(null);
   const [tempPosition, setTempPosition] = useState({ x: 0, y: 0 });
+  const [dragOffset, setDragOffset] = useState({
+  x: 0,
+  y: 0,
+});
   const [showPositionModal, setShowPositionModal] = useState(false);
 
   const svgRef = React.useRef<SVGSVGElement>(null);
@@ -65,34 +69,24 @@ const FloorPlanCanvas: React.FC = () => {
   const [selectedFiberId, setSelectedFiberId] = useState<string | null>(null);
 
   const screenToSvg = useCallback(
-    (clientX: number, clientY: number) => {
-      const svg = svgRef.current;
-      if (!svg) return { x: 0, y: 0 };
+  (clientX: number, clientY: number) => {
+    if (!svgRef.current) return { x: 0, y: 0 };
 
-      const ctm = svg.getScreenCTM();
+    const rect = svgRef.current.getBoundingClientRect();
 
-      if (ctm) {
-        const point = svg.createSVGPoint();
-        point.x = clientX;
-        point.y = clientY;
+    const x =
+      (clientX - rect.left - pan.x) / zoom;
 
-        const svgPoint = point.matrixTransform(ctm.inverse());
+    const y =
+      (clientY - rect.top - pan.y) / zoom;
 
-        return {
-          x: Math.max(0, Math.min(1400, svgPoint.x)),
-          y: Math.max(0, Math.min(900, svgPoint.y)),
-        };
-      }
-
-      const rect = svg.getBoundingClientRect();
-
-      return {
-        x: Math.max(0, Math.min(1400, (clientX - rect.left) / zoom)),
-        y: Math.max(0, Math.min(900, (clientY - rect.top) / zoom)),
-      };
-    },
-    [zoom]
-  );
+    return {
+      x: Math.max(0, Math.min(1400, x)),
+      y: Math.max(0, Math.min(900, y)),
+    };
+  },
+  [zoom, pan]
+);
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -121,13 +115,13 @@ const FloorPlanCanvas: React.FC = () => {
     }
 
     if (e.button === 0 && isMovingEquipment && draggedItem) {
-      e.preventDefault();
-      const pos = screenToSvg(e.clientX, e.clientY);
-      setTempPosition(pos);
-      setIsMovingEquipment(false);
-      setShowPositionModal(true);
-      return;
-    }
+  e.preventDefault();
+
+  setIsMovingEquipment(false);
+  setShowPositionModal(true);
+
+  return;
+}
 
     if (e.button === 0 && !isMovingEquipment) {
       const target = e.target as SVGElement;
@@ -154,9 +148,12 @@ const FloorPlanCanvas: React.FC = () => {
     }
 
     if (isMovingEquipment && draggedItem && svgRef.current) {
-      const pos = screenToSvg(e.clientX, e.clientY);
-      setTempPosition(pos);
-    }
+  const pos = screenToSvg(e.clientX, e.clientY);
+  setTempPosition({
+  x: pos.x - dragOffset.x,
+  y: pos.y - dragOffset.y,
+});
+}
 
     if (canvasMode === 'draw_fiber') {
       const pos = screenToSvg(e.clientX, e.clientY);
@@ -287,25 +284,83 @@ const FloorPlanCanvas: React.FC = () => {
     setSelectedItem(null);
   };
 
-  const startMovingEquipment = () => {
-    if (!selectedItem) return;
-    setIsDragging(false);
-    setIsMovingEquipment(true);
-    setDraggedItem(selectedItem);
+  const startMovingEquipment = (
+  e?: React.MouseEvent
+) => {
+  if (!selectedItem) return;
 
-    if (selectedItem.type === 'camera') {
-      const camera = (cameras || []).find((c) => c.id === selectedItem.id);
-      if (camera) setTempPosition({ x: camera.x, y: camera.y });
+  setIsDragging(false);
+  setIsMovingEquipment(true);
+  setDraggedItem(selectedItem);
+
+  let itemX = 0;
+  let itemY = 0;
+
+  if (selectedItem.type === 'camera') {
+    const camera = (cameras || []).find(
+      (c) => c.id === selectedItem.id
+    );
+
+    if (camera) {
+      itemX = camera.x;
+      itemY = camera.y;
+
+      setTempPosition({
+        x: camera.x,
+        y: camera.y,
+      });
     }
-    if (selectedItem.type === 'rack') {
-      const rack = (racks || []).find((r) => r.id === selectedItem.id);
-      if (rack) setTempPosition({ x: rack.x, y: rack.y });
+  }
+
+  if (selectedItem.type === 'rack') {
+    const rack = (racks || []).find(
+      (r) => r.id === selectedItem.id
+    );
+
+    if (rack) {
+      itemX = rack.x;
+      itemY = rack.y;
+
+      setTempPosition({
+        x: rack.x,
+        y: rack.y,
+      });
     }
-    if (selectedItem.type === 'cabinet') {
-      const cabinet = (cabinets || []).find((c) => c.id === selectedItem.id);
-      if (cabinet) setTempPosition({ x: cabinet.x, y: cabinet.y });
+  }
+
+  if (selectedItem.type === 'cabinet') {
+    const cabinet = (cabinets || []).find(
+      (c) => c.id === selectedItem.id
+    );
+
+    if (cabinet) {
+      itemX = cabinet.x;
+      itemY = cabinet.y;
+
+      setTempPosition({
+        x: cabinet.x,
+        y: cabinet.y,
+      });
     }
-  };
+  }
+
+  if (e) {
+    const mousePos = screenToSvg(
+      e.clientX,
+      e.clientY
+    );
+
+    setDragOffset({
+      x: mousePos.x - itemX,
+      y: mousePos.y - itemY,
+    });
+  } else {
+    setDragOffset({
+      x: 0,
+      y: 0,
+    });
+  }
+};
 
   const confirmPosition = () => {
     if (!draggedItem) return;
@@ -551,9 +606,9 @@ const FloorPlanCanvas: React.FC = () => {
         })}
       </svg>
 
-      {selectedCamera && !isMovingEquipment && !showPositionModal && <CameraStatusModal camera={selectedCamera} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={startMovingEquipment} />}
-      {selectedRack && !isMovingEquipment && !showPositionModal && <RackStatusModal rack={selectedRack} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={startMovingEquipment} />}
-      {selectedCabinet && !isMovingEquipment && !showPositionModal && <CabinetStatusModal cabinet={selectedCabinet} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={startMovingEquipment} />}
+      {selectedCamera && !isMovingEquipment && !showPositionModal && <CameraStatusModal camera={selectedCamera} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={(e) => startMovingEquipment(e)} />}
+      {selectedRack && !isMovingEquipment && !showPositionModal && <RackStatusModal rack={selectedRack} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={(e) => startMovingEquipment(e)} />}
+      {selectedCabinet && !isMovingEquipment && !showPositionModal && <CabinetStatusModal cabinet={selectedCabinet} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={(e) => startMovingEquipment(e)} />}
       {selectedFiberRoute && !isMovingEquipment && !showPositionModal && <FiberRouteStatusModal route={selectedFiberRoute} isOpen={true} onClose={() => setSelectedFiberId(null)} onUpdate={(changes: any) => updateFiberRoute(selectedFiberRoute.id, changes)} />}
 
       <PositionConfirmationModal
