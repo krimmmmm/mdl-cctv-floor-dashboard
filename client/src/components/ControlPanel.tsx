@@ -283,45 +283,72 @@ const ControlPanel: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 bg-gray-50 flex-shrink-0 min-w-max">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700">
-              Legend
-            </CardTitle>
-          </CardHeader>
+        <Card className="border-0 bg-gray-50 flex-shrink-0 min-w-[320px]">
+  <CardHeader className="pb-2">
+    <CardTitle className="text-sm font-semibold text-gray-700">
+      Legend
+    </CardTitle>
+  </CardHeader>
 
-          <CardContent className="space-y-1 text-xs">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded-full border-2 border-yellow-400 bg-yellow-100"></div>
-              <span>Camera Type 1 (New)</span>
-            </div>
+  <CardContent className="space-y-3 text-xs">
+    
+    {/* Camera Type 1 */}
+    <div className="flex items-center gap-3">
+      <div className="relative w-10 h-8">
+  <div className="absolute left-0 top-0 w-5 h-8 bg-red-500 rounded-l-full"></div>
 
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 border-2 border-blue-400 bg-blue-100"></div>
-              <span>Camera Type 2 (Replace)</span>
-            </div>
+  <div className="absolute right-0 top-0 w-5 h-8 bg-yellow-300 border-2 border-red-500 rounded-r-sm"></div>
+</div>
 
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 border-2 border-green-500 bg-green-200"></div>
-              <span>Rack Type 1 - New RACK</span>
-            </div>
+      <span>Camera Type 1 (New)</span>
+    </div>
 
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 border-2 border-blue-500 bg-blue-200"></div>
-              <span>Rack Type 2 - Old RACK (Existing)</span>
-            </div>
+    {/* Camera Type 2 */}
+    <div className="flex items-center gap-3">
+      <div className="relative w-10 h-8">
+  <div className="absolute left-0 top-0 w-5 h-8 bg-blue-600 rounded-l-full"></div>
 
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 border-2 border-orange-400 bg-orange-100"></div>
-              <span>Cabinet</span>
-            </div>
+  <div className="absolute right-0 top-0 w-5 h-8 bg-yellow-300 border-2 border-blue-600 rounded-r-sm"></div>
+</div>
 
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-1 bg-red-500"></div>
-              <span>Fiber</span>
-            </div>
-          </CardContent>
-        </Card>
+      <span>Camera Type 2 (Replace)</span>
+    </div>
+
+    {/* Rack Type 1 */}
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 border-2 border-green-600 bg-green-400 rounded flex items-center justify-center text-[10px] font-bold text-black">
+        R
+      </div>
+
+      <span>Rack Type 1 - New RACK</span>
+    </div>
+
+    {/* Rack Type 2 */}
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 border-2 border-blue-600 bg-blue-400 rounded flex items-center justify-center text-[10px] font-bold text-black">
+        R
+      </div>
+
+      <span>Rack Type 2 - Old RACK (Existing)</span>
+    </div>
+
+    {/* Cabinet */}
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 border-2 border-orange-500 bg-orange-200 rounded flex items-center justify-center text-[10px] font-bold text-black">
+        CAB
+      </div>
+
+      <span>Cabinet</span>
+    </div>
+
+    {/* Fiber */}
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-1 bg-red-500 rounded"></div>
+
+      <span>Fiber</span>
+    </div>
+  </CardContent>
+</Card>
 
         <Card className="border-0 bg-blue-50 flex-shrink-0 min-w-max">
           <CardHeader className="pb-2">
