@@ -48,41 +48,32 @@ const defaultRack = {
   photo4: "",
 };
 
-```tsx
 const defaultCabinet = {
   id: "cabinet-01",
   name: "Cabinet 01",
   x: 850,
   y: 420,
-
   type: "type1",
-
   status: "offline",
   installationStatus: "not_started",
-
   isUrgent: false,
-
   installCabinet: false,
   acPower: false,
   utp: false,
   poeSwitch: false,
   fiberOptic: false,
   ready: false,
-
   installCabinetProgress: 0,
   acPowerProgress: 0,
   utpProgress: 0,
   poeSwitchProgress: 0,
   fiberOpticProgress: 0,
   readyProgress: 0,
-
   photo1: "",
   photo2: "",
   photo3: "",
   photo4: "",
 };
-```
-
 
 const FloorPlanContext = createContext<any>({
   cameras: [],
@@ -95,6 +86,7 @@ const FloorPlanContext = createContext<any>({
 
   setCameraCountByType: () => {},
   setRackCountByType: () => {},
+  setCabinetCount: () => {},
 
   updateCameraPosition: () => {},
   updateCameraStatus: () => {},
@@ -110,6 +102,11 @@ const FloorPlanContext = createContext<any>({
   updateRackPhotos: () => {},
 
   updateCabinetPosition: () => {},
+  updateCabinetStatus: () => {},
+  updateCabinetField: () => {},
+  updateCabinetInstallationStatus: () => {},
+  updateCabinetPhotos: () => {},
+
   addActivityLog: () => {},
   addFiberRoute: () => {},
   deleteFiberRoute: () => {},
@@ -217,9 +214,75 @@ const toDbRack = (rack: any) => ({
   updated_at: new Date().toISOString(),
 });
 
-export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) => {
+const toAppCabinet = (row: any) => ({
+  id: row.id,
+  name: row.name,
+  x: Number(row.x || 0),
+  y: Number(row.y || 0),
+  type: row.type || "type1",
+  status: row.status || "offline",
+  installationStatus: row.installation_status || "not_started",
+  isUrgent: Boolean(row.is_urgent),
+
+  installCabinet: Boolean(row.install_cabinet),
+  acPower: Boolean(row.ac_power),
+  utp: Boolean(row.utp),
+  poeSwitch: Boolean(row.poe_switch),
+  fiberOptic: Boolean(row.fiber_optic),
+  ready: Boolean(row.ready),
+
+  installCabinetProgress: Number(row.install_cabinet_progress || 0),
+  acPowerProgress: Number(row.ac_power_progress || 0),
+  utpProgress: Number(row.utp_progress || 0),
+  poeSwitchProgress: Number(row.poe_switch_progress || 0),
+  fiberOpticProgress: Number(row.fiber_optic_progress || 0),
+  readyProgress: Number(row.ready_progress || 0),
+
+  photo1: row.photo1 || "",
+  photo2: row.photo2 || "",
+  photo3: row.photo3 || "",
+  photo4: row.photo4 || "",
+});
+
+const toDbCabinet = (cabinet: any) => ({
+  id: cabinet.id,
+  name: cabinet.name,
+  x: cabinet.x,
+  y: cabinet.y,
+  type: cabinet.type,
+  status: cabinet.status,
+  installation_status: cabinet.installationStatus || "not_started",
+  is_urgent: cabinet.isUrgent || false,
+
+  install_cabinet: cabinet.installCabinet || false,
+  ac_power: cabinet.acPower || false,
+  utp: cabinet.utp || false,
+  poe_switch: cabinet.poeSwitch || false,
+  fiber_optic: cabinet.fiberOptic || false,
+  ready: cabinet.ready || false,
+
+  install_cabinet_progress: cabinet.installCabinetProgress || 0,
+  ac_power_progress: cabinet.acPowerProgress || 0,
+  utp_progress: cabinet.utpProgress || 0,
+  poe_switch_progress: cabinet.poeSwitchProgress || 0,
+  fiber_optic_progress: cabinet.fiberOpticProgress || 0,
+  ready_progress: cabinet.readyProgress || 0,
+
+  photo1: cabinet.photo1 || "",
+  photo2: cabinet.photo2 || "",
+  photo3: cabinet.photo3 || "",
+  photo4: cabinet.photo4 || "",
+  updated_at: new Date().toISOString(),
+});
+
+export const FloorPlanProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const [cameras, setCameras] = useState<any[]>([defaultCamera]);
   const [racks, setRacks] = useState<any[]>([]);
+  const [cabinets, setCabinets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasDbError, setHasDbError] = useState(false);
 
@@ -245,6 +308,21 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
 
     if (error) {
       console.error("Save rack error:", error);
+      setHasDbError(true);
+      alert(error.message);
+      return false;
+    }
+
+    return true;
+  };
+
+  const saveCabinet = async (cabinet: any) => {
+    const { error } = await supabase
+      .from("cabinets")
+      .upsert(toDbCabinet(cabinet), { onConflict: "id" });
+
+    if (error) {
+      console.error("Save cabinet error:", error);
       setHasDbError(true);
       alert(error.message);
       return false;
@@ -281,6 +359,17 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
         setRacks([]);
       } else {
         setRacks((rackData || []).map(toAppRack));
+      }
+
+      const { data: cabinetData, error: cabinetError } = await supabase
+        .from("cabinets")
+        .select("*");
+
+      if (cabinetError) {
+        console.error("Load cabinets error:", cabinetError);
+        setCabinets([]);
+      } else {
+        setCabinets((cabinetData || []).map(toAppCabinet));
       }
 
       setIsLoading(false);
@@ -346,9 +435,44 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
       )
       .subscribe();
 
+    const cabinetChannel = supabase
+      .channel("cabinets-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cabinets" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const deletedId = payload.old?.id;
+            setCabinets((prev) =>
+              prev.filter((cabinet) => cabinet.id !== deletedId)
+            );
+            return;
+          }
+
+          const row = payload.new;
+          if (!row) return;
+
+          const updatedCabinet = toAppCabinet(row);
+
+          setCabinets((prev) => {
+            const exists = prev.some(
+              (cabinet) => cabinet.id === updatedCabinet.id
+            );
+
+            if (!exists) return [...prev, updatedCabinet];
+
+            return prev.map((cabinet) =>
+              cabinet.id === updatedCabinet.id ? updatedCabinet : cabinet
+            );
+          });
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(cameraChannel);
       supabase.removeChannel(rackChannel);
+      supabase.removeChannel(cabinetChannel);
     };
   }, []);
 
@@ -369,6 +493,17 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
         if (rack.id !== id) return rack;
         const updated = { ...rack, ...changes };
         saveRack(updated);
+        return updated;
+      })
+    );
+  };
+
+  const updateCabinet = (id: string, changes: any) => {
+    setCabinets((prev) =>
+      prev.map((cabinet) => {
+        if (cabinet.id !== id) return cabinet;
+        const updated = { ...cabinet, ...changes };
+        saveCabinet(updated);
         return updated;
       })
     );
@@ -427,6 +562,34 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
 
   const updateRackPhotos = (id: string, photos: string[]) => {
     updateRack(id, {
+      photo1: photos[0] || "",
+      photo2: photos[1] || "",
+      photo3: photos[2] || "",
+      photo4: photos[3] || "",
+    });
+  };
+
+  const updateCabinetPosition = (id: string, x: number, y: number) => {
+    updateCabinet(id, { x, y });
+  };
+
+  const updateCabinetStatus = (id: string, status: string) => {
+    updateCabinet(id, { status });
+  };
+
+  const updateCabinetField = (id: string, field: string, value: any) => {
+    updateCabinet(id, { [field]: value });
+  };
+
+  const updateCabinetInstallationStatus = (
+    id: string,
+    installationStatus: string
+  ) => {
+    updateCabinet(id, { installationStatus });
+  };
+
+  const updateCabinetPhotos = (id: string, photos: string[]) => {
+    updateCabinet(id, {
       photo1: photos[0] || "",
       photo2: photos[1] || "",
       photo3: photos[2] || "",
@@ -527,8 +690,14 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
           name:
             (rackType === "type1" ? "Rack T1 " : "Rack T2 ") +
             String(runningNumber).padStart(2, "0"),
-          x: rackType === "type1" ? 300 + runningNumber * 25 : 700 + runningNumber * 25,
-          y: rackType === "type1" ? 250 + runningNumber * 25 : 500 + runningNumber * 25,
+          x:
+            rackType === "type1"
+              ? 300 + runningNumber * 25
+              : 700 + runningNumber * 25,
+          y:
+            rackType === "type1"
+              ? 250 + runningNumber * 25
+              : 500 + runningNumber * 25,
         };
 
         const success = await saveRack(newRack);
@@ -567,12 +736,68 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     }
   };
 
+  const setCabinetCount = async (targetCount: number) => {
+    const safeTarget = Math.max(0, targetCount);
+    const currentCount = cabinets.length;
+
+    if (safeTarget > currentCount) {
+      const addAmount = safeTarget - currentCount;
+
+      for (let i = 1; i <= addAmount; i++) {
+        const runningNumber = currentCount + i;
+
+        const newCabinet = {
+          ...defaultCabinet,
+          id: `cabinet-${Date.now()}-${i}`,
+          name: `Cabinet ${String(runningNumber).padStart(2, "0")}`,
+          x: 850 + runningNumber * 25,
+          y: 420 + runningNumber * 25,
+        };
+
+        const success = await saveCabinet(newCabinet);
+
+        if (success) {
+          setCabinets((prev) => {
+            const exists = prev.some((cabinet) => cabinet.id === newCabinet.id);
+            if (exists) return prev;
+            return [...prev, newCabinet];
+          });
+        }
+      }
+    }
+
+    if (safeTarget < currentCount) {
+      const deleteAmount = currentCount - safeTarget;
+
+      const cabinetsToDelete = [...cabinets]
+        .sort((a, b) => b.name.localeCompare(a.name))
+        .slice(0, deleteAmount);
+
+      for (const cabinet of cabinetsToDelete) {
+        const { error } = await supabase
+          .from("cabinets")
+          .delete()
+          .eq("id", cabinet.id);
+
+        if (error) {
+          console.error("Delete cabinet error:", error);
+          alert(error.message);
+          continue;
+        }
+
+        setCabinets((prev) =>
+          prev.filter((item) => item.id !== cabinet.id)
+        );
+      }
+    }
+  };
+
   return (
     <FloorPlanContext.Provider
       value={{
         cameras,
         racks,
-        cabinets: [],
+        cabinets,
         fiberRoutes: [],
         activityLogs: [],
         isLoading,
@@ -587,6 +812,7 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
 
         setCameraCountByType,
         setRackCountByType,
+        setCabinetCount,
 
         updateRackPosition,
         updateRackStatus,
@@ -594,7 +820,12 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
         updateRackInstallationStatus,
         updateRackPhotos,
 
-        updateCabinetPosition: () => {},
+        updateCabinetPosition,
+        updateCabinetStatus,
+        updateCabinetField,
+        updateCabinetInstallationStatus,
+        updateCabinetPhotos,
+
         addActivityLog: () => {},
         addFiberRoute: () => {},
         deleteFiberRoute: () => {},
