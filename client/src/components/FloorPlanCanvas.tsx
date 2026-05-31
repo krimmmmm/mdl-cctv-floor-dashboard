@@ -36,13 +36,16 @@ const FloorPlanCanvas: React.FC = () => {
     deleteFiberRoute,
   } = floorPlan;
 
-  const setCameraCount = floorPlan.setCameraCount;
+  const setCameraCountByType =
+  floorPlan.setCameraCountByType;
   const setRackCount = floorPlan.setRackCount;
   const setCabinetCount = floorPlan.setCabinetCount;
 
   const [selectedItem, setSelectedItem] = useState<SelectedItem>(null);
 
-  const [cameraCountInput, setCameraCountInput] = useState(0);
+  const [cameraType1Count, setCameraType1Count] = useState(0);
+
+const [cameraType2Count, setCameraType2Count] = useState(0);
   const [rackCountInput, setRackCountInput] = useState(0);
   const [cabinetCountInput, setCabinetCountInput] = useState(0);
 
@@ -215,8 +218,21 @@ const FloorPlanCanvas: React.FC = () => {
   }, [canvasMode, selectedFiberId, deleteFiberRoute]);
 
   useEffect(() => {
-    setCameraCountInput((cameras || []).length);
-  }, [cameras]);
+
+  const type1 =
+    (cameras || []).filter(
+      (c) => c.type === "type1"
+    ).length;
+
+  const type2 =
+    (cameras || []).filter(
+      (c) => c.type === "type2"
+    ).length;
+
+  setCameraType1Count(type1);
+  setCameraType2Count(type2);
+
+}, [cameras]);
 
   useEffect(() => {
     setRackCountInput((racks || []).length);
@@ -226,15 +242,33 @@ const FloorPlanCanvas: React.FC = () => {
     setCabinetCountInput((cabinets || []).length);
   }, [cabinets]);
 
-  const handleCameraCountChange = (value: number) => {
-    const safeValue = Math.max(0, value);
+  const handleCameraTypeCountChange = (
+  cameraType: string,
+  value: number
+) => {
 
-    setCameraCountInput(safeValue);
+  const safeValue = Math.max(0, value);
 
-    if (typeof setCameraCount === 'function') {
-      setCameraCount(safeValue);
-    }
-  };
+  if (cameraType === "type1") {
+
+    setCameraType1Count(safeValue);
+
+  } else {
+
+    setCameraType2Count(safeValue);
+  }
+
+  if (
+    typeof setCameraCountByType ===
+    "function"
+  ) {
+
+    setCameraCountByType(
+      cameraType,
+      safeValue
+    );
+  }
+};
 
   const handleRackCountChange = (value: number) => {
     const safeValue = Math.max(0, value);
@@ -469,48 +503,139 @@ const FloorPlanCanvas: React.FC = () => {
           Equipment Control
         </div>
 
-        {/* CAMERA */}
-        <div className="mb-5">
-          <div className="flex justify-between mb-2">
-            <span className="font-semibold text-gray-700">Cameras</span>
+        {/* CAMERA TYPE 1 */}
+<div className="mb-5">
 
-            <span className="text-blue-600 font-bold">
-              {(cameras || []).length}
-            </span>
-          </div>
+  <div className="flex justify-between mb-2">
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCameraCountChange(cameraCountInput - 1);
-              }}
-              className="w-10 h-10 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xl font-bold"
-            >
-              -
-            </button>
+    <span className="font-semibold text-gray-700">
+      Camera Type 1
+    </span>
 
-            <input
-              type="number"
-              min={0}
-              value={cameraCountInput}
-              onClick={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onChange={(e) => handleCameraCountChange(Number(e.target.value))}
-              className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-2 text-center text-lg font-bold"
-            />
+    <span className="text-red-600 font-bold">
+      {
+        (cameras || []).filter(
+          (c) => c.type === "type1"
+        ).length
+      }
+    </span>
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCameraCountChange(cameraCountInput + 1);
-              }}
-              className="w-10 h-10 rounded-lg bg-green-500 hover:bg-green-600 text-white text-xl font-bold"
-            >
-              +
-            </button>
-          </div>
-        </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+
+        handleCameraTypeCountChange(
+          "type1",
+          cameraType1Count - 1
+        );
+      }}
+      className="w-10 h-10 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xl font-bold"
+    >
+      -
+    </button>
+
+    <input
+      type="number"
+      min={0}
+      value={cameraType1Count}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onChange={(e) =>
+        handleCameraTypeCountChange(
+          "type1",
+          Number(e.target.value)
+        )
+      }
+      className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-2 text-center text-lg font-bold"
+    />
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+
+        handleCameraTypeCountChange(
+          "type1",
+          cameraType1Count + 1
+        );
+      }}
+      className="w-10 h-10 rounded-lg bg-green-500 hover:bg-green-600 text-white text-xl font-bold"
+    >
+      +
+    </button>
+
+  </div>
+</div>
+
+{/* CAMERA TYPE 2 */}
+<div className="mb-5">
+
+  <div className="flex justify-between mb-2">
+
+    <span className="font-semibold text-gray-700">
+      Camera Type 2
+    </span>
+
+    <span className="text-blue-600 font-bold">
+      {
+        (cameras || []).filter(
+          (c) => c.type === "type2"
+        ).length
+      }
+    </span>
+
+  </div>
+
+  <div className="flex items-center gap-2">
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+
+        handleCameraTypeCountChange(
+          "type2",
+          cameraType2Count - 1
+        );
+      }}
+      className="w-10 h-10 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xl font-bold"
+    >
+      -
+    </button>
+
+    <input
+      type="number"
+      min={0}
+      value={cameraType2Count}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onChange={(e) =>
+        handleCameraTypeCountChange(
+          "type2",
+          Number(e.target.value)
+        )
+      }
+      className="flex-1 border-2 border-gray-300 rounded-lg px-3 py-2 text-center text-lg font-bold"
+    />
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+
+        handleCameraTypeCountChange(
+          "type2",
+          cameraType2Count + 1
+        );
+      }}
+      className="w-10 h-10 rounded-lg bg-green-500 hover:bg-green-600 text-white text-xl font-bold"
+    >
+      +
+    </button>
+
+  </div>
+</div>
 
         {/* RACK */}
         <div className="mb-5">
