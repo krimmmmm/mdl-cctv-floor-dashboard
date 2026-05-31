@@ -14,8 +14,8 @@ const ControlPanel: React.FC = () => {
 
     const totalCameras = safeCameras.length;
     const onlineCameras = safeCameras.filter(
-      (c) => c.status === "online"
-    ).length;
+  (c) => Number(c.onlineProgress || 0) >= 100
+).length;
 
     const type1Cameras = safeCameras.filter(
       (c) => c.type === "type1"
