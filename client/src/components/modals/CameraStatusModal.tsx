@@ -82,10 +82,18 @@ const CameraStatusModal = ({
   const wiringProgress = Number(camera.wiringUTPProgress || 0);
   const wallProgress = Number(camera.wallMountingProgress || 0);
   const domeProgress = Number(camera.domeCameraProgress || 0);
+  const onlineProgress = Number(
+  camera.onlineProgress || 0
+);
 
   const progress = Math.round(
-    (wiringProgress + wallProgress + domeProgress) / 3
-  );
+  (
+    wiringProgress +
+    wallProgress +
+    domeProgress +
+    onlineProgress
+  ) / 4
+);
 
   const computedInstallationStatus =
     progress <= 0
@@ -188,14 +196,20 @@ const CameraStatusModal = ({
         field === "domeCameraProgress"
           ? safeValue
           : Number(camera.domeCameraProgress || 0),
+      onlineProgress:
+  field === "onlineProgress"
+    ? safeValue
+    : Number(camera.onlineProgress || 0),
     };
 
     const totalProgress = Math.round(
-      (nextProgress.wiringUTPProgress +
-        nextProgress.wallMountingProgress +
-        nextProgress.domeCameraProgress) /
-        3
-    );
+  (
+    nextProgress.wiringUTPProgress +
+    nextProgress.wallMountingProgress +
+    nextProgress.domeCameraProgress +
+    nextProgress.onlineProgress
+  ) / 4
+);
 
     if (totalProgress <= 0) {
       updateCameraInstallationStatus(camera.id, "not_started");
@@ -340,6 +354,30 @@ const CameraStatusModal = ({
             }
           />
 
+<StepCard
+  checked={Boolean(camera.status === "online")}
+  progress={onlineProgress}
+  title="Camera Online"
+  subTitle="Device connected and online"
+  onChange={(value) => {
+    updateCameraStatus(
+      camera.id,
+      value ? "online" : "offline"
+    );
+
+    updateStepProgress(
+      "onlineProgress",
+      value ? 100 : 0
+    );
+  }}
+  onProgressChange={(value) =>
+    updateStepProgress(
+      "onlineProgress",
+      value
+    )
+  }
+/>
+          
           <div style={styles.progressBox}>
             <div style={styles.progressHeader}>
               <b>Progress การติดตั้งรวม</b>
@@ -371,6 +409,10 @@ const CameraStatusModal = ({
               <ProgressRow label="Wiring UTP" value={wiringProgress} />
               <ProgressRow label="Wall Mounting" value={wallProgress} />
               <ProgressRow label="Dome Camera" value={domeProgress} />
+              <ProgressRow
+  label="Camera Online"
+  value={onlineProgress}
+/>
             </div>
           </div>
 
