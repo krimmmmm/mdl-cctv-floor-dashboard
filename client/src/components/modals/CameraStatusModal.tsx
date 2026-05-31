@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
 
@@ -21,6 +21,16 @@ const CameraStatusModal = ({
   onEditPosition,
   onUpdate,
 }: CameraStatusModalProps) => {
+  const [modalPosition, setModalPosition] = useState({
+    x: 0,
+    y: 0,
+  });
+
+  const dragOffset = useRef({
+    x: 0,
+    y: 0,
+  });
+
   const {
     updateCameraStatus,
     updateCameraRotation,
@@ -40,6 +50,28 @@ const CameraStatusModal = ({
     if (onOpenChange) onOpenChange(false);
   };
 
+  const handleDragStart = (e: React.MouseEvent) => {
+    dragOffset.current = {
+      x: e.clientX - modalPosition.x,
+      y: e.clientY - modalPosition.y,
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      setModalPosition({
+        x: moveEvent.clientX - dragOffset.current.x,
+        y: moveEvent.clientY - dragOffset.current.y,
+      });
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
+
   const photos = [
     { url: camera.photo1, field: "photo1" },
     { url: camera.photo2, field: "photo2" },
@@ -56,191 +88,123 @@ const CameraStatusModal = ({
   );
 
   const computedInstallationStatus =
-  progress <= 0
-    ? "not_started"
-    : progress >= 100
-    ? "completed"
-    : "in_progress";
-  
+    progress <= 0
+      ? "not_started"
+      : progress >= 100
+      ? "completed"
+      : "in_progress";
+
   const refreshAfterChange = async () => {
     if (onUpdate) await onUpdate();
     window.location.reload();
   };
 
-  const toggleUrgent = async (
-  value: boolean
-) => {
-  updateCameraField(
-    camera.id,
-    "isUrgent",
-    value
-  );
+  const toggleUrgent = async (value: boolean) => {
+    updateCameraField(camera.id, "isUrgent", value);
 
-  const { error } = await supabase
-    .from("cameras")
-    .update({
-      is_urgent: value,
-    })
-    .eq("id", camera.id);
+    const { error } = await supabase
+      .from("cameras")
+      .update({
+        is_urgent: value,
+      })
+      .eq("id", camera.id);
 
-  if (error) {
-    alert(error.message);
-    return;
-  }
+    if (error) {
+      alert(error.message);
+      return;
+    }
 
-  await refreshAfterChange();
-};
-  
- const updateStep = async (
-  field: string,
-  value: boolean
-) => {
-  updateCameraField(camera.id, field, value);
-
-  const next = {
-    wiringUTP:
-      field === "wiringUTP"
-        ? value
-        : camera.wiringUTP,
-
-    wallMountingInstalled:
-      field === "wallMountingInstalled"
-        ? value
-        : camera.wallMountingInstalled,
-
-    domeCameraInstalled:
-      field === "domeCameraInstalled"
-        ? value
-        : camera.domeCameraInstalled,
+    await refreshAfterChange();
   };
 
-  // sync progress auto
-  if (field === "wiringUTP") {
-    updateCameraField(
-      camera.id,
-      "wiringUTPProgress",
-      value ? 100 : 0
+  const updateStep = async (field: string, value: boolean) => {
+    updateCameraField(camera.id, field, value);
+
+    if (field === "wiringUTP") {
+      updateCameraField(camera.id, "wiringUTPProgress", value ? 100 : 0);
+    }
+
+    if (field === "wallMountingInstalled") {
+      updateCameraField(camera.id, "wallMountingProgress", value ? 100 : 0);
+    }
+
+    if (field === "domeCameraInstalled") {
+      updateCameraField(camera.id, "domeCameraProgress", value ? 100 : 0);
+    }
+
+    const nextProgress = {
+      wiring:
+        field === "wiringUTP"
+          ? value
+            ? 100
+            : 0
+          : Number(camera.wiringUTPProgress || 0),
+
+      wall:
+        field === "wallMountingInstalled"
+          ? value
+            ? 100
+            : 0
+          : Number(camera.wallMountingProgress || 0),
+
+      dome:
+        field === "domeCameraInstalled"
+          ? value
+            ? 100
+            : 0
+          : Number(camera.domeCameraProgress || 0),
+    };
+
+    const totalProgress = Math.round(
+      (nextProgress.wiring + nextProgress.wall + nextProgress.dome) / 3
     );
-  }
 
-  if (field === "wallMountingInstalled") {
-    updateCameraField(
-      camera.id,
-      "wallMountingProgress",
-      value ? 100 : 0
-    );
-  }
-
-  if (field === "domeCameraInstalled") {
-    updateCameraField(
-      camera.id,
-      "domeCameraProgress",
-      value ? 100 : 0
-    );
-  }
-
-  const nextProgress = {
-    wiring:
-      field === "wiringUTP"
-        ? value
-          ? 100
-          : 0
-        : Number(camera.wiringUTPProgress || 0),
-
-    wall:
-      field === "wallMountingInstalled"
-        ? value
-          ? 100
-          : 0
-        : Number(camera.wallMountingProgress || 0),
-
-    dome:
-      field === "domeCameraInstalled"
-        ? value
-          ? 100
-          : 0
-        : Number(camera.domeCameraProgress || 0),
+    if (totalProgress <= 0) {
+      updateCameraInstallationStatus(camera.id, "not_started");
+    } else if (totalProgress >= 100) {
+      updateCameraInstallationStatus(camera.id, "completed");
+    } else {
+      updateCameraInstallationStatus(camera.id, "in_progress");
+    }
   };
 
-  const totalProgress = Math.round(
-    (
-      nextProgress.wiring +
-      nextProgress.wall +
-      nextProgress.dome
-    ) / 3
-  );
+  const updateStepProgress = async (field: string, value: number) => {
+    const safeValue = Math.min(100, Math.max(0, Number(value || 0)));
 
-  if (totalProgress <= 0) {
-    updateCameraInstallationStatus(
-      camera.id,
-      "not_started"
+    updateCameraField(camera.id, field, safeValue);
+
+    const nextProgress = {
+      wiringUTPProgress:
+        field === "wiringUTPProgress"
+          ? safeValue
+          : Number(camera.wiringUTPProgress || 0),
+
+      wallMountingProgress:
+        field === "wallMountingProgress"
+          ? safeValue
+          : Number(camera.wallMountingProgress || 0),
+
+      domeCameraProgress:
+        field === "domeCameraProgress"
+          ? safeValue
+          : Number(camera.domeCameraProgress || 0),
+    };
+
+    const totalProgress = Math.round(
+      (nextProgress.wiringUTPProgress +
+        nextProgress.wallMountingProgress +
+        nextProgress.domeCameraProgress) /
+        3
     );
-  } else if (totalProgress >= 100) {
-    updateCameraInstallationStatus(
-      camera.id,
-      "completed"
-    );
-  } else {
-    updateCameraInstallationStatus(
-      camera.id,
-      "in_progress"
-    );
-  }
-};
 
-const updateStepProgress = async (
-  field: string,
-  value: number
-) => {
-  const safeValue = Math.min(
-    100,
-    Math.max(0, Number(value || 0))
-  );
-
-  updateCameraField(camera.id, field, safeValue);
-
-  const nextProgress = {
-    wiringUTPProgress:
-      field === "wiringUTPProgress"
-        ? safeValue
-        : Number(camera.wiringUTPProgress || 0),
-
-    wallMountingProgress:
-      field === "wallMountingProgress"
-        ? safeValue
-        : Number(camera.wallMountingProgress || 0),
-
-    domeCameraProgress:
-      field === "domeCameraProgress"
-        ? safeValue
-        : Number(camera.domeCameraProgress || 0),
+    if (totalProgress <= 0) {
+      updateCameraInstallationStatus(camera.id, "not_started");
+    } else if (totalProgress >= 100) {
+      updateCameraInstallationStatus(camera.id, "completed");
+    } else {
+      updateCameraInstallationStatus(camera.id, "in_progress");
+    }
   };
-
-  const totalProgress = Math.round(
-    (
-      nextProgress.wiringUTPProgress +
-      nextProgress.wallMountingProgress +
-      nextProgress.domeCameraProgress
-    ) / 3
-  );
-
-  if (totalProgress <= 0) {
-    updateCameraInstallationStatus(
-      camera.id,
-      "not_started"
-    );
-  } else if (totalProgress >= 100) {
-    updateCameraInstallationStatus(
-      camera.id,
-      "completed"
-    );
-  } else {
-    updateCameraInstallationStatus(
-      camera.id,
-      "in_progress"
-    );
-  }
-};
 
   const handleUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -318,11 +282,17 @@ const updateStepProgress = async (
   return (
     <>
       <div style={styles.overlay} onClick={closeModal}>
-  <div
-    style={styles.modal}
-    onClick={(e) => e.stopPropagation()}
-  >
-          <h2 style={styles.title}>{camera.name || "Camera"}</h2>
+        <div
+          style={{
+            ...styles.modal,
+            transform: `translate(${modalPosition.x}px, ${modalPosition.y}px)`,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={styles.dragHeader} onMouseDown={handleDragStart}>
+            <h2 style={styles.title}>{camera.name || "Camera"}</h2>
+            <span style={styles.dragHint}>ลากเพื่อย้าย Modal</span>
+          </div>
 
           <div style={styles.typeBox}>
             <b>Type:</b>{" "}
@@ -332,8 +302,8 @@ const updateStepProgress = async (
           </div>
 
           <div style={styles.statusBox}>
-  Installation Status: {computedInstallationStatus}
-</div>
+            Installation Status: {computedInstallationStatus}
+          </div>
 
           <div style={styles.sectionLabel}>Installation Steps</div>
 
@@ -374,12 +344,12 @@ const updateStepProgress = async (
             <div style={styles.progressHeader}>
               <b>Progress การติดตั้งรวม</b>
               <span style={styles.badge}>
-  {computedInstallationStatus === "completed"
-    ? "Completed"
-    : computedInstallationStatus === "in_progress"
-    ? "In Progress"
-    : "Not Started"}
-</span>
+                {computedInstallationStatus === "completed"
+                  ? "Completed"
+                  : computedInstallationStatus === "in_progress"
+                  ? "In Progress"
+                  : "Not Started"}
+              </span>
             </div>
 
             <div style={styles.progressTrack}>
@@ -428,21 +398,18 @@ const updateStepProgress = async (
             </div>
           </div>
 
-    <div style={styles.urgentBox}>
-  <label style={styles.urgentLabel}>
-    <input
-      type="checkbox"
-      checked={Boolean(camera.isUrgent)}
-      onChange={(e) =>
-        toggleUrgent(e.target.checked)
-      }
-      style={styles.urgentCheckbox}
-    />
+          <div style={styles.urgentBox}>
+            <label style={styles.urgentLabel}>
+              <input
+                type="checkbox"
+                checked={Boolean(camera.isUrgent)}
+                onChange={(e) => toggleUrgent(e.target.checked)}
+                style={styles.urgentCheckbox}
+              />
+              🚨 งานเร่งด่วน (Urgent Work)
+            </label>
+          </div>
 
-    🚨 งานเร่งด่วน (Urgent Work)
-  </label>
-</div>
-    
           <div style={styles.rotationBox}>
             <div style={styles.rotationTitle}>
               Camera Direction (Rotation)
@@ -511,14 +478,14 @@ const updateStepProgress = async (
 
           <div style={styles.footer}>
             <button
-  style={styles.footerButton}
-  onClick={() => {
-    closeModal();
-    if (onEditPosition) onEditPosition();
-  }}
->
-  Edit Position
-</button>
+              style={styles.footerButton}
+              onClick={() => {
+                closeModal();
+                if (onEditPosition) onEditPosition();
+              }}
+            >
+              Edit Position
+            </button>
 
             <button style={styles.footerButton} onClick={closeModal}>
               Close
@@ -637,10 +604,24 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "24px",
     boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
   },
+  dragHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    cursor: "move",
+    userSelect: "none",
+    borderBottom: "1px solid #1f2937",
+    paddingBottom: "10px",
+    marginBottom: "12px",
+  },
+  dragHint: {
+    fontSize: "12px",
+    color: "#64748b",
+  },
   title: {
     fontSize: "18px",
     fontWeight: 700,
-    marginBottom: "12px",
+    margin: 0,
   },
   typeBox: {
     background: "#fff",
@@ -817,29 +798,25 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#fff",
     fontWeight: 700,
   },
-
   urgentBox: {
-  background: "#ffe4f4",
-  border: "2px solid #ff4db8",
-  borderRadius: "12px",
-  padding: "16px",
-  marginTop: "18px",
-},
-
-urgentLabel: {
-  display: "flex",
-  alignItems: "center",
-  gap: "12px",
-  color: "#c2185b",
-  fontWeight: 800,
-  fontSize: "18px",
-},
-
-urgentCheckbox: {
-  width: "22px",
-  height: "22px",
-},
-  
+    background: "#ffe4f4",
+    border: "2px solid #ff4db8",
+    borderRadius: "12px",
+    padding: "16px",
+    marginTop: "18px",
+  },
+  urgentLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    color: "#c2185b",
+    fontWeight: 800,
+    fontSize: "18px",
+  },
+  urgentCheckbox: {
+    width: "22px",
+    height: "22px",
+  },
   rotationBox: {
     background: "#fffbea",
     color: "#111",
