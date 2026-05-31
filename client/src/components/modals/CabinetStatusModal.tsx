@@ -1,9 +1,5 @@
-import React, { useMemo } from "react";
-import {
-  Cabinet,
-  CabinetStatus,
-} from "@/lib/floorPlanData";
-
+import React, { useMemo, useState } from "react";
+import { Cabinet } from "@/lib/floorPlanData";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
 
 interface CabinetStatusModalProps {
@@ -13,9 +9,7 @@ interface CabinetStatusModalProps {
   onEditPosition?: () => void;
 }
 
-const CabinetStatusModal: React.FC<
-  CabinetStatusModalProps
-> = ({
+const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
   cabinet,
   isOpen,
   onClose,
@@ -25,391 +19,609 @@ const CabinetStatusModal: React.FC<
     updateCabinetStatus,
     updateCabinetField,
     updateCabinetInstallationStatus,
+    updateCabinetPhotos,
   } = useFloorPlan();
 
-  if (!isOpen) return null;
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  const stepList = [
+  if (!isOpen || !cabinet) return null;
+
+  const steps = [
     {
       key: "installCabinet",
       title: "INSTALL CABINET",
       desc: "Cabinet installed",
+      progressKey: "installCabinetProgress",
+      progress: Number((cabinet as any).installCabinetProgress || 0),
+      checked: Boolean((cabinet as any).installCabinet),
     },
     {
       key: "acPower",
       title: "AC POWER",
       desc: "Power supply installed",
+      progressKey: "acPowerProgress",
+      progress: Number((cabinet as any).acPowerProgress || 0),
+      checked: Boolean((cabinet as any).acPower),
     },
     {
       key: "utp",
       title: "UTP",
       desc: "Network cable installed",
+      progressKey: "utpProgress",
+      progress: Number((cabinet as any).utpProgress || 0),
+      checked: Boolean((cabinet as any).utp),
     },
     {
       key: "poeSwitch",
       title: "POE SWITCH",
       desc: "Switch installed",
+      progressKey: "poeSwitchProgress",
+      progress: Number((cabinet as any).poeSwitchProgress || 0),
+      checked: Boolean((cabinet as any).poeSwitch),
     },
     {
       key: "fiberOptic",
       title: "FIBER OPTIC",
       desc: "Fiber optic connected",
+      progressKey: "fiberOpticProgress",
+      progress: Number((cabinet as any).fiberOpticProgress || 0),
+      checked: Boolean((cabinet as any).fiberOptic),
     },
     {
       key: "ready",
       title: "READY",
       desc: "Cabinet ready for use",
+      progressKey: "readyProgress",
+      progress: Number((cabinet as any).readyProgress || 0),
+      checked: Boolean((cabinet as any).ready),
     },
   ];
 
-  const checkedCount = stepList.filter(
-    (s) => cabinet[s.key as keyof Cabinet]
-  ).length;
+  const totalProgress = useMemo(() => {
+    return Math.round(
+      steps.reduce((sum, item) => sum + item.progress, 0) / steps.length
+    );
+  }, [cabinet]);
 
-  const totalProgress = Math.round(
-    (checkedCount / stepList.length) * 100
-  );
+  const computedStatus =
+    totalProgress <= 0
+      ? "not_started"
+      : totalProgress >= 100
+      ? "completed"
+      : "in_progress";
 
-  const installationText = useMemo(() => {
-    if (totalProgress === 0)
-      return "Not Started";
+  const statusText =
+    computedStatus === "completed"
+      ? "Completed"
+      : computedStatus === "in_progress"
+      ? "In Progress"
+      : "Not Started";
 
-    if (totalProgress === 100)
-      return "Completed";
+  const syncStatus = (progressValue: number) => {
+    const nextStatus =
+      progressValue <= 0
+        ? "not_started"
+        : progressValue >= 100
+        ? "completed"
+        : "in_progress";
 
-    return "In Progress";
-  }, [totalProgress]);
+    updateCabinetInstallationStatus(cabinet.id, nextStatus);
+  };
 
-  const installationColor =
-    installationText === "Completed"
-      ? "bg-green-100 text-green-700"
-      : installationText === "In Progress"
-      ? "bg-yellow-100 text-yellow-700"
-      : "bg-yellow-100 text-yellow-800";
-
-  const handleCheckbox = (
-    field: keyof Cabinet,
-    value: boolean
+  const updateStepProgress = (
+    progressKey: string,
+    stepKey: string,
+    value: number
   ) => {
-    updateCabinetField(
-      cabinet.id,
-      field as any,
-      value
+    const safeValue = Math.min(100, Math.max(0, Number(value || 0)));
+
+    updateCabinetField(cabinet.id, progressKey, safeValue);
+    updateCabinetField(cabinet.id, stepKey, safeValue > 0);
+
+    const nextSteps = steps.map((step) =>
+      step.progressKey === progressKey ? { ...step, progress: safeValue } : step
     );
 
-    const updatedCount = value
-      ? checkedCount + 1
-      : checkedCount - 1;
+    const nextTotal = Math.round(
+      nextSteps.reduce((sum, item) => sum + item.progress, 0) / nextSteps.length
+    );
 
-    if (updatedCount <= 0) {
-      updateCabinetInstallationStatus(
-        cabinet.id,
-        "not_started"
-      );
-    } else if (
-      updatedCount >= stepList.length
-    ) {
-      updateCabinetInstallationStatus(
-        cabinet.id,
-        "completed"
-      );
-    } else {
-      updateCabinetInstallationStatus(
-        cabinet.id,
-        "in_progress"
-      );
+    syncStatus(nextTotal);
+  };
+
+  const updateStepCheck = (
+    stepKey: string,
+    progressKey: string,
+    checked: boolean
+  ) => {
+    updateCabinetField(cabinet.id, stepKey, checked);
+    updateCabinetField(cabinet.id, progressKey, checked ? 100 : 0);
+
+    const nextSteps = steps.map((step) =>
+      step.key === stepKey ? { ...step, progress: checked ? 100 : 0 } : step
+    );
+
+    const nextTotal = Math.round(
+      nextSteps.reduce((sum, item) => sum + item.progress, 0) / nextSteps.length
+    );
+
+    syncStatus(nextTotal);
+  };
+
+  const photos = [
+    (cabinet as any).photo1,
+    (cabinet as any).photo2,
+    (cabinet as any).photo3,
+    (cabinet as any).photo4,
+  ].filter(Boolean);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const currentPhotos = [
+      (cabinet as any).photo1 || "",
+      (cabinet as any).photo2 || "",
+      (cabinet as any).photo3 || "",
+      (cabinet as any).photo4 || "",
+    ].filter(Boolean);
+
+    const remaining = 4 - currentPhotos.length;
+    const selectedFiles = Array.from(files).slice(0, remaining);
+
+    const newPhotos: string[] = [];
+
+    for (const file of selectedFiles) {
+      const reader = new FileReader();
+
+      await new Promise<void>((resolve) => {
+        reader.onloadend = () => {
+          newPhotos.push(reader.result as string);
+          resolve();
+        };
+
+        reader.readAsDataURL(file);
+      });
     }
+
+    updateCabinetPhotos(cabinet.id, [...currentPhotos, ...newPhotos]);
+  };
+
+  const deletePhoto = (index: number) => {
+    const nextPhotos = [
+      (cabinet as any).photo1 || "",
+      (cabinet as any).photo2 || "",
+      (cabinet as any).photo3 || "",
+      (cabinet as any).photo4 || "",
+    ];
+
+    nextPhotos[index] = "";
+    updateCabinetPhotos(cabinet.id, nextPhotos);
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40"
-      onClick={onClose}
-    >
-      <div
-        className="
-          bg-white
-          w-[560px]
-          max-h-[90vh]
-          overflow-y-auto
-          rounded-2xl
-          border-2
-          border-blue-300
-          shadow-2xl
-          p-6
-        "
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="mb-4">
-          <h1 className="text-3xl font-black text-black">
-            {cabinet.name}
-          </h1>
+    <>
+      <div style={styles.overlay} onClick={onClose}>
+        <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+          <h2 style={styles.title}>{cabinet.name}</h2>
 
-          <div
-            className={`mt-4 rounded-2xl px-6 py-4 text-2xl font-bold ${installationColor}`}
-          >
-            Installation Status:{" "}
-            {installationText}
+          <div style={styles.typeBox}>
+            <b>Type:</b> CCTV OUTDOOR STEEL CABINET
           </div>
-        </div>
 
-        {/* Type */}
-        <div className="mb-6">
-          <div className="text-[34px] font-black text-black">
-            Type: CCTV OUTDOOR STEEL CABINET
+          <div style={styles.statusBox}>
+            Installation Status: {statusText}
           </div>
-        </div>
 
-        {/* Urgent */}
-        <div className="mb-6">
-          <label className="flex items-center gap-3 text-xl font-bold">
+          <label style={styles.urgentBox}>
             <input
               type="checkbox"
-              checked={
-                (cabinet as any).isUrgent ||
-                false
-              }
+              checked={Boolean((cabinet as any).isUrgent)}
               onChange={(e) =>
-                updateCabinetField(
-                  cabinet.id,
-                  "isUrgent" as any,
-                  e.target.checked
-                )
+                updateCabinetField(cabinet.id, "isUrgent", e.target.checked)
               }
             />
-            Urgent Task
+            🚨 งานเร่งด่วน (Urgent Work)
           </label>
-        </div>
 
-        {/* Installation Steps */}
-        <div className="space-y-5">
-          <h2 className="text-4xl font-black text-blue-300">
-            Installation Steps
-          </h2>
+          <div style={styles.sectionLabel}>Installation Steps</div>
 
-          {stepList.map((step) => {
-            const checked =
-              cabinet[
-                step.key as keyof Cabinet
-              ] as boolean;
+          {steps.map((step) => (
+            <div key={step.key} style={styles.stepCard}>
+              <input
+                type="checkbox"
+                checked={step.checked}
+                onChange={(e) =>
+                  updateStepCheck(step.key, step.progressKey, e.target.checked)
+                }
+                style={styles.checkbox}
+              />
 
-            return (
-              <div
-                key={step.key}
-                className="
-                  bg-black
-                  rounded-3xl
-                  px-6
-                  py-5
-                  text-white
-                  flex
-                  items-center
-                  gap-5
-                "
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={(e) =>
-                    handleCheckbox(
-                      step.key as keyof Cabinet,
-                      e.target.checked
-                    )
-                  }
-                  className="w-7 h-7"
-                />
-
-                <div className="flex-1">
-                  <div className="text-3xl font-black">
-                    {step.title}
-                  </div>
-
-                  <div className="text-lg text-gray-300">
-                    {step.desc}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    defaultValue={
-                      checked ? 100 : 0
-                    }
-                    className="
-                      w-24
-                      h-14
-                      rounded-xl
-                      border-2
-                      border-white
-                      bg-black
-                      text-center
-                      text-2xl
-                      font-bold
-                    "
-                  />
-
-                  <span className="text-3xl font-black">
-                    %
-                  </span>
-                </div>
+              <div style={{ flex: 1 }}>
+                <div style={styles.stepTitle}>{step.title}</div>
+                <div style={styles.stepSub}>{step.desc}</div>
               </div>
-            );
-          })}
-        </div>
 
-        {/* Progress */}
-        <div
-          className="
-            mt-8
-            rounded-3xl
-            bg-green-50
-            p-6
-          "
-        >
-          <div className="flex items-center justify-between">
-            <div className="text-5xl font-black text-green-700">
-              Progress รวม
+              <div style={styles.checkMark}>
+                {step.progress >= 100 ? "✓" : step.progress > 0 ? "◔" : ""}
+              </div>
+
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={step.progress}
+                onChange={(e) =>
+                  updateStepProgress(
+                    step.progressKey,
+                    step.key,
+                    Number(e.target.value)
+                  )
+                }
+                style={styles.progressInput}
+              />
+
+              <span style={styles.percent}>%</span>
+            </div>
+          ))}
+
+          <div style={styles.progressBox}>
+            <div style={styles.progressHeader}>
+              <b>Progress การติดตั้งรวม</b>
+              <span style={styles.badge}>{statusText}</span>
             </div>
 
-            <div
-              className={`
-                px-5
-                py-3
-                rounded-full
-                text-2xl
-                font-black
-                ${installationColor}
-              `}
-            >
-              {installationText}
+            <div style={styles.track}>
+              <div
+                style={{
+                  ...styles.fill,
+                  width: `${totalProgress}%`,
+                }}
+              />
+            </div>
+
+            <div style={styles.progressText}>{totalProgress}%</div>
+
+            <div style={styles.averageText}>
+              คำนวณอัตโนมัติจากค่าเฉลี่ย step progress
             </div>
           </div>
 
-          <div className="mt-5 h-7 rounded-full bg-gray-300 overflow-hidden">
-            <div
-              className="
-                h-full
-                bg-orange-500
-                transition-all
-              "
-              style={{
-                width: `${totalProgress}%`,
-              }}
-            />
+          <div style={styles.photoSection}>
+            <div style={styles.photoHeader}>
+              <b>▧ รูปหน้างาน Cabinet ({photos.length}/4)</b>
+
+              {photos.length < 4 && (
+                <label style={styles.uploadButton}>
+                  Upload Photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoUpload}
+                    style={{ display: "none" }}
+                  />
+                </label>
+              )}
+            </div>
+
+            {photos.length > 0 ? (
+              <div style={styles.photoGrid}>
+                {photos.map((photo, index) => (
+                  <div key={index} style={styles.photoWrap}>
+                    <button
+                      style={styles.deleteButton}
+                      onClick={() => deletePhoto(index)}
+                    >
+                      ×
+                    </button>
+
+                    <img
+                      src={photo}
+                      style={styles.photo}
+                      onClick={() => setPreviewImage(photo)}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={styles.emptyPhoto}>ยังไม่มีรูปหน้างาน</div>
+            )}
           </div>
 
-          <div className="text-center text-[90px] font-black text-orange-600 mt-4">
-            {totalProgress}%
-          </div>
-        </div>
+          <div style={styles.statusPanel}>
+            <b>Current Status:</b> {cabinet.status || "offline"}
 
-        {/* Upload */}
-        <div className="mt-8">
-          <div className="text-4xl font-black text-blue-300 mb-5">
-            Upload Cabinet Photos
-          </div>
+            <div style={styles.buttonRow}>
+              <button
+                style={styles.onlineButton}
+                onClick={() => updateCabinetStatus(cabinet.id, "online")}
+              >
+                Mark as Online
+              </button>
 
-          <input
-            type="file"
-            multiple
-            className="text-xl"
-          />
-        </div>
-
-        {/* Status */}
-        <div
-          className="
-            mt-8
-            rounded-3xl
-            border
-            border-blue-200
-            bg-blue-50
-            p-6
-          "
-        >
-          <div className="text-2xl font-bold mb-5">
-            Current Status: {cabinet.status}
+              <button
+                style={styles.idleButton}
+                onClick={() => updateCabinetStatus(cabinet.id, "idle")}
+              >
+                Mark as Idle
+              </button>
+            </div>
           </div>
 
-          <div className="flex gap-4">
-            <button
-              className="
-                flex-1
-                h-16
-                rounded-2xl
-                bg-green-600
-                text-white
-                text-2xl
-                font-black
-              "
-              onClick={() =>
-                updateCabinetStatus(
-                  cabinet.id,
-                  "online" as CabinetStatus
-                )
-              }
-            >
-              Mark as Online
-            </button>
-
-            <button
-              className="
-                flex-1
-                h-16
-                rounded-2xl
-                bg-gray-200
-                text-black
-                text-2xl
-                font-black
-              "
-              onClick={() =>
-                updateCabinetStatus(
-                  cabinet.id,
-                  "offline" as CabinetStatus
-                )
-              }
-            >
-              Mark as Idle
-            </button>
-          </div>
-        </div>
-
-        {/* Buttons */}
-        <div className="mt-8 space-y-4">
-          {onEditPosition && (
-            <button
-              onClick={onEditPosition}
-              className="
-                w-full
-                h-16
-                rounded-2xl
-                bg-gray-200
-                text-2xl
-                font-black
-              "
-            >
+          <div style={styles.footer}>
+            <button style={styles.footerButton} onClick={onEditPosition}>
               Edit Position
             </button>
-          )}
 
-          <button
-            onClick={onClose}
-            className="
-              w-full
-              h-16
-              rounded-2xl
-              border
-              text-2xl
-              font-black
-            "
-          >
-            Close
-          </button>
+            <button style={styles.footerButton} onClick={onClose}>
+              Close
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {previewImage && (
+        <div style={styles.previewOverlay} onClick={() => setPreviewImage(null)}>
+          <img src={previewImage} style={styles.previewImage} />
+        </div>
+      )}
+    </>
   );
+};
+
+const styles: Record<string, React.CSSProperties> = {
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.45)",
+    zIndex: 9999,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "flex-start",
+    paddingTop: 35,
+  },
+  modal: {
+    width: 760,
+    maxHeight: "90vh",
+    overflowY: "auto",
+    background: "#030303",
+    color: "#fff",
+    borderRadius: 16,
+    border: "1px solid #2563eb",
+    padding: 24,
+    boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 800,
+    marginBottom: 18,
+  },
+  typeBox: {
+    background: "#fff",
+    color: "#111",
+    padding: "12px 16px",
+    borderRadius: 12,
+    width: 330,
+    marginBottom: 16,
+  },
+  statusBox: {
+    background: "#fff7bf",
+    color: "#8a4b00",
+    padding: "14px 16px",
+    borderRadius: 12,
+    fontWeight: 800,
+    marginBottom: 16,
+  },
+  urgentBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    background: "#ffe4f4",
+    color: "#c2185b",
+    border: "2px solid #ff4db8",
+    borderRadius: 12,
+    padding: 14,
+    fontWeight: 800,
+    marginBottom: 18,
+  },
+  sectionLabel: {
+    color: "#94a3b8",
+    marginBottom: 8,
+  },
+  stepCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    border: "1px solid #334155",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    background: "#020202",
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+  },
+  stepTitle: {
+    fontSize: 18,
+    fontWeight: 800,
+  },
+  stepSub: {
+    fontSize: 13,
+    color: "#64748b",
+  },
+  checkMark: {
+    color: "#00ff66",
+    fontSize: 22,
+    width: 26,
+    textAlign: "center",
+  },
+  progressInput: {
+    width: 78,
+    padding: 8,
+    borderRadius: 8,
+    border: "1px solid #cbd5e1",
+    textAlign: "center",
+    fontWeight: 800,
+    fontSize: 18,
+  },
+  percent: {
+    color: "#94a3b8",
+    fontWeight: 800,
+  },
+  progressBox: {
+    background: "#ecfdf3",
+    color: "#111",
+    borderRadius: 12,
+    padding: 20,
+    marginTop: 22,
+  },
+  progressHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    color: "#00843d",
+    fontSize: 22,
+  },
+  badge: {
+    background: "#fff1a8",
+    color: "#b45309",
+    padding: "8px 14px",
+    borderRadius: 999,
+    fontWeight: 800,
+  },
+  track: {
+    height: 20,
+    background: "#e5e7eb",
+    borderRadius: 999,
+    marginTop: 18,
+  },
+  fill: {
+    height: 20,
+    background: "#d68a00",
+    borderRadius: 999,
+  },
+  progressText: {
+    textAlign: "center",
+    fontSize: 48,
+    fontWeight: 900,
+    color: "#d68a00",
+    marginTop: 20,
+  },
+  averageText: {
+    color: "#64748b",
+    textAlign: "center",
+    fontSize: 16,
+  },
+  photoSection: {
+    borderTop: "1px solid #1f2937",
+    marginTop: 22,
+    paddingTop: 14,
+  },
+  photoHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  uploadButton: {
+    background: "#2563eb",
+    color: "#fff",
+    padding: "9px 16px",
+    borderRadius: 8,
+    cursor: "pointer",
+  },
+  photoGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 12,
+    marginTop: 16,
+  },
+  photoWrap: {
+    position: "relative",
+  },
+  photo: {
+    width: "100%",
+    height: 180,
+    objectFit: "cover",
+    borderRadius: 12,
+    cursor: "pointer",
+  },
+  deleteButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 30,
+    height: 30,
+    borderRadius: "50%",
+    border: "none",
+    background: "#ef4444",
+    color: "#fff",
+    fontWeight: 900,
+    cursor: "pointer",
+  },
+  emptyPhoto: {
+    color: "#64748b",
+    textAlign: "center",
+    padding: 32,
+  },
+  statusPanel: {
+    background: "#eff6ff",
+    color: "#111",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 18,
+  },
+  buttonRow: {
+    display: "flex",
+    gap: 10,
+    marginTop: 12,
+  },
+  onlineButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    border: "none",
+    background: "#2563eb",
+    color: "#fff",
+    fontWeight: 800,
+  },
+  idleButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    border: "1px solid #ddd",
+    background: "#fff",
+    fontWeight: 800,
+  },
+  footer: {
+    display: "flex",
+    gap: 12,
+    marginTop: 20,
+  },
+  footerButton: {
+    flex: 1,
+    background: "#111",
+    color: "#fff",
+    border: "1px solid #334155",
+    borderRadius: 10,
+    padding: 12,
+    cursor: "pointer",
+  },
+  previewOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.95)",
+    zIndex: 10000,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    cursor: "pointer",
+  },
+  previewImage: {
+    maxWidth: "95vw",
+    maxHeight: "95vh",
+    objectFit: "contain",
+  },
 };
 
 export default CabinetStatusModal;
