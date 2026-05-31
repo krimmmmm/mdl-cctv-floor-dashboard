@@ -1,10 +1,10 @@
-import React from 'react';
-import { Cabinet, CabinetStatus } from '@/lib/floorPlanData';
-import { useFloorPlan } from '@/contexts/FloorPlanContext';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
+import React, { useMemo } from "react";
+import {
+  Cabinet,
+  CabinetStatus,
+} from "@/lib/floorPlanData";
+
+import { useFloorPlan } from "@/contexts/FloorPlanContext";
 
 interface CabinetStatusModalProps {
   cabinet: Cabinet;
@@ -13,223 +13,402 @@ interface CabinetStatusModalProps {
   onEditPosition?: () => void;
 }
 
-const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({ cabinet, isOpen, onClose, onEditPosition }) => {
-  const { updateCabinetStatus, updateCabinetField, updateCabinetInstallationStatus, addActivityLog } = useFloorPlan();
+const CabinetStatusModal: React.FC<
+  CabinetStatusModalProps
+> = ({
+  cabinet,
+  isOpen,
+  onClose,
+  onEditPosition,
+}) => {
+  const {
+    updateCabinetStatus,
+    updateCabinetField,
+    updateCabinetInstallationStatus,
+  } = useFloorPlan();
 
-  const handleStatusUpdate = (status: CabinetStatus) => {
-    updateCabinetStatus(cabinet.id, status);
-  };
+  if (!isOpen) return null;
 
-  const handleFieldUpdate = (field: keyof Omit<Cabinet, 'id' | 'x' | 'y' | 'name' | 'status'>, value: boolean) => {
-    updateCabinetField(cabinet.id, field, value);
-    
-    // Compute updated state for all checkboxes
-    const updated = {
-      installCabinet: field === 'installCabinet' ? value : cabinet.installCabinet,
-      acPower: field === 'acPower' ? value : cabinet.acPower,
-      utp: field === 'utp' ? value : cabinet.utp,
-      poeSwitch: field === 'poeSwitch' ? value : cabinet.poeSwitch,
-      fiberOptic: field === 'fiberOptic' ? value : cabinet.fiberOptic,
-      ready: field === 'ready' ? value : cabinet.ready,
-    };
-    const checkedCount = Object.values(updated).filter(Boolean).length;
-    
-    // Update installation status based on checked items
-    if (checkedCount === 0) {
-      updateCabinetInstallationStatus(cabinet.id, 'not_started');
-    } else if (checkedCount === 6) {
-      updateCabinetInstallationStatus(cabinet.id, 'completed');
+  const stepList = [
+    {
+      key: "installCabinet",
+      title: "INSTALL CABINET",
+      desc: "Cabinet installed",
+    },
+    {
+      key: "acPower",
+      title: "AC POWER",
+      desc: "Power supply installed",
+    },
+    {
+      key: "utp",
+      title: "UTP",
+      desc: "Network cable installed",
+    },
+    {
+      key: "poeSwitch",
+      title: "POE SWITCH",
+      desc: "Switch installed",
+    },
+    {
+      key: "fiberOptic",
+      title: "FIBER OPTIC",
+      desc: "Fiber optic connected",
+    },
+    {
+      key: "ready",
+      title: "READY",
+      desc: "Cabinet ready for use",
+    },
+  ];
+
+  const checkedCount = stepList.filter(
+    (s) => cabinet[s.key as keyof Cabinet]
+  ).length;
+
+  const totalProgress = Math.round(
+    (checkedCount / stepList.length) * 100
+  );
+
+  const installationText = useMemo(() => {
+    if (totalProgress === 0)
+      return "Not Started";
+
+    if (totalProgress === 100)
+      return "Completed";
+
+    return "In Progress";
+  }, [totalProgress]);
+
+  const installationColor =
+    installationText === "Completed"
+      ? "bg-green-100 text-green-700"
+      : installationText === "In Progress"
+      ? "bg-yellow-100 text-yellow-700"
+      : "bg-yellow-100 text-yellow-800";
+
+  const handleCheckbox = (
+    field: keyof Cabinet,
+    value: boolean
+  ) => {
+    updateCabinetField(
+      cabinet.id,
+      field as any,
+      value
+    );
+
+    const updatedCount = value
+      ? checkedCount + 1
+      : checkedCount - 1;
+
+    if (updatedCount <= 0) {
+      updateCabinetInstallationStatus(
+        cabinet.id,
+        "not_started"
+      );
+    } else if (
+      updatedCount >= stepList.length
+    ) {
+      updateCabinetInstallationStatus(
+        cabinet.id,
+        "completed"
+      );
     } else {
-      updateCabinetInstallationStatus(cabinet.id, 'in_progress');
+      updateCabinetInstallationStatus(
+        cabinet.id,
+        "in_progress"
+      );
     }
-  };
-
-  const handleOnlineClick = () => {
-    if (cabinet.installCabinet && cabinet.acPower && cabinet.utp && cabinet.ready) {
-      handleStatusUpdate('online');
-      updateCabinetInstallationStatus(cabinet.id, 'completed');
-      addActivityLog({
-        userId: 'current_user',
-        equipmentId: cabinet.id,
-        equipmentName: cabinet.name,
-        equipmentType: 'cabinet',
-        changeType: 'status',
-        action: `${cabinet.name} marked as Online`,
-        oldValue: 'idle',
-        newValue: 'online'
-      });
-    }
-  };
-
-  const allConditionsMet = cabinet.installCabinet && cabinet.acPower && cabinet.utp && cabinet.ready;
-  
-  // Calculate installation status display
-  const getInstallationStatusDisplay = () => {
-    const checkedCount = [
-      cabinet.installCabinet,
-      cabinet.acPower,
-      cabinet.utp,
-      cabinet.poeSwitch,
-      cabinet.fiberOptic,
-      cabinet.ready
-    ].filter(Boolean).length;
-    
-    if (checkedCount === 0) return 'Not Started';
-    if (checkedCount === 6) return 'Completed';
-    return 'In Progress';
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{cabinet.name}</DialogTitle>
-        </DialogHeader>
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="
+          bg-white
+          w-[560px]
+          max-h-[90vh]
+          overflow-y-auto
+          rounded-2xl
+          border-2
+          border-blue-300
+          shadow-2xl
+          p-6
+        "
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="mb-4">
+          <h1 className="text-3xl font-black text-black">
+            {cabinet.name}
+          </h1>
 
-        <div className="space-y-6">
-          {/* Installation Status */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-gray-600">
-              <span className="font-semibold">Installation Status:</span> <span className="font-semibold text-blue-600">{getInstallationStatusDisplay()}</span>
-            </p>
+          <div
+            className={`mt-4 rounded-2xl px-6 py-4 text-2xl font-bold ${installationColor}`}
+          >
+            Installation Status:{" "}
+            {installationText}
           </div>
+        </div>
 
-        {/* Cabinet Type */}
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600">
-              <span className="font-semibold">Type:</span> CCTV OUTDOOR STEEL CABINET (New)
-            </p>
+        {/* Type */}
+        <div className="mb-6">
+          <div className="text-[34px] font-black text-black">
+            Type: CCTV OUTDOOR STEEL CABINET
           </div>
+        </div>
 
-          {/* Installation/Configuration Steps */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-sm text-gray-700">Configuration Items</h3>
+        {/* Urgent */}
+        <div className="mb-6">
+          <label className="flex items-center gap-3 text-xl font-bold">
+            <input
+              type="checkbox"
+              checked={
+                (cabinet as any).isUrgent ||
+                false
+              }
+              onChange={(e) =>
+                updateCabinetField(
+                  cabinet.id,
+                  "isUrgent" as any,
+                  e.target.checked
+                )
+              }
+            />
+            Urgent Task
+          </label>
+        </div>
 
-            {/* Install Cabinet */}
-            <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <Checkbox
-                id="install_cabinet"
-                checked={cabinet.installCabinet}
-                onCheckedChange={(checked) => handleFieldUpdate('installCabinet', checked as boolean)}
-              />
-              <Label htmlFor="install_cabinet" className="flex-1 cursor-pointer">
-                <span className="font-medium">Install Cabinet</span>
-                <p className="text-xs text-gray-500">Cabinet physically installed</p>
-              </Label>
-              {cabinet.installCabinet && <span className="text-green-600 text-sm font-semibold">✓</span>}
-            </div>
+        {/* Installation Steps */}
+        <div className="space-y-5">
+          <h2 className="text-4xl font-black text-blue-300">
+            Installation Steps
+          </h2>
 
-            {/* AC POWER */}
-            <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <Checkbox
-                id="ac_power"
-                checked={cabinet.acPower}
-                onCheckedChange={(checked) => handleFieldUpdate('acPower', checked as boolean)}
-              />
-              <Label htmlFor="ac_power" className="flex-1 cursor-pointer">
-                <span className="font-medium">AC POWER</span>
-                <p className="text-xs text-gray-500">Power supply installed</p>
-              </Label>
-              {cabinet.acPower && <span className="text-green-600 text-sm font-semibold">✓</span>}
-            </div>
+          {stepList.map((step) => {
+            const checked =
+              cabinet[
+                step.key as keyof Cabinet
+              ] as boolean;
 
-            {/* UTP */}
-            <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <Checkbox
-                id="utp"
-                checked={cabinet.utp}
-                onCheckedChange={(checked) => handleFieldUpdate('utp', checked as boolean)}
-              />
-              <Label htmlFor="utp" className="flex-1 cursor-pointer">
-                <span className="font-medium">UTP</span>
-                <p className="text-xs text-gray-500">Network cables installed</p>
-              </Label>
-              {cabinet.utp && <span className="text-green-600 text-sm font-semibold">✓</span>}
-            </div>
-
-            {/* POE Switch */}
-            <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <Checkbox
-                id="poe_switch"
-                checked={cabinet.poeSwitch}
-                onCheckedChange={(checked) => handleFieldUpdate('poeSwitch', checked as boolean)}
-              />
-              <Label htmlFor="poe_switch" className="flex-1 cursor-pointer">
-                <span className="font-medium">POE Switch</span>
-                <p className="text-xs text-gray-500">Power over Ethernet switch (optional)</p>
-              </Label>
-              {cabinet.poeSwitch && <span className="text-green-600 text-sm font-semibold">✓</span>}
-            </div>
-
-            {/* Fiber Optic */}
-            <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <Checkbox
-                id="fiber_optic"
-                checked={cabinet.fiberOptic}
-                onCheckedChange={(checked) => handleFieldUpdate('fiberOptic', checked as boolean)}
-              />
-              <Label htmlFor="fiber_optic" className="flex-1 cursor-pointer">
-                <span className="font-medium">Fiber Optic</span>
-                <p className="text-xs text-gray-500">Fiber optic connection (optional)</p>
-              </Label>
-              {cabinet.fiberOptic && <span className="text-green-600 text-sm font-semibold">✓</span>}
-            </div>
-
-            {/* Ready */}
-            <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-              <Checkbox
-                id="ready"
-                checked={cabinet.ready}
-                onCheckedChange={(checked) => handleFieldUpdate('ready', checked as boolean)}
-              />
-              <Label htmlFor="ready" className="flex-1 cursor-pointer">
-                <span className="font-medium">Ready</span>
-                <p className="text-xs text-gray-500">All checks passed</p>
-              </Label>
-              {cabinet.ready && <span className="text-green-600 text-sm font-semibold">✓</span>}
-            </div>
-          </div>
-
-          {/* Online Status */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-gray-600 mb-3">
-              <span className="font-semibold">Current Status:</span> {cabinet.status}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleOnlineClick}
-                disabled={!allConditionsMet}
-                className={`flex-1 ${allConditionsMet ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-300'}`}
+            return (
+              <div
+                key={step.key}
+                className="
+                  bg-black
+                  rounded-3xl
+                  px-6
+                  py-5
+                  text-white
+                  flex
+                  items-center
+                  gap-5
+                "
               >
-                {cabinet.status === 'online' ? '✓ Online' : 'Mark as Online'}
-              </Button>
-              <Button
-                onClick={() => handleStatusUpdate('idle')}
-                variant="outline"
-                className="flex-1"
-              >
-                Mark as Idle
-              </Button>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(e) =>
+                    handleCheckbox(
+                      step.key as keyof Cabinet,
+                      e.target.checked
+                    )
+                  }
+                  className="w-7 h-7"
+                />
+
+                <div className="flex-1">
+                  <div className="text-3xl font-black">
+                    {step.title}
+                  </div>
+
+                  <div className="text-lg text-gray-300">
+                    {step.desc}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    defaultValue={
+                      checked ? 100 : 0
+                    }
+                    className="
+                      w-24
+                      h-14
+                      rounded-xl
+                      border-2
+                      border-white
+                      bg-black
+                      text-center
+                      text-2xl
+                      font-bold
+                    "
+                  />
+
+                  <span className="text-3xl font-black">
+                    %
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Progress */}
+        <div
+          className="
+            mt-8
+            rounded-3xl
+            bg-green-50
+            p-6
+          "
+        >
+          <div className="flex items-center justify-between">
+            <div className="text-5xl font-black text-green-700">
+              Progress รวม
             </div>
-            {!allConditionsMet && (
-              <p className="text-xs text-gray-500 mt-2">Complete all required items to mark as online</p>
-            )}
+
+            <div
+              className={`
+                px-5
+                py-3
+                rounded-full
+                text-2xl
+                font-black
+                ${installationColor}
+              `}
+            >
+              {installationText}
+            </div>
           </div>
 
-          {/* Edit Position Button */}
+          <div className="mt-5 h-7 rounded-full bg-gray-300 overflow-hidden">
+            <div
+              className="
+                h-full
+                bg-orange-500
+                transition-all
+              "
+              style={{
+                width: `${totalProgress}%`,
+              }}
+            />
+          </div>
+
+          <div className="text-center text-[90px] font-black text-orange-600 mt-4">
+            {totalProgress}%
+          </div>
+        </div>
+
+        {/* Upload */}
+        <div className="mt-8">
+          <div className="text-4xl font-black text-blue-300 mb-5">
+            Upload Cabinet Photos
+          </div>
+
+          <input
+            type="file"
+            multiple
+            className="text-xl"
+          />
+        </div>
+
+        {/* Status */}
+        <div
+          className="
+            mt-8
+            rounded-3xl
+            border
+            border-blue-200
+            bg-blue-50
+            p-6
+          "
+        >
+          <div className="text-2xl font-bold mb-5">
+            Current Status: {cabinet.status}
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              className="
+                flex-1
+                h-16
+                rounded-2xl
+                bg-green-600
+                text-white
+                text-2xl
+                font-black
+              "
+              onClick={() =>
+                updateCabinetStatus(
+                  cabinet.id,
+                  "online" as CabinetStatus
+                )
+              }
+            >
+              Mark as Online
+            </button>
+
+            <button
+              className="
+                flex-1
+                h-16
+                rounded-2xl
+                bg-gray-200
+                text-black
+                text-2xl
+                font-black
+              "
+              onClick={() =>
+                updateCabinetStatus(
+                  cabinet.id,
+                  "offline" as CabinetStatus
+                )
+              }
+            >
+              Mark as Idle
+            </button>
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="mt-8 space-y-4">
           {onEditPosition && (
-            <Button onClick={onEditPosition} variant="secondary" className="w-full">
+            <button
+              onClick={onEditPosition}
+              className="
+                w-full
+                h-16
+                rounded-2xl
+                bg-gray-200
+                text-2xl
+                font-black
+              "
+            >
               Edit Position
-            </Button>
+            </button>
           )}
 
-          {/* Close Button */}
-          <Button onClick={onClose} variant="outline" className="w-full">
+          <button
+            onClick={onClose}
+            className="
+              w-full
+              h-16
+              rounded-2xl
+              border
+              text-2xl
+              font-black
+            "
+          >
             Close
-          </Button>
+          </button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 
