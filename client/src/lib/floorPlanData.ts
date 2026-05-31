@@ -27,6 +27,7 @@ export type Camera = {
   wiringUTPProgress?: number;
   wallMountingProgress?: number;
   domeCameraProgress?: number;
+  onlineProgress?: number;
 
   photo1?: string;
   photo2?: string;
@@ -154,6 +155,7 @@ export const initialCameras: Camera[] = [
     wiringUTPProgress: 0,
     wallMountingProgress: 0,
     domeCameraProgress: 0,
+    onlineProgress: 0,
 
     photo1: "",
     photo2: "",
