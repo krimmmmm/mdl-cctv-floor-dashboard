@@ -13,13 +13,12 @@ const defaultCamera = {
   wallMountingInstalled: false,
   domeCameraInstalled: false,
   rotation: 0,
-
   isUrgent: false,
-  
+
   wiringUTPProgress: 0,
-wallMountingProgress: 0,
-domeCameraProgress: 0,
-  
+  wallMountingProgress: 0,
+  domeCameraProgress: 0,
+
   photo1: "",
   photo2: "",
   photo3: "",
@@ -35,8 +34,8 @@ const FloorPlanContext = createContext<any>({
   isLoading: false,
   hasDbError: false,
 
-setCameraCountByType: () => {},
-  
+  setCameraCountByType: () => {},
+
   updateCameraPosition: () => {},
   updateCameraStatus: () => {},
   updateCameraRotation: () => {},
@@ -51,26 +50,24 @@ setCameraCountByType: () => {},
   deleteFiberRoute: () => {},
 });
 
-
 const toAppCamera = (row: any) => ({
   id: row.id,
   name: row.name,
   x: Number(row.x || 0),
   y: Number(row.y || 0),
-  type: row.type,
-  status: row.status,
-  installationStatus: row.installation_status,
-  wiringUTP: row.wiring_utp,
-  wallMountingInstalled: row.wall_mounting,
-  domeCameraInstalled: row.install_camera,
+  type: row.type || "type1",
+  status: row.status || "offline",
+  installationStatus: row.installation_status || "not_started",
+  wiringUTP: Boolean(row.wiring_utp),
+  wallMountingInstalled: Boolean(row.wall_mounting),
+  domeCameraInstalled: Boolean(row.install_camera),
   rotation: Number(row.rotation || 0),
+  isUrgent: Boolean(row.is_urgent),
 
-  isUrgent: row.is_urgent || false,
-  
   wiringUTPProgress: Number(row.wiring_utp_progress || 0),
-wallMountingProgress: Number(row.wall_mounting_progress || 0),
-domeCameraProgress: Number(row.dome_camera_progress || 0),
-  
+  wallMountingProgress: Number(row.wall_mounting_progress || 0),
+  domeCameraProgress: Number(row.dome_camera_progress || 0),
+
   photo1: row.photo1 || "",
   photo2: row.photo2 || "",
   photo3: row.photo3 || "",
@@ -89,13 +86,12 @@ const toDbCamera = (camera: any) => ({
   wall_mounting: camera.wallMountingInstalled,
   install_camera: camera.domeCameraInstalled,
   rotation: camera.rotation || 0,
-
   is_urgent: camera.isUrgent || false,
-  
+
   wiring_utp_progress: camera.wiringUTPProgress || 0,
-wall_mounting_progress: camera.wallMountingProgress || 0,
-dome_camera_progress: camera.domeCameraProgress || 0,
-  
+  wall_mounting_progress: camera.wallMountingProgress || 0,
+  dome_camera_progress: camera.domeCameraProgress || 0,
+
   photo1: camera.photo1 || "",
   photo2: camera.photo2 || "",
   photo3: camera.photo3 || "",
@@ -116,7 +112,11 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     if (error) {
       console.error("Save camera error:", error);
       setHasDbError(true);
+      alert(error.message);
+      return false;
     }
+
+    return true;
   };
 
   useEffect(() => {
@@ -142,62 +142,36 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     loadCameras();
 
     const channel = supabase
-  .channel("cameras-sync")
-  .on(
-    "postgres_changes",
-    {
-      event: "*",
-      schema: "public",
-      table: "cameras",
-    },
-    (payload) => {
+      .channel("cameras-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cameras" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const deletedId = payload.old?.id;
+            setCameras((prev) => prev.filter((cam) => cam.id !== deletedId));
+            return;
+          }
 
-      // DELETE
-      if (payload.eventType === "DELETE") {
+          const row = payload.new;
+          if (!row) return;
 
-        const deletedId =
-          payload.old?.id;
+          const updatedCamera = toAppCamera(row);
 
-        setCameras((prev) =>
-          prev.filter(
-            (cam) =>
-              cam.id !== deletedId
-          )
-        );
+          setCameras((prev) => {
+            const exists = prev.some((cam) => cam.id === updatedCamera.id);
 
-        return;
-      }
+            if (!exists) {
+              return [...prev, updatedCamera];
+            }
 
-      const row = payload.new;
-
-      if (!row) return;
-
-      const updatedCamera =
-        toAppCamera(row);
-
-      setCameras((prev) => {
-
-        const exists = prev.some(
-          (cam) =>
-            cam.id === updatedCamera.id
-        );
-
-        if (!exists) {
-          return [
-            ...prev,
-            updatedCamera,
-          ];
+            return prev.map((cam) =>
+              cam.id === updatedCamera.id ? updatedCamera : cam
+            );
+          });
         }
-
-        return prev.map((cam) =>
-          cam.id === updatedCamera.id
-            ? updatedCamera
-            : cam
-        );
-      });
-    }
-  )
-  .subscribe();
+      )
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -253,68 +227,70 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
   };
 
   const setCameraCountByType = async (
-  cameraType: string,
-  targetCount: number
-) => {
+    cameraType: string,
+    targetCount: number
+  ) => {
+    const safeTarget = Math.max(0, targetCount);
 
-  const camerasByType = cameras.filter(
-    (cam) => cam.type === cameraType
-  );
+    const camerasByType = cameras
+      .filter((cam) => cam.type === cameraType)
+      .sort((a, b) => a.name.localeCompare(b.name));
 
-  const currentCount = camerasByType.length;
+    const currentCount = camerasByType.length;
 
-  // ADD CAMERA
-  if (targetCount > currentCount) {
+    if (safeTarget > currentCount) {
+      const addAmount = safeTarget - currentCount;
 
-    for (
-      let i = currentCount + 1;
-      i <= targetCount;
-      i++
-    ) {
+      for (let i = 1; i <= addAmount; i++) {
+        const runningNumber = currentCount + i;
 
-      const newCamera = {
-        ...defaultCamera,
+        const newCamera = {
+          ...defaultCamera,
+          id: `${cameraType}-${Date.now()}-${i}`,
+          type: cameraType,
+          name:
+            (cameraType === "type1" ? "Camera T1 " : "Camera T2 ") +
+            String(runningNumber).padStart(2, "0"),
+          x: cameraType === "type1" ? 420 + runningNumber * 20 : 560 + runningNumber * 20,
+          y: cameraType === "type1" ? 330 + runningNumber * 20 : 520 + runningNumber * 20,
+        };
 
-        type: cameraType,
+        const success = await saveCamera(newCamera);
 
-        id:
-          cameraType +
-          "-" +
-          String(Date.now()) +
-          "-" +
-          i,
-
-        name:
-          (cameraType === "type1"
-            ? "Camera T1 "
-            : "Camera T2 ") +
-          String(i).padStart(2, "0"),
-
-        x: 250 + i * 20,
-        y: 250 + i * 20,
-      };
-
-      await saveCamera(newCamera);
+        if (success) {
+          setCameras((prev) => {
+            const exists = prev.some((cam) => cam.id === newCamera.id);
+            if (exists) return prev;
+            return [...prev, newCamera];
+          });
+        }
+      }
     }
-  }
 
-  // REMOVE CAMERA
-  if (targetCount < currentCount) {
+    if (safeTarget < currentCount) {
+      const deleteAmount = currentCount - safeTarget;
 
-    const camerasToDelete =
-      camerasByType.slice(targetCount);
+      const camerasToDelete = [...camerasByType]
+        .sort((a, b) => b.name.localeCompare(a.name))
+        .slice(0, deleteAmount);
 
-    for (const cam of camerasToDelete) {
+      for (const cam of camerasToDelete) {
+        const { error } = await supabase
+          .from("cameras")
+          .delete()
+          .eq("id", cam.id);
 
-      await supabase
-        .from("cameras")
-        .delete()
-        .eq("id", cam.id);
+        if (error) {
+          console.error("Delete camera error:", error);
+          alert(error.message);
+          continue;
+        }
+
+        setCameras((prev) => prev.filter((item) => item.id !== cam.id));
+      }
     }
-  }
-};
+  };
 
-  
   return (
     <FloorPlanContext.Provider
       value={{
@@ -333,7 +309,7 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
         updateCameraPhotos,
         updateCameraInstallationStatus,
 
-      setCameraCountByType,
+        setCameraCountByType,
 
         updateRackPosition: () => {},
         updateCabinetPosition: () => {},
