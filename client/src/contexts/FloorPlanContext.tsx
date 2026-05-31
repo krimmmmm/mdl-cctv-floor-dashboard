@@ -35,7 +35,7 @@ const FloorPlanContext = createContext<any>({
   isLoading: false,
   hasDbError: false,
 
-setCameraCount: () => {},
+setCameraCountByType: () => {},
   
   updateCameraPosition: () => {},
   updateCameraStatus: () => {},
@@ -217,33 +217,82 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
     updateCamera(id, { installationStatus });
   };
 
-  const setCameraCount = async (
+  const setCameraCountByType = async (
+  cameraType: string,
   targetCount: number
 ) => {
-  const currentCount = cameras.length;
+
+  const camerasByType = cameras.filter(
+    (cam) => cam.type === cameraType
+  );
+
+  const currentCount = camerasByType.length;
 
   // ADD CAMERA
   if (targetCount > currentCount) {
+
     for (
       let i = currentCount + 1;
       i <= targetCount;
       i++
     ) {
+
+      const allSameType = cameras.filter(
+        (cam) => cam.type === cameraType
+      );
+
+      const runningNumber =
+        allSameType.length + i;
+
       const newCamera = {
         ...defaultCamera,
 
+        type: cameraType,
+
         id:
-          "cam-" +
-          String(i).padStart(2, "0"),
+          cameraType +
+          "-" +
+          String(Date.now()) +
+          "-" +
+          i,
 
         name:
-          "Camera " +
-          String(i).padStart(2, "0"),
+          (cameraType === "type1"
+            ? "Camera T1 "
+            : "Camera T2 ") +
+          String(runningNumber).padStart(2, "0"),
 
-        x: 200 + i * 20,
-        y: 200 + i * 20,
+        x: 250 + i * 20,
+        y: 250 + i * 20,
       };
 
+      await saveCamera(newCamera);
+    }
+  }
+
+  // REMOVE CAMERA
+  if (targetCount < currentCount) {
+
+    const camerasToDelete =
+      camerasByType
+        .sort((a, b) =>
+          b.id.localeCompare(a.id)
+        )
+        .slice(
+          0,
+          currentCount - targetCount
+        );
+
+    for (const cam of camerasToDelete) {
+
+      await supabase
+        .from("cameras")
+        .delete()
+        .eq("id", cam.id);
+    }
+  }
+};
+  
       await saveCamera(newCamera);
     }
   }
@@ -284,7 +333,7 @@ export const FloorPlanProvider = ({ children }: { children: React.ReactNode }) =
         updateCameraPhotos,
         updateCameraInstallationStatus,
 
-      setCameraCount,
+      setCameraCountByType,
 
         updateRackPosition: () => {},
         updateCabinetPosition: () => {},
