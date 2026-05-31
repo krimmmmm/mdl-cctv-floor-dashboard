@@ -1,4 +1,3 @@
-```tsx
 import React from "react";
 import { Rack } from "@/lib/floorPlanData";
 
@@ -257,4 +256,3 @@ const RackMarker: React.FC<RackMarkerProps> = ({
 };
 
 export default RackMarker;
-```
