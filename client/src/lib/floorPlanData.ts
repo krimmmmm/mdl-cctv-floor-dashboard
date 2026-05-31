@@ -115,13 +115,22 @@ export type Cabinet = {
 export type FiberRoute = {
   id: string;
   name: string;
+
   points: {
     x: number;
     y: number;
   }[];
 
-  status: string;
   color: string;
+  status: string;
+
+  progress?: number;
+  progressDirection?: "start" | "end";
+
+  photo1?: string;
+  photo2?: string;
+  photo3?: string;
+  photo4?: string;
 };
 
 export const initialCameras: Camera[] = [
