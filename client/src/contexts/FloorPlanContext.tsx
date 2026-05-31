@@ -48,6 +48,42 @@ const defaultRack = {
   photo4: "",
 };
 
+```tsx
+const defaultCabinet = {
+  id: "cabinet-01",
+  name: "Cabinet 01",
+  x: 850,
+  y: 420,
+
+  type: "type1",
+
+  status: "offline",
+  installationStatus: "not_started",
+
+  isUrgent: false,
+
+  installCabinet: false,
+  acPower: false,
+  utp: false,
+  poeSwitch: false,
+  fiberOptic: false,
+  ready: false,
+
+  installCabinetProgress: 0,
+  acPowerProgress: 0,
+  utpProgress: 0,
+  poeSwitchProgress: 0,
+  fiberOpticProgress: 0,
+  readyProgress: 0,
+
+  photo1: "",
+  photo2: "",
+  photo3: "",
+  photo4: "",
+};
+```
+
+
 const FloorPlanContext = createContext<any>({
   cameras: [],
   racks: [],
