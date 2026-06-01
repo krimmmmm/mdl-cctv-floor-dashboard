@@ -3,6 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch, Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { FloorPlanProvider } from "./contexts/FloorPlanContext";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -19,9 +20,25 @@ function Router() {
       </Route>
 
       <Route path="/login" component={Login} />
-      <Route path="/admin/users" component={AdminUsers} />
-      <Route path="/dashboard" component={DashboardOverview} />
-      <Route path="/floorplan" component={Home} />
+
+      <ProtectedRoute
+        path="/admin/users"
+        component={AdminUsers}
+        allowedRoles={["admin"]}
+      />
+
+      <ProtectedRoute
+        path="/dashboard"
+        component={DashboardOverview}
+        allowedRoles={["admin", "staff", "customer"]}
+      />
+
+      <ProtectedRoute
+        path="/floorplan"
+        component={Home}
+        allowedRoles={["admin", "staff"]}
+      />
+
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
