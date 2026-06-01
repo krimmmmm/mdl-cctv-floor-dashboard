@@ -4,6 +4,7 @@ import { useFloorPlan } from "@/contexts/FloorPlanContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { supabase } from "@/lib/supabase";
 
 const COLORS = ["#22c55e", "#f59e0b", "#94a3b8"];
 
@@ -1280,34 +1281,64 @@ const CustomerRequirementBox = ({
 }) => {
   const [requirements, setRequirements] = React.useState<any[]>([]);
   const [text, setText] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  React.useEffect(() => {
-    const saved = localStorage.getItem("mdl_customer_requirements");
-    if (saved) {
-      setRequirements(JSON.parse(saved));
+  const loadRequirements = async () => {
+    const { data, error } = await supabase
+      .from("customer_requirements")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Load customer requirements error:", error);
+      return;
     }
-  }, []);
 
-  const saveRequirements = (next: any[]) => {
-    setRequirements(next);
-    localStorage.setItem("mdl_customer_requirements", JSON.stringify(next));
+    setRequirements(data || []);
+    setIsLoading(false);
   };
 
-  const submitRequirement = () => {
+  React.useEffect(() => {
+    loadRequirements();
+
+    const channel = supabase
+      .channel("customer-requirements-sync")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "customer_requirements",
+        },
+        () => {
+          loadRequirements();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const submitRequirement = async () => {
     if (!text.trim()) return;
 
-    const next = [
-      {
-        id: `req-${Date.now()}`,
+    const { error } = await supabase
+      .from("customer_requirements")
+      .insert({
         message: text.trim(),
-        createdBy: currentUser?.username || "customer",
-        createdAt: new Date().toISOString(),
-      },
-      ...requirements,
-    ];
+        created_by: currentUser?.username || "customer",
+      });
 
-    saveRequirements(next);
+    if (error) {
+      console.error("Insert requirement error:", error);
+      alert(error.message);
+      return;
+    }
+
     setText("");
+    await loadRequirements();
   };
 
   return (
@@ -1351,10 +1382,11 @@ const CustomerRequirementBox = ({
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-xs font-black text-slate-700">
-                    {item.createdBy}
+                    {item.created_by}
                   </div>
+
                   <div className="text-[11px] text-slate-400">
-                    {new Date(item.createdAt).toLocaleString("th-TH")}
+                    {new Date(item.created_at).toLocaleString("th-TH")}
                   </div>
                 </div>
 
@@ -1365,7 +1397,9 @@ const CustomerRequirementBox = ({
             ))
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-              ยังไม่มี Requirement จากลูกค้า
+              {isLoading
+                ? "Loading..."
+                : "ยังไม่มี Requirement จากลูกค้า"}
             </div>
           )}
         </div>
