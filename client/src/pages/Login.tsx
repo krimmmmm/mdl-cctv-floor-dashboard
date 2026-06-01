@@ -258,7 +258,16 @@ export default function Login() {
 
                 <button
                   type="button"
-                  onClick={() => setLocation("/admin/users")}
+                  onClick={async () => {
+  const success = await login(username, phone);
+
+  if (!success) {
+    setError("กรุณา Login ด้วยสิทธิ์ Admin ก่อนเข้าหน้าจัดการผู้ใช้งาน");
+    return;
+  }
+
+  setLocation("/admin/users");
+}}
                   className="mt-3 flex w-full items-center justify-between rounded-xl border border-slate-200 px-5 py-4 text-left transition hover:border-blue-300 hover:bg-blue-50"
                 >
                   <div className="flex items-center gap-4">
