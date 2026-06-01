@@ -5,15 +5,21 @@ import { Route, Switch, Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { FloorPlanProvider } from "./contexts/FloorPlanContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import Home from "./pages/Home";
 import DashboardOverview from "./pages/DashboardOverview";
+import Login from "./pages/Login";
+import AdminUsers from "./pages/AdminUsers";
 
 function Router() {
   return (
     <Switch>
       <Route path="/">
-        <Redirect to="/dashboard" />
+        <Redirect to="/login" />
       </Route>
+
+      <Route path="/login" component={Login} />
+      <Route path="/admin/users" component={AdminUsers} />
       <Route path="/dashboard" component={DashboardOverview} />
       <Route path="/floorplan" component={Home} />
       <Route path="/404" component={NotFound} />
@@ -29,7 +35,9 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <FloorPlanProvider>
-            <Router />
+            <AuthProvider>
+              <Router />
+            </AuthProvider>
           </FloorPlanProvider>
         </TooltipProvider>
       </ThemeProvider>
