@@ -16,7 +16,9 @@ export default function Home() {
   const { user, logout } = useAuth();
 
   const role = user?.role || 'customer';
-  const canEditFloorPlan = role === 'admin' || role === 'staff';
+  const isAdmin = role === 'admin';
+  const canViewFloorPlan = role === 'admin' || role === 'staff' || role === 'customer';
+  const canManageLayout = isAdmin;
   const isCustomer = role === 'customer';
 
   return (
@@ -109,7 +111,7 @@ export default function Home() {
       {/* Main Content - Vertical Layout */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Control Panel - Hidden for Customer */}
-        {canEditFloorPlan ? (
+        {canManageLayout ? (
           <div className="flex-shrink-0 border-b border-gray-200 overflow-x-auto bg-white">
             <ControlPanel />
           </div>
@@ -120,7 +122,7 @@ export default function Home() {
                 View Only Mode
               </p>
               <p className="text-xs text-slate-500 mt-1">
-                ผู้ใช้งานประเภท Customer สามารถดู Floor Plan และสถานะอุปกรณ์ได้ แต่ไม่สามารถเพิ่ม ลบ ย้าย หรือแก้ไขอุปกรณ์ได้
+                Admin เท่านั้นที่สามารถเพิ่ม/ลด/ย้ายตำแหน่งอุปกรณ์ได้ ส่วน Staff สามารถอัปเดต Progress ได้ และ Customer ดูข้อมูลได้เท่านั้น
               </p>
             </div>
           </div>
@@ -128,11 +130,11 @@ export default function Home() {
 
         {/* Floor Plan Canvas - Full Width Middle */}
         <div className="flex-1 overflow-hidden">
-          <FloorPlanCanvas readOnly={!canEditFloorPlan} />
+          <FloorPlanCanvas readOnly={!canViewFloorPlan} canManageLayout={canManageLayout} />
         </div>
 
         {/* Activity Log - Admin/Staff only */}
-        {canEditFloorPlan && (
+        {!isCustomer && (
           <div className="h-48 border-t border-gray-200 overflow-hidden flex flex-col bg-white">
             <ActivityLog />
           </div>
