@@ -29,6 +29,36 @@ const toneClass: Record<Tone, string> = {
   orange: "from-orange-50 to-amber-50 border-orange-100",
 };
 
+const formatDateDisplay = (dateValue?: string) => {
+  if (!dateValue) return "";
+
+  const [year, month, day] = String(dateValue).slice(0, 10).split("-");
+  if (!year || !month || !day) return "";
+
+  return `${day}/${month}/${year}`;
+};
+
+const parseDisplayDate = (value: string) => {
+  const cleaned = value.trim();
+  const match = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+
+  if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+};
+
+const getProjectPlanStart = (workPlans: Record<string, any>) =>
+  workPlans.__project_plan__?.planStart || workPlans.__project_plan__?.date || "";
+
+const getProjectPlanFinish = (workPlans: Record<string, any>) =>
+  workPlans.__project_plan__?.finishDate || "";
+
+
 
 const calculateCameraOverallProgress = (camera: any) => {
   const values = [
@@ -337,12 +367,35 @@ const DashboardOverview: React.FC = () => {
       </header>
 
       <main className="p-5 space-y-5">
-        <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <section className="grid grid-cols-2 md:grid-cols-7 gap-3">
           <KpiCard title="Overall" value={`${summary.overall}%`} tone="blue" />
           <KpiCard title="Total Work" value={summary.total} tone="slate" />
           <KpiCard title="Completed" value={summary.completed} tone="green" />
           <KpiCard title="In Progress" value={summary.inProgress} tone="yellow" />
           <KpiCard title="Not Started" value={summary.notStarted} tone="gray" />
+          <KpiDateInputCard
+            title="Plan Start"
+            value={getProjectPlanStart(workPlans)}
+            tone="blue"
+            onSave={(isoDate) =>
+              updateWorkPlan("__project_plan__", {
+                date: isoDate,
+                planStart: isoDate,
+                equipmentName: "Project Plan",
+              })
+            }
+          />
+          <KpiDateInputCard
+            title="Plan Finish"
+            value={getProjectPlanFinish(workPlans)}
+            tone="orange"
+            onSave={(isoDate) =>
+              updateWorkPlan("__project_plan__", {
+                finishDate: isoDate,
+                equipmentName: "Project Plan",
+              })
+            }
+          />
         </section>
 
         <section className="grid grid-cols-1 xl:grid-cols-[1.1fr_1fr] gap-5">
@@ -624,30 +677,26 @@ const DashboardOverview: React.FC = () => {
                           </div>
                         </td>
                         <td className="p-3">
-                          <input
-                            type="date"
-                            value={workPlans[row.id]?.date || ""}
-                            onChange={(e) =>
+                          <DateInput
+                            value={workPlans[row.id]?.date || workPlans[row.id]?.planStart || ""}
+                            onSave={(isoDate) =>
                               updateWorkPlan(row.id, {
-                                date: e.target.value,
-                                planStart: e.target.value,
+                                date: isoDate,
+                                planStart: isoDate,
                                 equipmentName: row.name || row.label || row.id,
                               })
                             }
-                            className="border border-slate-200 rounded-lg px-2 py-1 text-xs"
                           />
                         </td>
                         <td className="p-3">
-                          <input
-                            type="date"
+                          <DateInput
                             value={workPlans[row.id]?.finishDate || ""}
-                            onChange={(e) =>
+                            onSave={(isoDate) =>
                               updateWorkPlan(row.id, {
-                                finishDate: e.target.value,
+                                finishDate: isoDate,
                                 equipmentName: row.name || row.label || row.id,
                               })
                             }
-                            className="border border-slate-200 rounded-lg px-2 py-1 text-xs"
                           />
                         </td>
                         <td className="p-3">
@@ -876,7 +925,7 @@ const DayWorkModal = ({
             <h2 className="text-xl font-black text-slate-900">
               Daily Work Plan
             </h2>
-            <p className="text-sm text-slate-500">{dateKey}</p>
+            <p className="text-sm text-slate-500">{formatDateDisplay(dateKey)}</p>
           </div>
 
           <button
@@ -1074,7 +1123,7 @@ const DayJobListModal = ({
             <h2 className="text-xl font-black text-slate-900">
               รายการงานของวันนี้
             </h2>
-            <p className="text-sm text-slate-500">{dateKey}</p>
+            <p className="text-sm text-slate-500">{formatDateDisplay(dateKey)}</p>
           </div>
 
           <button
@@ -1175,6 +1224,60 @@ const DayJobListModal = ({
   );
 };
 
+
+const DateInput = ({
+  value,
+  onSave,
+}: {
+  value?: string;
+  onSave: (isoDate: string) => void;
+}) => {
+  const [text, setText] = React.useState(formatDateDisplay(value));
+
+  React.useEffect(() => {
+    setText(formatDateDisplay(value));
+  }, [value]);
+
+  const commit = (nextText: string) => {
+    const isoDate = parseDisplayDate(nextText);
+    if (isoDate) onSave(isoDate);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      placeholder="วัน/เดือน/ปี"
+      value={text}
+      onChange={(e) => {
+        const nextText = e.target.value;
+        setText(nextText);
+        if (nextText.length >= 10) commit(nextText);
+      }}
+      onBlur={() => commit(text)}
+      className="border border-slate-200 rounded-lg px-2 py-1 text-xs w-[120px]"
+    />
+  );
+};
+
+const KpiDateInputCard = ({
+  title,
+  value,
+  tone,
+  onSave,
+}: {
+  title: string;
+  value?: string;
+  tone: Tone;
+  onSave: (isoDate: string) => void;
+}) => (
+  <Card className={`rounded-2xl border shadow-sm bg-gradient-to-br ${toneClass[tone]}`}>
+    <CardContent className="p-4">
+      <div className="text-xs text-slate-500 font-semibold">{title}</div>
+      <DateInput value={value} onSave={onSave} />
+    </CardContent>
+  </Card>
+);
 
 const KpiCard = ({ title, value, tone }: { title: string; value: any; tone: Tone }) => (
   <Card className={`rounded-2xl border shadow-sm bg-gradient-to-br ${toneClass[tone]}`}>
