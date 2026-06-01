@@ -122,14 +122,31 @@ const DashboardOverview: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">MDL CCTV Monitoring Dashboard</h1>
-          <p className="text-sm text-slate-500">Executive overview, progress, schedule, and uploaded field photos</p>
-        </div>
-        <Link href="/floorplan" className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm">
-          Open Floor Plan
-        </Link>
-      </header>
+  <div>
+    <h1 className="text-2xl font-bold">
+      MDL CCTV Monitoring Dashboard
+    </h1>
+
+    <p className="text-sm text-slate-500">
+      Executive overview, progress, schedule, and uploaded field photos
+    </p>
+  </div>
+
+  <div className="flex items-center gap-4">
+    <div className="text-right">
+      <p className="text-xs text-slate-500">
+        Created by Tadchai Sittisomboon (EPM)
+      </p>
+    </div>
+
+    <Link
+      href="/floorplan"
+      className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm"
+    >
+      Open Floor Plan
+    </Link>
+  </div>
+</header>
 
       <main className="p-5 space-y-5">
         <section className="grid grid-cols-2 md:grid-cols-5 gap-4">
