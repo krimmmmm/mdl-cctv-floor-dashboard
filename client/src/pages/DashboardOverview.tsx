@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -183,6 +184,11 @@ const DashboardOverview: React.FC = () => {
     updateWorkPlan = () => {},
   } = useFloorPlan();
 
+  const { user, users = [] } = useAuth();
+  const userRole = user?.role || null;
+  const canEdit = userRole === "admin" || userRole === "staff";
+  const isCustomer = userRole === "customer";
+
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
@@ -353,7 +359,10 @@ const DashboardOverview: React.FC = () => {
         <div className="flex items-center gap-4">
           <div className="text-right">
             <p className="text-xs text-slate-500">
-              Created by Tadchai Sittisomboon (EPM)
+              Created by Tadchai Sittisomboon _ AWN (EPM)
+            </p>
+            <p className="mt-1 text-[11px] font-black text-blue-600 uppercase">
+              {user?.username || "Guest"} · {userRole || "no role"}
             </p>
           </div>
 
@@ -377,7 +386,9 @@ const DashboardOverview: React.FC = () => {
             title="Plan Start"
             value={getProjectPlanStart(workPlans)}
             tone="blue"
+            disabled={!canEdit}
             onSave={(isoDate) =>
+              canEdit &&
               updateWorkPlan("__project_plan__", {
                 date: isoDate,
                 planStart: isoDate,
@@ -389,7 +400,9 @@ const DashboardOverview: React.FC = () => {
             title="Plan Finish"
             value={getProjectPlanFinish(workPlans)}
             tone="orange"
+            disabled={!canEdit}
             onSave={(isoDate) =>
+              canEdit &&
               updateWorkPlan("__project_plan__", {
                 finishDate: isoDate,
                 equipmentName: "Project Plan",
@@ -679,7 +692,9 @@ const DashboardOverview: React.FC = () => {
                         <td className="p-3">
                           <DateInput
                             value={workPlans[row.id]?.date || workPlans[row.id]?.planStart || ""}
+                            disabled={!canEdit}
                             onSave={(isoDate) =>
+                              canEdit &&
                               updateWorkPlan(row.id, {
                                 date: isoDate,
                                 planStart: isoDate,
@@ -691,7 +706,9 @@ const DashboardOverview: React.FC = () => {
                         <td className="p-3">
                           <DateInput
                             value={workPlans[row.id]?.finishDate || ""}
+                            disabled={!canEdit}
                             onSave={(isoDate) =>
+                              canEdit &&
                               updateWorkPlan(row.id, {
                                 finishDate: isoDate,
                                 equipmentName: row.name || row.label || row.id,
@@ -779,6 +796,18 @@ const DashboardOverview: React.FC = () => {
             </CardContent>
           </Card>
         </section>
+
+        <section className="grid grid-cols-1 xl:grid-cols-[1.4fr_0.9fr] gap-5">
+          <CustomerRequirementBox
+            currentUser={user}
+            isCustomer={isCustomer}
+          />
+
+          <OnlineUsersBox
+            currentUser={user}
+            users={users}
+          />
+        </section>
       </main>
 
       {selectedMonth && (
@@ -798,6 +827,7 @@ const DashboardOverview: React.FC = () => {
           equipmentRows={equipmentRows}
           workPlans={workPlans}
           updateWorkPlan={updateWorkPlan}
+          canEdit={canEdit}
           onClose={() => setSelectedDayModal(null)}
         />
       )}
@@ -898,12 +928,14 @@ const DayWorkModal = ({
   equipmentRows,
   workPlans,
   updateWorkPlan,
+  canEdit,
   onClose,
 }: {
   dateKey: string;
   equipmentRows: any[];
   workPlans: Record<string, any>;
   updateWorkPlan: (id: string, changes: any) => void;
+  canEdit: boolean;
   onClose: () => void;
 }) => {
   const [selectedEquipmentId, setSelectedEquipmentId] = useState(
@@ -944,7 +976,7 @@ const DayWorkModal = ({
             <select
               value={selectedEquipmentId}
               onChange={(e) => setSelectedEquipmentId(e.target.value)}
-              className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+              className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
             >
               {equipmentRows.map((row) => (
                 <option key={`${row.typeKey}-${row.id}`} value={row.id}>
@@ -964,6 +996,7 @@ const DayWorkModal = ({
                   <input
                     type="text"
                     value={currentPlan.supervisorName || ""}
+                    disabled={!canEdit}
                     onChange={(e) =>
                       updateWorkPlan(selectedEquipment.id, {
                         date: dateKey,
@@ -973,7 +1006,7 @@ const DayWorkModal = ({
                       })
                     }
                     placeholder="ระบุชื่อหัวหน้างาน"
-                    className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                    className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
                   />
                 </div>
 
@@ -984,6 +1017,7 @@ const DayWorkModal = ({
                   <input
                     type="tel"
                     value={currentPlan.supervisorPhone || ""}
+                    disabled={!canEdit}
                     onChange={(e) =>
                       updateWorkPlan(selectedEquipment.id, {
                         date: dateKey,
@@ -993,7 +1027,7 @@ const DayWorkModal = ({
                       })
                     }
                     placeholder="ระบุเบอร์โทร"
-                    className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                    className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
                   />
                 </div>
               </div>
@@ -1006,6 +1040,7 @@ const DayWorkModal = ({
                   <input
                     type="time"
                     value={currentPlan.startTime || ""}
+                    disabled={!canEdit}
                     onChange={(e) =>
                       updateWorkPlan(selectedEquipment.id, {
                         date: dateKey,
@@ -1014,7 +1049,7 @@ const DayWorkModal = ({
                         startTime: e.target.value,
                       })
                     }
-                    className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                    className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
                   />
                 </div>
 
@@ -1025,6 +1060,7 @@ const DayWorkModal = ({
                   <input
                     type="time"
                     value={currentPlan.endTime || ""}
+                    disabled={!canEdit}
                     onChange={(e) =>
                       updateWorkPlan(selectedEquipment.id, {
                         date: dateKey,
@@ -1033,7 +1069,7 @@ const DayWorkModal = ({
                         endTime: e.target.value,
                       })
                     }
-                    className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                    className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
                   />
                 </div>
               </div>
@@ -1044,6 +1080,7 @@ const DayWorkModal = ({
                 </label>
                 <textarea
                   value={currentPlan.workDetail || ""}
+                  disabled={!canEdit}
                   onChange={(e) =>
                     updateWorkPlan(selectedEquipment.id, {
                       date: dateKey,
@@ -1053,7 +1090,7 @@ const DayWorkModal = ({
                     })
                   }
                   placeholder="ระบุว่าเข้าไปทำอะไร"
-                  className="mt-1 w-full min-h-[120px] border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                  className="mt-1 w-full min-h-[120px] border border-slate-200 rounded-xl px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
                 />
               </div>
 
@@ -1061,6 +1098,7 @@ const DayWorkModal = ({
                 <input
                   type="checkbox"
                   checked={Boolean(currentPlan.isWorking)}
+                  disabled={!canEdit}
                   onChange={(e) =>
                     updateWorkPlan(selectedEquipment.id, {
                       date: dateKey,
@@ -1225,12 +1263,199 @@ const DayJobListModal = ({
 };
 
 
+
+const CustomerRequirementBox = ({
+  currentUser,
+  isCustomer,
+}: {
+  currentUser: any;
+  isCustomer: boolean;
+}) => {
+  const [requirements, setRequirements] = React.useState<any[]>([]);
+  const [text, setText] = React.useState("");
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem("mdl_customer_requirements");
+    if (saved) {
+      setRequirements(JSON.parse(saved));
+    }
+  }, []);
+
+  const saveRequirements = (next: any[]) => {
+    setRequirements(next);
+    localStorage.setItem("mdl_customer_requirements", JSON.stringify(next));
+  };
+
+  const submitRequirement = () => {
+    if (!text.trim()) return;
+
+    const next = [
+      {
+        id: `req-${Date.now()}`,
+        message: text.trim(),
+        createdBy: currentUser?.username || "customer",
+        createdAt: new Date().toISOString(),
+      },
+      ...requirements,
+    ];
+
+    saveRequirements(next);
+    setText("");
+  };
+
+  return (
+    <Card className="rounded-2xl border border-slate-200 shadow-sm bg-white">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">
+          Customer Requirement / Comment
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        {isCustomer ? (
+          <div className="space-y-2">
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="พิมพ์ Comment หรือ Requirement ถึง Admin / Staff"
+              className="w-full min-h-[110px] rounded-2xl border border-slate-200 px-4 py-3 text-sm"
+            />
+
+            <button
+              type="button"
+              onClick={submitRequirement}
+              className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-black text-white hover:bg-blue-500 transition"
+            >
+              ส่ง Requirement
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-700 font-semibold">
+            กล่องนี้สำหรับรับ Requirement / Comment จากลูกค้า
+          </div>
+        )}
+
+        <div className="space-y-2 max-h-[220px] overflow-auto pr-1">
+          {requirements.length > 0 ? (
+            requirements.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs font-black text-slate-700">
+                    {item.createdBy}
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    {new Date(item.createdAt).toLocaleString("th-TH")}
+                  </div>
+                </div>
+
+                <div className="mt-2 whitespace-pre-wrap text-sm text-slate-800">
+                  {item.message}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+              ยังไม่มี Requirement จากลูกค้า
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const OnlineUsersBox = ({
+  currentUser,
+  users,
+}: {
+  currentUser: any;
+  users: any[];
+}) => {
+  const knownUsers = users || [];
+  const nowText = new Date().toLocaleString("th-TH");
+
+  return (
+    <Card className="rounded-2xl border border-slate-200 shadow-sm bg-white">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">
+          Login Today / Online Users
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        {currentUser && (
+          <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-black text-green-800">
+                  {currentUser.username}
+                </div>
+                <div className="text-xs text-green-700 uppercase">
+                  {currentUser.role}
+                </div>
+              </div>
+
+              <span className="rounded-full bg-green-600 px-3 py-1 text-xs font-black text-white animate-pulse">
+                ONLINE
+              </span>
+            </div>
+
+            <div className="mt-2 text-[11px] text-green-700">
+              Active now · {nowText}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2 max-h-[220px] overflow-auto pr-1">
+          {knownUsers.length > 0 ? (
+            knownUsers.map((item) => {
+              const isCurrent = item.username === currentUser?.username;
+
+              return (
+                <div
+                  key={item.username}
+                  className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+                >
+                  <div>
+                    <div className="font-bold text-slate-800">{item.username}</div>
+                    <div className="text-xs text-slate-500 uppercase">{item.role}</div>
+                  </div>
+
+                  <span
+                    className={`rounded-full px-3 py-1 text-[11px] font-black ${
+                      isCurrent
+                        ? "bg-green-100 text-green-700"
+                        : "bg-slate-200 text-slate-500"
+                    }`}
+                  >
+                    {isCurrent ? "ONLINE" : "OFFLINE"}
+                  </span>
+                </div>
+              );
+            })
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+              ยังไม่มีข้อมูลผู้ใช้งาน
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+
 const DateInput = ({
   value,
   onSave,
+  disabled = false,
 }: {
   value?: string;
   onSave: (isoDate: string) => void;
+  disabled?: boolean;
 }) => {
   const [text, setText] = React.useState(formatDateDisplay(value));
 
@@ -1246,6 +1471,7 @@ const DateInput = ({
   return (
     <input
       type="text"
+      disabled={disabled}
       inputMode="numeric"
       placeholder="วัน/เดือน/ปี"
       value={text}
@@ -1255,7 +1481,7 @@ const DateInput = ({
         if (nextText.length >= 10) commit(nextText);
       }}
       onBlur={() => commit(text)}
-      className="border border-slate-200 rounded-lg px-2 py-1 text-xs w-[120px]"
+      className="border border-slate-200 rounded-lg px-2 py-1 text-xs w-[120px] disabled:bg-slate-100 disabled:text-slate-400"
     />
   );
 };
@@ -1264,17 +1490,19 @@ const KpiDateInputCard = ({
   title,
   value,
   tone,
+  disabled = false,
   onSave,
 }: {
   title: string;
   value?: string;
   tone: Tone;
+  disabled?: boolean;
   onSave: (isoDate: string) => void;
 }) => (
   <Card className={`rounded-2xl border shadow-sm bg-gradient-to-br ${toneClass[tone]}`}>
     <CardContent className="p-4">
       <div className="text-xs text-slate-500 font-semibold">{title}</div>
-      <DateInput value={value} onSave={onSave} />
+      <DateInput value={value} disabled={disabled} onSave={onSave} />
     </CardContent>
   </Card>
 );
