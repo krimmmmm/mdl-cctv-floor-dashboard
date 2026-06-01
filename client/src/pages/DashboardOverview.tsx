@@ -175,6 +175,301 @@ const averageOverallProgress = (
   );
 };
 
+const getReportSummary = (equipmentRows: any[]) => {
+  const total = equipmentRows.length;
+  const completed = equipmentRows.filter((row) => row.progress >= 100).length;
+  const inProgress = equipmentRows.filter((row) => row.progress > 0 && row.progress < 100).length;
+  const notStarted = equipmentRows.filter((row) => row.progress <= 0).length;
+  const overall =
+    total > 0
+      ? Math.round(equipmentRows.reduce((sum, row) => sum + Number(row.progress || 0), 0) / total)
+      : 0;
+
+  return { total, completed, inProgress, notStarted, overall };
+};
+
+const getRowsForDate = (
+  dateKey: string,
+  equipmentRows: any[],
+  workPlans: Record<string, any>
+) =>
+  equipmentRows.filter((row) => {
+    const plan = workPlans[row.id] || {};
+    return plan.date === dateKey || plan.planStart === dateKey || row.planStartDate === dateKey;
+  });
+
+const getWeekRangeFromTuesday = (tuesdayKey: string) => {
+  const start = new Date(`${tuesdayKey}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  const toIso = (date: Date) => date.toISOString().slice(0, 10);
+
+  return {
+    startKey: toIso(start),
+    endKey: toIso(end),
+  };
+};
+
+const getRowsForWeek = (
+  tuesdayKey: string,
+  equipmentRows: any[],
+  workPlans: Record<string, any>
+) => {
+  const { startKey, endKey } = getWeekRangeFromTuesday(tuesdayKey);
+
+  return equipmentRows.filter((row) => {
+    const plan = workPlans[row.id] || {};
+    const date = plan.date || plan.planStart || row.planStartDate;
+    return date && date >= startKey && date <= endKey;
+  });
+};
+
+const escapeHtml = (value: any) =>
+  String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+const buildReportHtml = ({
+  title,
+  subTitle,
+  equipmentRows,
+  workPlans,
+  reportRows,
+}: {
+  title: string;
+  subTitle: string;
+  equipmentRows: any[];
+  workPlans: Record<string, any>;
+  reportRows: any[];
+}) => {
+  const summary = getReportSummary(equipmentRows);
+  const generatedAt = new Date().toLocaleString("th-TH");
+
+  const rowsHtml = reportRows
+    .map((row) => {
+      const plan = workPlans[row.id] || {};
+
+      return `
+        <tr>
+          <td>${escapeHtml(row.equipmentType)}</td>
+          <td><b>${escapeHtml(row.name || row.label || row.id)}</b></td>
+          <td>${escapeHtml(row.statusLabel)}</td>
+          <td>${Number(row.progress || 0)}%</td>
+          <td>${escapeHtml(plan.supervisorName || "-")}</td>
+          <td>${escapeHtml(plan.supervisorPhone || "-")}</td>
+          <td>${escapeHtml(plan.startTime || "-")} - ${escapeHtml(plan.endTime || "-")}</td>
+          <td>${escapeHtml(plan.workDetail || "-")}</td>
+          <td>${plan.isWorking ? "On Site" : "-"}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Tahoma, sans-serif;
+      color: #0f172a;
+      background: #f8fafc;
+    }
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+    .hero {
+      background: linear-gradient(135deg, #06164a, #0f3b8f);
+      color: white;
+      border-radius: 24px;
+      padding: 28px 32px;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+    .hero p { margin: 8px 0 0; opacity: 0.85; }
+    .creator {
+      margin-top: 18px;
+      color: #facc15;
+      font-weight: 800;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+      margin: 24px 0;
+    }
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+    }
+    .label {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .value {
+      margin-top: 8px;
+      font-size: 30px;
+      font-weight: 900;
+      color: #0f172a;
+    }
+    h2 {
+      margin: 28px 0 12px;
+      font-size: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+    }
+    th {
+      background: #eaf0f7;
+      color: #334155;
+      font-size: 12px;
+      text-align: left;
+      padding: 12px;
+      text-transform: uppercase;
+    }
+    td {
+      border-top: 1px solid #e2e8f0;
+      padding: 12px;
+      vertical-align: top;
+      font-size: 13px;
+    }
+    .empty {
+      background: white;
+      border: 1px dashed #cbd5e1;
+      border-radius: 18px;
+      padding: 28px;
+      text-align: center;
+      color: #64748b;
+      font-weight: 700;
+    }
+    .footer {
+      margin-top: 26px;
+      text-align: right;
+      color: #64748b;
+      font-size: 12px;
+    }
+    @media print {
+      body { background: white; }
+      .page { padding: 12px; }
+      .hero, .card, table { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <h1>${escapeHtml(title)}</h1>
+      <p>${escapeHtml(subTitle)}</p>
+      <div class="creator">Created by Tadchai Sittisomboon _ AWN (EPM)</div>
+    </div>
+
+    <div class="summary">
+      <div class="card"><div class="label">Overall Progress</div><div class="value">${summary.overall}%</div></div>
+      <div class="card"><div class="label">Total Work</div><div class="value">${summary.total}</div></div>
+      <div class="card"><div class="label">Completed</div><div class="value">${summary.completed}</div></div>
+      <div class="card"><div class="label">In Progress</div><div class="value">${summary.inProgress}</div></div>
+      <div class="card"><div class="label">Not Started</div><div class="value">${summary.notStarted}</div></div>
+    </div>
+
+    <h2>Work Detail</h2>
+    ${
+      reportRows.length > 0
+        ? `<table>
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Equipment</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>Supervisor</th>
+                <th>Phone</th>
+                <th>Time</th>
+                <th>Work Detail</th>
+                <th>On Site</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>`
+        : `<div class="empty">ยังไม่มีรายการงานสำหรับช่วงเวลานี้</div>`
+    }
+
+    <div class="footer">Generated at ${escapeHtml(generatedAt)}</div>
+  </div>
+</body>
+</html>`;
+};
+
+const downloadHtmlReport = (fileName: string, html: string) => {
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+};
+
+const downloadDailyReport = (
+  dateKey: string,
+  equipmentRows: any[],
+  workPlans: Record<string, any>
+) => {
+  const reportRows = getRowsForDate(dateKey, equipmentRows, workPlans);
+  const html = buildReportHtml({
+    title: "Daily Work Report",
+    subTitle: `Daily Report Date: ${formatDateDisplay(dateKey)}`,
+    equipmentRows,
+    workPlans,
+    reportRows,
+  });
+
+  downloadHtmlReport(`Daily-Work-Report-${dateKey}.html`, html);
+};
+
+const downloadWeeklyReport = (
+  tuesdayKey: string,
+  equipmentRows: any[],
+  workPlans: Record<string, any>
+) => {
+  const { startKey, endKey } = getWeekRangeFromTuesday(tuesdayKey);
+  const reportRows = getRowsForWeek(tuesdayKey, equipmentRows, workPlans);
+  const html = buildReportHtml({
+    title: "Weekly Work Report",
+    subTitle: `Weekly Report: ${formatDateDisplay(startKey)} - ${formatDateDisplay(endKey)}`,
+    equipmentRows,
+    workPlans,
+    reportRows,
+  });
+
+  downloadHtmlReport(`Weekly-Work-Report-${startKey}-to-${endKey}.html`, html);
+};
+
+
 const DashboardOverview: React.FC = () => {
   const {
     cameras,
@@ -683,12 +978,12 @@ const DashboardOverview: React.FC = () => {
                       >
                         <td className="p-3 font-semibold">{row.equipmentType}</td>
                         <td className="p-3">
-                          <a
+                          <Link
                             href={`/floorplan?focus=${row.typeKey}:${row.id}`}
                             className="text-blue-600 font-semibold hover:underline"
                           >
                             {row.name || row.label || row.id}
-                          </a>
+                          </Link>
                         </td>
                         <td className="p-3">
                           <StatusPill status={row.statusLabel} />
@@ -830,6 +1125,8 @@ const DashboardOverview: React.FC = () => {
       {selectedMonth && (
         <MonthCalendarModal
           month={months2026.find((month) => month.monthNumber === selectedMonth)}
+          equipmentRows={equipmentRows}
+          workPlans={workPlans}
           onClose={() => setSelectedMonth(null)}
           onSelectDay={(dateKey) => {
             setSelectedDate(dateKey);
@@ -868,10 +1165,14 @@ const DashboardOverview: React.FC = () => {
 
 const MonthCalendarModal = ({
   month,
+  equipmentRows,
+  workPlans,
   onClose,
   onSelectDay,
 }: {
   month: any;
+  equipmentRows: any[];
+  workPlans: Record<string, any>;
   onClose: () => void;
   onSelectDay: (dateKey: string) => void;
 }) => {
@@ -900,39 +1201,56 @@ const MonthCalendarModal = ({
 
         <div className="p-6">
           <div className="grid grid-cols-7 gap-2">
-            {month.days.map((day: any) => (
-              <button
-                key={day.key}
-                onClick={() => onSelectDay(day.key)}
-                className={`min-h-[88px] rounded-2xl border p-3 text-left bg-white hover:bg-blue-50 transition ${
-                  day.isToday && day.isWorking
-                    ? "border-yellow-400 border-4 animate-pulse shadow-yellow-200"
-                    : day.isWorking
-                      ? "border-yellow-300 border-2"
-                      : "border-slate-200"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="font-black text-slate-900">{day.day}</div>
+            {month.days.map((day: any) => {
+              const isTuesday = new Date(`${day.key}T00:00:00`).getDay() === 2;
 
-                  {day.jobs.length > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black">
-                      {day.jobs.length}
-                    </span>
+              return (
+                <div
+                  key={day.key}
+                  onClick={() => onSelectDay(day.key)}
+                  className={`min-h-[108px] rounded-2xl border p-3 text-left bg-white hover:bg-blue-50 transition cursor-pointer ${
+                    day.isToday && day.isWorking
+                      ? "border-yellow-400 border-4 animate-pulse shadow-yellow-200"
+                      : day.isWorking
+                        ? "border-yellow-300 border-2"
+                        : "border-slate-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="font-black text-slate-900">{day.day}</div>
+
+                    {day.jobs.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black">
+                        {day.jobs.length}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-[11px] text-slate-500 mt-2">
+                    {day.jobs.length} jobs
+                  </div>
+
+                  {day.isWorking && (
+                    <div className="text-[10px] font-black text-yellow-700 mt-1">
+                      LIVE WORKING
+                    </div>
+                  )}
+
+                  {isTuesday && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadWeeklyReport(day.key, equipmentRows, workPlans);
+                      }}
+                      className="mt-2 w-full rounded-lg bg-blue-600 px-2 py-1.5 text-[10px] font-black text-white hover:bg-blue-500 transition"
+                    >
+                      Download Weekly Report
+                    </button>
                   )}
                 </div>
-
-                <div className="text-[11px] text-slate-500 mt-2">
-                  {day.jobs.length} jobs
-                </div>
-
-                {day.isWorking && (
-                  <div className="text-[10px] font-black text-yellow-700 mt-1">
-                    LIVE WORKING
-                  </div>
-                )}
-              </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -977,12 +1295,22 @@ const DayWorkModal = ({
             <p className="text-sm text-slate-500">{formatDateDisplay(dateKey)}</p>
           </div>
 
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => downloadDailyReport(dateKey, equipmentRows, workPlans)}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold"
+            >
+              Download Daily Report
+            </button>
+
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold"
+            >
+              Close
+            </button>
+          </div>
         </div>
 
         <div className="p-6 space-y-4">
@@ -1291,6 +1619,7 @@ const CustomerRequirementBox = ({
   const [requirements, setRequirements] = React.useState<any[]>([]);
   const [text, setText] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
+  const canSubmitRequirement = isCustomer || currentUser?.role === "admin";
 
   const loadRequirements = async () => {
     const { data, error } = await supabase
@@ -1351,15 +1680,18 @@ const CustomerRequirementBox = ({
   };
 
   return (
-    <Card className="rounded-2xl border border-slate-200 shadow-sm bg-white">
+    <Card className="rounded-2xl border-2 border-red-500/80 shadow-lg bg-red-50/70 animate-pulse">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">
+        <CardTitle className="text-base flex items-center gap-2 text-red-700">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-red-600 text-white animate-bounce">
+            !
+          </span>
           Customer Requirement / Comment
         </CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {isCustomer ? (
+        {canSubmitRequirement ? (
           <div className="space-y-2">
             <textarea
               value={text}
@@ -1378,7 +1710,7 @@ const CustomerRequirementBox = ({
           </div>
         ) : (
           <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-700 font-semibold">
-            กล่องนี้สำหรับรับ Requirement / Comment จากลูกค้า
+            กล่องนี้สำหรับรับ Requirement / Comment จากลูกค้า และ Admin สามารถเพิ่ม Comment ได้ และ Admin สามารถเพิ่ม Comment ได้
           </div>
         )}
 
@@ -1391,7 +1723,7 @@ const CustomerRequirementBox = ({
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-xs font-black text-slate-700">
-                    {item.created_by}
+                    Requirement / Comment by: {item.created_by || item.createdBy || "-"}
                   </div>
 
                   <div className="text-[11px] text-slate-400">
