@@ -6,6 +6,17 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 const COLORS = ["#22c55e", "#f59e0b", "#94a3b8"];
 
+const MONTH_NAMES = [
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 type Tone = "blue" | "green" | "yellow" | "slate" | "gray" | "purple" | "orange";
 
 const toneClass: Record<Tone, string> = {
@@ -137,6 +148,8 @@ const DashboardOverview: React.FC = () => {
 
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [selectedDayModal, setSelectedDayModal] = useState<string | null>(null);
   const [workPlans, setWorkPlans] = useState<Record<string, any>>({});
 
   const safeCameras = cameras || [];
@@ -244,22 +257,49 @@ const DashboardOverview: React.FC = () => {
 
   const todayKey = new Date().toISOString().slice(0, 10);
 
-  const monthDays = useMemo(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const lastDay = new Date(year, month + 1, 0).getDate();
+  const getJobsForDate = (dateKey: string) =>
+    equipmentRows.filter(
+      (row) => row.planStartDate === dateKey || workPlans[row.id]?.date === dateKey
+    );
 
-    return Array.from({ length: lastDay }, (_, index) => {
-      const day = index + 1;
-      const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const jobs = equipmentRows.filter(
-        (row) => row.planStartDate === key || workPlans[row.id]?.date === key
-      );
-      const isWorkingToday =
-        key === todayKey && jobs.some((job) => workPlans[job.id]?.isWorking);
+  const hasWorkingOnDate = (dateKey: string) =>
+    getJobsForDate(dateKey).some((job) => workPlans[job.id]?.isWorking);
 
-      return { day, key, jobs, isWorkingToday };
+  const months2026 = useMemo(() => {
+    return MONTH_NAMES.map((name, index) => {
+      const monthNumber = index + 5; // May = 5
+      const monthKey = `2026-${String(monthNumber).padStart(2, "0")}`;
+      const lastDay = new Date(2026, monthNumber, 0).getDate();
+
+      const days = Array.from({ length: lastDay }, (_, dayIndex) => {
+        const day = dayIndex + 1;
+        const key = `${monthKey}-${String(day).padStart(2, "0")}`;
+        const jobs = getJobsForDate(key);
+        const isWorking = hasWorkingOnDate(key);
+        const isToday = key === todayKey;
+
+        return {
+          day,
+          key,
+          jobs,
+          isWorking,
+          isToday,
+        };
+      });
+
+      const totalJobs = days.reduce((sum, day) => sum + day.jobs.length, 0);
+      const workingDays = days.filter((day) => day.isWorking).length;
+      const isLive = days.some((day) => day.isToday && day.isWorking);
+
+      return {
+        name,
+        monthNumber,
+        monthKey,
+        days,
+        totalJobs,
+        workingDays,
+        isLive,
+      };
     });
   }, [equipmentRows, workPlans, todayKey]);
 
@@ -478,24 +518,60 @@ const DashboardOverview: React.FC = () => {
               <CardTitle className="text-base">Overall Status</CardTitle>
             </CardHeader>
 
-            <CardContent className="h-[230px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={donutData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={54}
-                    outerRadius={82}
-                    paddingAngle={4}
-                  >
-                    {donutData.map((_, index) => (
-                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+            <CardContent className="space-y-4">
+              <div className="relative h-[210px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={donutData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={54}
+                      outerRadius={82}
+                      paddingAngle={4}
+                    >
+                      {donutData.map((_, index) => (
+                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <div className="text-3xl font-black text-blue-600">
+                    {summary.overall}%
+                  </div>
+                  <div className="text-[11px] font-semibold text-slate-500">
+                    Overall Progress
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {donutData.map((item, index) => {
+                  const percent =
+                    summary.total > 0 ? Math.round((item.value / summary.total) * 100) : 0;
+
+                  return (
+                    <div key={item.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        />
+                        <span className="font-semibold text-slate-700">
+                          {item.name}
+                        </span>
+                      </div>
+
+                      <span className="font-black text-slate-900">
+                        {item.value} / {percent}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
 
@@ -598,100 +674,78 @@ const DashboardOverview: React.FC = () => {
           </Card>
         </section>
 
-        <section className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-5">
+        <section>
           <Card className="rounded-2xl border border-slate-200 shadow-sm bg-white">
-            <CardHeader>
-              <CardTitle className="text-base">Monthly Work Calendar</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Monthly Work Calendar 2026</CardTitle>
             </CardHeader>
 
             <CardContent>
-              <div className="grid grid-cols-7 gap-2">
-                {monthDays.map((day) => (
+              <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
+                {months2026.map((month) => (
                   <button
-                    key={day.key}
-                    onClick={() => setSelectedDate(day.key)}
-                    className={`min-h-[76px] rounded-xl border p-2 text-left bg-white hover:bg-blue-50 ${
-                      day.isWorkingToday
-                        ? "border-yellow-400 border-4 animate-pulse"
+                    key={month.monthKey}
+                    onClick={() => setSelectedMonth(month.monthNumber)}
+                    className={`rounded-2xl border bg-white p-4 text-left shadow-sm hover:bg-blue-50 hover:border-blue-300 transition ${
+                      month.isLive
+                        ? "border-yellow-400 border-4 animate-pulse shadow-yellow-200"
                         : "border-slate-200"
                     }`}
                   >
-                    <div className="font-bold text-sm">{day.day}</div>
-                    <div className="text-[11px] text-slate-500 mt-1">
-                      {day.jobs.length} jobs
-                    </div>
-                    {day.isWorkingToday && (
-                      <div className="text-[10px] font-bold text-yellow-700 mt-1">
-                        LIVE WORKING
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-lg font-black text-slate-900">
+                          {month.name}
+                        </div>
+                        <div className="text-xs text-slate-500">2026</div>
                       </div>
-                    )}
+
+                      {month.isLive && (
+                        <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 text-[10px] font-black">
+                          LIVE
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <div className="text-slate-500">Jobs</div>
+                        <div className="font-black text-blue-600">{month.totalJobs}</div>
+                      </div>
+
+                      <div>
+                        <div className="text-slate-500">Working</div>
+                        <div className="font-black text-orange-600">{month.workingDays}</div>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
             </CardContent>
           </Card>
-
-          <Card className="rounded-2xl border border-slate-200 shadow-sm bg-white">
-            <CardHeader>
-              <CardTitle className="text-base">Daily Schedule</CardTitle>
-            </CardHeader>
-
-            <CardContent className="space-y-3">
-              <div className="text-sm font-semibold">{selectedDate || "Select a date"}</div>
-
-              {equipmentRows.map((row) =>
-                workPlans[row.id]?.date === selectedDate ? (
-                  <div
-                    key={row.id}
-                    className="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-2"
-                  >
-                    <div className="font-semibold text-sm">{row.name || row.label}</div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="time"
-                        value={workPlans[row.id]?.startTime || ""}
-                        onChange={(e) =>
-                          updateWorkPlan(row.id, { startTime: e.target.value })
-                        }
-                        className="border rounded-lg px-2 py-1 text-xs"
-                      />
-                      <input
-                        type="time"
-                        value={workPlans[row.id]?.endTime || ""}
-                        onChange={(e) =>
-                          updateWorkPlan(row.id, { endTime: e.target.value })
-                        }
-                        className="border rounded-lg px-2 py-1 text-xs"
-                      />
-                    </div>
-
-                    <textarea
-                      value={workPlans[row.id]?.workDetail || ""}
-                      onChange={(e) =>
-                        updateWorkPlan(row.id, { workDetail: e.target.value })
-                      }
-                      placeholder="ระบุว่าเข้าไปทำอะไร"
-                      className="w-full border rounded-lg px-2 py-1 text-xs"
-                    />
-
-                    <label className="flex items-center gap-2 text-xs font-semibold">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(workPlans[row.id]?.isWorking)}
-                        onChange={(e) =>
-                          updateWorkPlan(row.id, { isWorking: e.target.checked })
-                        }
-                      />
-                      เข้าทำงานวันนี้ / On Site
-                    </label>
-                  </div>
-                ) : null
-              )}
-            </CardContent>
-          </Card>
         </section>
       </main>
+
+      {selectedMonth && (
+        <MonthCalendarModal
+          month={months2026.find((month) => month.monthNumber === selectedMonth)}
+          onClose={() => setSelectedMonth(null)}
+          onSelectDay={(dateKey) => {
+            setSelectedDate(dateKey);
+            setSelectedDayModal(dateKey);
+          }}
+        />
+      )}
+
+      {selectedDayModal && (
+        <DayWorkModal
+          dateKey={selectedDayModal}
+          equipmentRows={equipmentRows}
+          workPlans={workPlans}
+          updateWorkPlan={updateWorkPlan}
+          onClose={() => setSelectedDayModal(null)}
+        />
+      )}
 
       {selectedPhoto && (
         <div
@@ -708,6 +762,219 @@ const DashboardOverview: React.FC = () => {
     </div>
   );
 };
+
+
+const MonthCalendarModal = ({
+  month,
+  onClose,
+  onSelectDay,
+}: {
+  month: any;
+  onClose: () => void;
+  onSelectDay: (dateKey: string) => void;
+}) => {
+  if (!month) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm flex items-center justify-center p-6">
+      <div className="w-full max-w-5xl rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900">
+              {month.name} 2026
+            </h2>
+            <p className="text-sm text-slate-500">
+              Monthly daily work calendar
+            </p>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className="grid grid-cols-7 gap-2">
+            {month.days.map((day: any) => (
+              <button
+                key={day.key}
+                onClick={() => onSelectDay(day.key)}
+                className={`min-h-[88px] rounded-2xl border p-3 text-left bg-white hover:bg-blue-50 transition ${
+                  day.isToday && day.isWorking
+                    ? "border-yellow-400 border-4 animate-pulse shadow-yellow-200"
+                    : day.isWorking
+                      ? "border-yellow-300 border-2"
+                      : "border-slate-200"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="font-black text-slate-900">{day.day}</div>
+
+                  {day.jobs.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black">
+                      {day.jobs.length}
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-[11px] text-slate-500 mt-2">
+                  {day.jobs.length} jobs
+                </div>
+
+                {day.isWorking && (
+                  <div className="text-[10px] font-black text-yellow-700 mt-1">
+                    LIVE WORKING
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DayWorkModal = ({
+  dateKey,
+  equipmentRows,
+  workPlans,
+  updateWorkPlan,
+  onClose,
+}: {
+  dateKey: string;
+  equipmentRows: any[];
+  workPlans: Record<string, any>;
+  updateWorkPlan: (id: string, changes: any) => void;
+  onClose: () => void;
+}) => {
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState(
+    equipmentRows[0]?.id || ""
+  );
+
+  const selectedEquipment = equipmentRows.find(
+    (row) => row.id === selectedEquipmentId
+  );
+
+  const currentPlan = selectedEquipmentId ? workPlans[selectedEquipmentId] || {} : {};
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+      <div className="w-full max-w-2xl rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-black text-slate-900">
+              Daily Work Plan
+            </h2>
+            <p className="text-sm text-slate-500">{dateKey}</p>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="text-xs font-bold text-slate-600">
+              Equipment
+            </label>
+            <select
+              value={selectedEquipmentId}
+              onChange={(e) => setSelectedEquipmentId(e.target.value)}
+              className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+            >
+              {equipmentRows.map((row) => (
+                <option key={`${row.typeKey}-${row.id}`} value={row.id}>
+                  {row.equipmentType} - {row.name || row.label || row.id}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedEquipment && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-600">
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    value={currentPlan.startTime || ""}
+                    onChange={(e) =>
+                      updateWorkPlan(selectedEquipment.id, {
+                        date: dateKey,
+                        startTime: e.target.value,
+                      })
+                    }
+                    className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-600">
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    value={currentPlan.endTime || ""}
+                    onChange={(e) =>
+                      updateWorkPlan(selectedEquipment.id, {
+                        date: dateKey,
+                        endTime: e.target.value,
+                      })
+                    }
+                    className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-600">
+                  Work Detail
+                </label>
+                <textarea
+                  value={currentPlan.workDetail || ""}
+                  onChange={(e) =>
+                    updateWorkPlan(selectedEquipment.id, {
+                      date: dateKey,
+                      workDetail: e.target.value,
+                    })
+                  }
+                  placeholder="ระบุว่าเข้าไปทำอะไร"
+                  className="mt-1 w-full min-h-[120px] border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+
+              <label className="flex items-center gap-3 p-3 rounded-2xl border border-yellow-200 bg-yellow-50 text-sm font-bold text-yellow-800">
+                <input
+                  type="checkbox"
+                  checked={Boolean(currentPlan.isWorking)}
+                  onChange={(e) =>
+                    updateWorkPlan(selectedEquipment.id, {
+                      date: dateKey,
+                      isWorking: e.target.checked,
+                    })
+                  }
+                  className="w-5 h-5 accent-yellow-500"
+                />
+                เข้าทำงานวันนี้ / On Site
+              </label>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 const KpiCard = ({ title, value, tone }: { title: string; value: any; tone: Tone }) => (
   <Card className={`rounded-2xl border shadow-sm bg-gradient-to-br ${toneClass[tone]}`}>
