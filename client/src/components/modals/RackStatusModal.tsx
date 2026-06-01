@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Rack } from "@/lib/floorPlanData";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RackStatusModalProps {
   rack: Rack;
@@ -23,6 +24,11 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
   } = useFloorPlan();
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userRole = user?.role || "customer";
+  const canEditProgress = userRole === "admin" || userRole === "staff";
+  const canManageLayout = userRole === "admin";
+  const canToggleUrgent = userRole === "admin" || userRole === "staff" || userRole === "customer";
 
   if (!isOpen || !rack) return null;
 
@@ -101,6 +107,7 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
   };
 
   const updateStepProgress = (progressKey: string, stepKey: string, value: number) => {
+    if (!canEditProgress) return;
     const safeValue = Math.min(100, Math.max(0, Number(value || 0)));
 
     updateRackField(rack.id, progressKey, safeValue);
@@ -120,6 +127,7 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
   };
 
   const updateStepCheck = (stepKey: string, progressKey: string, checked: boolean) => {
+    if (!canEditProgress) return;
     updateRackField(rack.id, stepKey, checked);
     updateRackField(rack.id, progressKey, checked ? 100 : 0);
 
@@ -144,6 +152,7 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
   ].filter(Boolean);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canEditProgress) return;
     const files = e.target.files;
     if (!files) return;
 
@@ -176,6 +185,7 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
   };
 
   const deletePhoto = (index: number) => {
+    if (!canEditProgress) return;
     const nextPhotos = [
       (rack as any).photo1 || "",
       (rack as any).photo2 || "",
@@ -208,8 +218,9 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
             <input
               type="checkbox"
               checked={Boolean((rack as any).isUrgent)}
+              disabled={!canToggleUrgent}
               onChange={(e) =>
-                updateRackField(rack.id, "isUrgent", e.target.checked)
+                canToggleUrgent && updateRackField(rack.id, "isUrgent", e.target.checked)
               }
             />
             🚨 งานเร่งด่วน (Urgent Work)
@@ -222,6 +233,7 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
               <input
                 type="checkbox"
                 checked={step.checked}
+                disabled={!canEditProgress}
                 onChange={(e) =>
                   updateStepCheck(step.key, step.progressKey, e.target.checked)
                 }
@@ -242,6 +254,7 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
                 min={0}
                 max={100}
                 value={step.progress}
+                disabled={!canEditProgress}
                 onChange={(e) =>
                   updateStepProgress(
                     step.progressKey,
@@ -280,7 +293,7 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
             <div style={styles.photoHeader}>
               <b>▧ รูปหน้างาน Rack ({photos.length}/4)</b>
 
-              {photos.length < 4 && (
+              {canEditProgress && photos.length < 4 && (
                 <label style={styles.uploadButton}>
                   Upload Photo
                   <input
@@ -300,7 +313,8 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
                   <div key={index} style={styles.photoWrap}>
                     <button
                       style={styles.deleteButton}
-                      onClick={() => deletePhoto(index)}
+                      disabled={!canEditProgress}
+                      onClick={() => canEditProgress && deletePhoto(index)}
                     >
                       ×
                     </button>
@@ -324,14 +338,16 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
             <div style={styles.buttonRow}>
               <button
                 style={styles.onlineButton}
-                onClick={() => updateRackStatus(rack.id, "online")}
+                disabled={!canEditProgress}
+                onClick={() => canEditProgress && updateRackStatus(rack.id, "online")}
               >
                 Mark as Online
               </button>
 
               <button
                 style={styles.idleButton}
-                onClick={() => updateRackStatus(rack.id, "idle")}
+                disabled={!canEditProgress}
+                onClick={() => canEditProgress && updateRackStatus(rack.id, "idle")}
               >
                 Mark as Idle
               </button>
@@ -339,8 +355,9 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
           </div>
 
           <div style={styles.footer}>
-            <button style={styles.footerButton} onClick={onEditPosition}>
-              Edit Position
+            <button style={styles.footerButton} disabled={!canManageLayout}
+              onClick={canManageLayout ? onEditPosition : undefined}>
+              {canManageLayout ? "Edit Position" : "Position Locked"}
             </button>
 
             <button style={styles.footerButton} onClick={onClose}>
