@@ -1,27 +1,47 @@
 import React from "react";
-import { Redirect } from "wouter";
+import { Redirect, Route } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 
 type Role = "admin" | "staff" | "customer";
 
 type ProtectedRouteProps = {
-  children: React.ReactNode;
+  path?: string;
+  component?: React.ComponentType<any>;
+  children?: React.ReactNode;
   allowedRoles?: Role[];
 };
 
 export default function ProtectedRoute({
+  path,
+  component: Component,
   children,
   allowedRoles = ["admin", "staff", "customer"],
 }: ProtectedRouteProps) {
-  const { user, isLoggedIn } = useAuth();
+  const ProtectedContent = () => {
+    const { user, isLoggedIn } = useAuth();
 
-  if (!isLoggedIn || !user) {
-    return <Redirect to="/login" />;
+    if (!isLoggedIn || !user) {
+      return <Redirect to="/login" />;
+    }
+
+    if (!allowedRoles.includes(user.role as Role)) {
+      return <Redirect to="/dashboard" />;
+    }
+
+    if (Component) {
+      return <Component />;
+    }
+
+    return <>{children}</>;
+  };
+
+  if (path) {
+    return (
+      <Route path={path}>
+        <ProtectedContent />
+      </Route>
+    );
   }
 
-  if (!allowedRoles.includes(user.role as Role)) {
-    return <Redirect to="/dashboard" />;
-  }
-
-  return <>{children}</>;
+  return <ProtectedContent />;
 }
