@@ -81,6 +81,7 @@ const FloorPlanContext = createContext<any>({
   racks: [],
   cabinets: [],
   fiberRoutes: [],
+  workPlans: {},
   activityLogs: [],
   isLoading: false,
   hasDbError: false,
@@ -112,6 +113,9 @@ const FloorPlanContext = createContext<any>({
   addFiberRoute: () => {},
   updateFiberRoute: () => {},
   deleteFiberRoute: () => {},
+
+  updateWorkPlan: () => {},
+  deleteWorkPlan: () => {},
 });
 
 const toAppCamera = (row: any) => ({
@@ -301,6 +305,36 @@ const toDbFiberRoute = (route: any) => ({
   updated_at: new Date().toISOString(),
 });
 
+const toAppWorkPlan = (row: any) => ({
+  dbId: row.id,
+  equipmentId: row.equipment_id || "",
+  equipmentName: row.equipment_name || "",
+  date: row.work_date || row.plan_start || "",
+  planStart: row.plan_start || row.work_date || "",
+  finishDate: row.plan_finish || "",
+  supervisorName: row.supervisor_name || "",
+  supervisorPhone: row.supervisor_phone || "",
+  startTime: row.start_time || "",
+  endTime: row.end_time || "",
+  workDetail: row.work_detail || "",
+  isWorking: Boolean(row.is_onsite),
+});
+
+const toDbWorkPlan = (plan: any) => ({
+  work_date: plan.date || plan.planStart || null,
+  equipment_id: plan.equipmentId || "",
+  equipment_name: plan.equipmentName || "",
+  plan_start: plan.planStart || plan.date || null,
+  plan_finish: plan.finishDate || null,
+  supervisor_name: plan.supervisorName || "",
+  supervisor_phone: plan.supervisorPhone || "",
+  start_time: plan.startTime || "",
+  end_time: plan.endTime || "",
+  work_detail: plan.workDetail || "",
+  is_onsite: Boolean(plan.isWorking),
+  updated_at: new Date().toISOString(),
+});
+
 export const FloorPlanProvider = ({
   children,
 }: {
@@ -310,6 +344,7 @@ export const FloorPlanProvider = ({
   const [racks, setRacks] = useState<any[]>([]);
   const [cabinets, setCabinets] = useState<any[]>([]);
   const [fiberRoutes, setFiberRoutes] = useState<any[]>([]);
+  const [workPlans, setWorkPlans] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [hasDbError, setHasDbError] = useState(false);
 
@@ -408,6 +443,26 @@ export const FloorPlanProvider = ({
         setFiberRoutes([]);
       } else {
         setFiberRoutes((fiberData || []).map(toAppFiberRoute));
+      }
+
+
+
+      const { data: workPlanData, error: workPlanError } = await supabase
+        .from("work_plans")
+        .select("*");
+
+      if (workPlanError) {
+        console.error("Load work plans error:", workPlanError);
+        setWorkPlans({});
+      } else {
+        const plans: Record<string, any> = {};
+        (workPlanData || []).forEach((row: any) => {
+          const plan = toAppWorkPlan(row);
+          if (plan.equipmentId) {
+            plans[plan.equipmentId] = plan;
+          }
+        });
+        setWorkPlans(plans);
       }
 
       setIsLoading(false);
@@ -541,11 +596,45 @@ export const FloorPlanProvider = ({
       )
       .subscribe();
 
+
+
+    const workPlanChannel = supabase
+      .channel("work-plans-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "work_plans" },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const deletedEquipmentId = payload.old?.equipment_id;
+            if (!deletedEquipmentId) return;
+            setWorkPlans((prev) => {
+              const next = { ...prev };
+              delete next[deletedEquipmentId];
+              return next;
+            });
+            return;
+          }
+
+          const row = payload.new;
+          if (!row) return;
+
+          const updatedPlan = toAppWorkPlan(row);
+          if (!updatedPlan.equipmentId) return;
+
+          setWorkPlans((prev) => ({
+            ...prev,
+            [updatedPlan.equipmentId]: updatedPlan,
+          }));
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(cameraChannel);
       supabase.removeChannel(rackChannel);
       supabase.removeChannel(cabinetChannel);
       supabase.removeChannel(fiberChannel);
+      supabase.removeChannel(workPlanChannel);
     };
   }, []);
 
@@ -736,6 +825,116 @@ export const FloorPlanProvider = ({
 
     if (error) {
       console.error("Delete fiber route error:", error);
+      alert(error.message);
+    }
+  };
+
+
+  const updateWorkPlan = async (equipmentId: string, changes: any) => {
+    if (!equipmentId) return;
+
+    const current = workPlans[equipmentId] || {};
+    const updated = {
+      ...current,
+      equipmentId,
+      ...changes,
+    };
+
+    if (updated.date && !updated.planStart) {
+      updated.planStart = updated.date;
+    }
+
+    setWorkPlans((prev) => ({
+      ...prev,
+      [equipmentId]: updated,
+    }));
+
+    const dbPayload = toDbWorkPlan(updated);
+
+    if (current.dbId) {
+      const { error } = await supabase
+        .from("work_plans")
+        .update(dbPayload)
+        .eq("id", current.dbId);
+
+      if (error) {
+        console.error("Update work plan error:", error);
+        alert(error.message);
+      }
+
+      return;
+    }
+
+    const { data: existing, error: findError } = await supabase
+      .from("work_plans")
+      .select("id")
+      .eq("equipment_id", equipmentId)
+      .maybeSingle();
+
+    if (findError) {
+      console.error("Find work plan error:", findError);
+      alert(findError.message);
+      return;
+    }
+
+    if (existing?.id) {
+      const { error } = await supabase
+        .from("work_plans")
+        .update(dbPayload)
+        .eq("id", existing.id);
+
+      if (error) {
+        console.error("Update work plan error:", error);
+        alert(error.message);
+        return;
+      }
+
+      setWorkPlans((prev) => ({
+        ...prev,
+        [equipmentId]: { ...updated, dbId: existing.id },
+      }));
+
+      return;
+    }
+
+    const { data: inserted, error } = await supabase
+      .from("work_plans")
+      .insert(dbPayload)
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("Insert work plan error:", error);
+      alert(error.message);
+      return;
+    }
+
+    if (inserted?.id) {
+      setWorkPlans((prev) => ({
+        ...prev,
+        [equipmentId]: { ...updated, dbId: inserted.id },
+      }));
+    }
+  };
+
+  const deleteWorkPlan = async (equipmentId: string) => {
+    const plan = workPlans[equipmentId];
+
+    setWorkPlans((prev) => {
+      const next = { ...prev };
+      delete next[equipmentId];
+      return next;
+    });
+
+    if (!plan?.dbId) return;
+
+    const { error } = await supabase
+      .from("work_plans")
+      .delete()
+      .eq("id", plan.dbId);
+
+    if (error) {
+      console.error("Delete work plan error:", error);
       alert(error.message);
     }
   };
@@ -940,6 +1139,7 @@ export const FloorPlanProvider = ({
         racks,
         cabinets,
         fiberRoutes,
+        workPlans,
         activityLogs: [],
         isLoading,
         hasDbError,
@@ -971,6 +1171,9 @@ export const FloorPlanProvider = ({
         addFiberRoute,
         updateFiberRoute,
         deleteFiberRoute,
+
+        updateWorkPlan,
+        deleteWorkPlan,
       }}
     >
       {children}
