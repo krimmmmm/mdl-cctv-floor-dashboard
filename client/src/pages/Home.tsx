@@ -32,17 +32,44 @@ export default function Home() {
         </div>
       )}
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="px-6 py-4 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">MDL CCTV Floor Plan Dashboard</h1>
-              <p className="text-sm text-gray-500 mt-1">AIS-MDL New CCTV Project - Interactive Installation Tracker</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-500">สร้างโดย Tadchai Sittisomboob (EPM)</p>
-            </div>
-          </div>
-        </header>
+<header className="bg-white border-b border-gray-200 shadow-sm">
+  <div className="px-6 py-3 flex items-center justify-between">
+
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900">
+        MDL CCTV Floor Plan Dashboard
+      </h1>
+
+      <p className="text-sm text-gray-500 mt-1">
+        AIS-MDL New CCTV Project - Interactive Installation Tracker
+      </p>
+    </div>
+
+    <div className="flex items-center gap-3">
+
+      <a
+        href="/dashboard"
+        className="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-semibold shadow-sm hover:bg-slate-700 transition"
+      >
+        ← Dashboard
+      </a>
+
+      <a
+        href="/floorplan"
+        className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-500 transition"
+      >
+        Floor Plan
+      </a>
+
+      <div className="text-right ml-2">
+        <p className="text-xs text-gray-500">
+          Created by Tadchai Sittisomboon (EPM)
+        </p>
+      </div>
+
+    </div>
+  </div>
+</header>
 
         {/* Main Content - Vertical Layout */}
         <div className="flex-1 flex flex-col overflow-hidden">
