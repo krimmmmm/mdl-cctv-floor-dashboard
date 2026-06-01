@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Cabinet } from "@/lib/floorPlanData";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CabinetStatusModalProps {
   cabinet: Cabinet;
@@ -23,6 +24,11 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
   } = useFloorPlan();
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userRole = user?.role || "customer";
+  const canEditProgress = userRole === "admin" || userRole === "staff";
+  const canManageLayout = userRole === "admin";
+  const canToggleUrgent = userRole === "admin" || userRole === "staff" || userRole === "customer";
 
   if (!isOpen || !cabinet) return null;
 
@@ -113,6 +119,7 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
     stepKey: string,
     value: number
   ) => {
+    if (!canEditProgress) return;
     const safeValue = Math.min(100, Math.max(0, Number(value || 0)));
 
     updateCabinetField(cabinet.id, progressKey, safeValue);
@@ -134,6 +141,7 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
     progressKey: string,
     checked: boolean
   ) => {
+    if (!canEditProgress) return;
     updateCabinetField(cabinet.id, stepKey, checked);
     updateCabinetField(cabinet.id, progressKey, checked ? 100 : 0);
 
@@ -156,6 +164,7 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
   ].filter(Boolean);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canEditProgress) return;
     const files = e.target.files;
     if (!files) return;
 
@@ -188,6 +197,7 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
   };
 
   const deletePhoto = (index: number) => {
+    if (!canEditProgress) return;
     const nextPhotos = [
       (cabinet as any).photo1 || "",
       (cabinet as any).photo2 || "",
@@ -217,8 +227,9 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
             <input
               type="checkbox"
               checked={Boolean((cabinet as any).isUrgent)}
+              disabled={!canToggleUrgent}
               onChange={(e) =>
-                updateCabinetField(cabinet.id, "isUrgent", e.target.checked)
+                canToggleUrgent && updateCabinetField(cabinet.id, "isUrgent", e.target.checked)
               }
             />
             🚨 งานเร่งด่วน (Urgent Work)
@@ -231,6 +242,7 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
               <input
                 type="checkbox"
                 checked={step.checked}
+                disabled={!canEditProgress}
                 onChange={(e) =>
                   updateStepCheck(step.key, step.progressKey, e.target.checked)
                 }
@@ -251,6 +263,7 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
                 min={0}
                 max={100}
                 value={step.progress}
+                disabled={!canEditProgress}
                 onChange={(e) =>
                   updateStepProgress(
                     step.progressKey,
@@ -291,7 +304,7 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
             <div style={styles.photoHeader}>
               <b>▧ รูปหน้างาน Cabinet ({photos.length}/4)</b>
 
-              {photos.length < 4 && (
+              {canEditProgress && photos.length < 4 && (
                 <label style={styles.uploadButton}>
                   Upload Photo
                   <input
@@ -311,7 +324,8 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
                   <div key={index} style={styles.photoWrap}>
                     <button
                       style={styles.deleteButton}
-                      onClick={() => deletePhoto(index)}
+                      disabled={!canEditProgress}
+                      onClick={() => canEditProgress && deletePhoto(index)}
                     >
                       ×
                     </button>
@@ -335,14 +349,16 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
             <div style={styles.buttonRow}>
               <button
                 style={styles.onlineButton}
-                onClick={() => updateCabinetStatus(cabinet.id, "online")}
+                disabled={!canEditProgress}
+                onClick={() => canEditProgress && updateCabinetStatus(cabinet.id, "online")}
               >
                 Mark as Online
               </button>
 
               <button
                 style={styles.idleButton}
-                onClick={() => updateCabinetStatus(cabinet.id, "idle")}
+                disabled={!canEditProgress}
+                onClick={() => canEditProgress && updateCabinetStatus(cabinet.id, "idle")}
               >
                 Mark as Idle
               </button>
@@ -350,8 +366,9 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
           </div>
 
           <div style={styles.footer}>
-            <button style={styles.footerButton} onClick={onEditPosition}>
-              Edit Position
+            <button style={styles.footerButton} disabled={!canManageLayout}
+              onClick={canManageLayout ? onEditPosition : undefined}>
+              {canManageLayout ? "Edit Position" : "Position Locked"}
             </button>
 
             <button style={styles.footerButton} onClick={onClose}>
