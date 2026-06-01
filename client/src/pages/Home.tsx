@@ -2,7 +2,8 @@ import ControlPanel from '@/components/ControlPanel';
 import FloorPlanCanvas from '@/components/FloorPlanCanvas';
 import { ActivityLog } from '@/components/ActivityLog';
 import { useFloorPlan } from '@/contexts/FloorPlanContext';
-import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2, Shield, Eye } from 'lucide-react';
 
 /**
  * MDL CCTV Floor Plan Dashboard
@@ -11,14 +12,30 @@ import { Loader2 } from 'lucide-react';
  */
 export default function Home() {
   const { isLoading, hasDbError } = useFloorPlan();
+  const { user, logout } = useAuth();
+
+  const role = user?.role || 'customer';
+  const canEditFloorPlan = role === 'admin' || role === 'staff';
+  const isCustomer = role === 'customer';
 
   return (
-   
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* DB error banner */}
       {hasDbError && !isLoading && (
         <div className="bg-yellow-50 border-b border-yellow-200 px-6 py-2 flex items-center gap-2">
-          <span className="text-yellow-700 text-sm font-medium">⚠️ ไม่สามารถเชื่อมต่อ Database ได้ — แสดงข้อมูลเริ่มต้น (ข้อมูลจะไม่ถูกบันทึก)</span>
+          <span className="text-yellow-700 text-sm font-medium">
+            ⚠️ ไม่สามารถเชื่อมต่อ Database ได้ — แสดงข้อมูลเริ่มต้น (ข้อมูลจะไม่ถูกบันทึก)
+          </span>
+        </div>
+      )}
+
+      {/* Customer read-only banner */}
+      {isCustomer && !isLoading && (
+        <div className="bg-blue-50 border-b border-blue-200 px-6 py-2 flex items-center gap-2">
+          <Eye className="w-4 h-4 text-blue-600" />
+          <span className="text-blue-700 text-sm font-medium">
+            Customer View Mode — สามารถดูข้อมูลได้เท่านั้น ไม่สามารถแก้ไข Floor Plan ได้
+          </span>
         </div>
       )}
 
@@ -31,63 +48,95 @@ export default function Home() {
           </div>
         </div>
       )}
-        {/* Header */}
-<header className="bg-white border-b border-gray-200 shadow-sm">
-  <div className="px-6 py-3 flex items-center justify-between">
 
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900">
-        MDL CCTV Floor Plan Dashboard
-      </h1>
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="px-6 py-3 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              MDL CCTV Floor Plan Dashboard
+            </h1>
 
-      <p className="text-sm text-gray-500 mt-1">
-        AIS-MDL New CCTV Project - Interactive Installation Tracker
-      </p>
-    </div>
+            <p className="text-sm text-gray-500 mt-1">
+              AIS-MDL New CCTV Project - Interactive Installation Tracker
+            </p>
+          </div>
 
-    <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
+            <a
+              href="/dashboard"
+              className="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-semibold shadow-sm hover:bg-slate-700 transition"
+            >
+              ← Dashboard
+            </a>
 
-      <a
-        href="/dashboard"
-        className="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-semibold shadow-sm hover:bg-slate-700 transition"
-      >
-        ← Dashboard
-      </a>
+            <a
+              href="/floorplan"
+              className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-500 transition"
+            >
+              Floor Plan
+            </a>
 
-      <a
-        href="/floorplan"
-        className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-500 transition"
-      >
-        Floor Plan
-      </a>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200">
+              <Shield className="w-4 h-4 text-slate-600" />
+              <div className="leading-tight">
+                <p className="text-xs font-bold text-slate-700">
+                  {user?.username || 'Guest'}
+                </p>
+                <p className="text-[10px] uppercase font-black text-blue-600">
+                  {role}
+                </p>
+              </div>
+            </div>
 
-      <div className="text-right ml-2">
-        <p className="text-xs text-gray-500">
-          Created by Tadchai Sittisomboon (EPM)
-        </p>
-      </div>
+            <button
+              onClick={logout}
+              className="px-4 py-2 rounded-xl bg-red-50 text-red-600 text-sm font-semibold border border-red-100 hover:bg-red-100 transition"
+            >
+              Logout
+            </button>
 
-    </div>
-  </div>
-</header>
+            <div className="text-right ml-2">
+              <p className="text-xs text-gray-500">
+                Created by Tadchai Sittisomboon (EPM)
+              </p>
+            </div>
+          </div>
+        </div>
+      </header>
 
-        {/* Main Content - Vertical Layout */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Control Panel - Horizontal Cards at Top */}
+      {/* Main Content - Vertical Layout */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Control Panel - Hidden for Customer */}
+        {canEditFloorPlan ? (
           <div className="flex-shrink-0 border-b border-gray-200 overflow-x-auto bg-white">
             <ControlPanel />
           </div>
-
-          {/* Floor Plan Canvas - Full Width Middle */}
-          <div className="flex-1 overflow-hidden">
-            <FloorPlanCanvas />
+        ) : (
+          <div className="flex-shrink-0 border-b border-gray-200 bg-white px-6 py-3">
+            <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
+              <p className="text-sm font-semibold text-slate-700">
+                View Only Mode
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                ผู้ใช้งานประเภท Customer สามารถดู Floor Plan และสถานะอุปกรณ์ได้ แต่ไม่สามารถเพิ่ม ลบ ย้าย หรือแก้ไขอุปกรณ์ได้
+              </p>
+            </div>
           </div>
+        )}
 
-          {/* Activity Log - Horizontal at Bottom */}
+        {/* Floor Plan Canvas - Full Width Middle */}
+        <div className="flex-1 overflow-hidden">
+          <FloorPlanCanvas readOnly={!canEditFloorPlan} />
+        </div>
+
+        {/* Activity Log - Admin/Staff only */}
+        {canEditFloorPlan && (
           <div className="h-48 border-t border-gray-200 overflow-hidden flex flex-col bg-white">
             <ActivityLog />
           </div>
-        </div>
+        )}
       </div>
+    </div>
   );
 }
