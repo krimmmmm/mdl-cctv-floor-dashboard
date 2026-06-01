@@ -34,11 +34,12 @@ function App() {
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
-          <FloorPlanProvider>
-            <AuthProvider>
+
+          <AuthProvider>
+            <FloorPlanProvider>
               <Router />
-            </AuthProvider>
-          </FloorPlanProvider>
+            </FloorPlanProvider>
+          </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
