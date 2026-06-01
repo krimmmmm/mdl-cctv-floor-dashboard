@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'wouter';
 import { useFloorPlan } from '@/contexts/FloorPlanContext';
 import { Camera, Rack, Cabinet, FiberRoute } from '@/lib/floorPlanData';
 import CameraMarker from './equipment/CameraMarker';
@@ -20,6 +21,7 @@ type SelectedItem =
 type CanvasMode = 'normal' | 'draw_fiber';
 
 const FloorPlanCanvas: React.FC = () => {
+  const [, setLocation] = useLocation();
   const floorPlan = useFloorPlan();
 
   const {
@@ -62,6 +64,73 @@ const FloorPlanCanvas: React.FC = () => {
   const [showPositionModal, setShowPositionModal] = useState(false);
 
   const svgRef = React.useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const focus = params.get('focus');
+
+    if (!focus) return;
+
+    const [type, id] = focus.split(':');
+    if (!type || !id) return;
+
+    let target: any = null;
+
+    if (type === 'camera') {
+      target = (cameras || []).find((c) => c.id === id);
+
+      if (target) {
+        setSelectedItem({
+          type: 'camera',
+          id,
+        });
+
+        setSelectedFiberId(null);
+      }
+    }
+
+    if (type === 'rack') {
+      target = (racks || []).find((r) => r.id === id);
+
+      if (target) {
+        setSelectedItem({
+          type: 'rack',
+          id,
+        });
+
+        setSelectedFiberId(null);
+      }
+    }
+
+    if (type === 'cabinet') {
+      target = (cabinets || []).find((c) => c.id === id);
+
+      if (target) {
+        setSelectedItem({
+          type: 'cabinet',
+          id,
+        });
+
+        setSelectedFiberId(null);
+      }
+    }
+
+    if (!target) return;
+
+    const focusZoom = 2.2;
+
+    setZoom(focusZoom);
+    setPan({
+      x: 700 - target.x * focusZoom,
+      y: 350 - target.y * focusZoom,
+    });
+
+    const timer = window.setTimeout(() => {
+      setLocation('/floorplan', { replace: true });
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [cameras, racks, cabinets, setLocation]);
 
   const [canvasMode, setCanvasMode] = useState<CanvasMode>('normal');
   const [drawingPoints, setDrawingPoints] = useState<Array<{ x: number; y: number }>>([]);
