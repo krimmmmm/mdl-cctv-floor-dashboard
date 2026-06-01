@@ -144,13 +144,19 @@ const averageOverallProgress = (
 };
 
 const DashboardOverview: React.FC = () => {
-  const { cameras, racks, cabinets, fiberRoutes } = useFloorPlan();
+  const {
+    cameras,
+    racks,
+    cabinets,
+    fiberRoutes,
+    workPlans = {},
+    updateWorkPlan = () => {},
+  } = useFloorPlan();
 
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [selectedDayModal, setSelectedDayModal] = useState<string | null>(null);
-  const [workPlans, setWorkPlans] = useState<Record<string, any>>({});
 
   const safeCameras = cameras || [];
   const safeRacks = racks || [];
@@ -303,15 +309,6 @@ const DashboardOverview: React.FC = () => {
     });
   }, [equipmentRows, workPlans, todayKey]);
 
-  const updateWorkPlan = (id: string, changes: any) => {
-    setWorkPlans((prev) => ({
-      ...prev,
-      [id]: {
-        ...(prev[id] || {}),
-        ...changes,
-      },
-    }));
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -630,7 +627,13 @@ const DashboardOverview: React.FC = () => {
                           <input
                             type="date"
                             value={workPlans[row.id]?.date || ""}
-                            onChange={(e) => updateWorkPlan(row.id, { date: e.target.value })}
+                            onChange={(e) =>
+                              updateWorkPlan(row.id, {
+                                date: e.target.value,
+                                planStart: e.target.value,
+                                equipmentName: row.name || row.label || row.id,
+                              })
+                            }
                             className="border border-slate-200 rounded-lg px-2 py-1 text-xs"
                           />
                         </td>
@@ -639,7 +642,10 @@ const DashboardOverview: React.FC = () => {
                             type="date"
                             value={workPlans[row.id]?.finishDate || ""}
                             onChange={(e) =>
-                              updateWorkPlan(row.id, { finishDate: e.target.value })
+                              updateWorkPlan(row.id, {
+                                finishDate: e.target.value,
+                                equipmentName: row.name || row.label || row.id,
+                              })
                             }
                             className="border border-slate-200 rounded-lg px-2 py-1 text-xs"
                           />
@@ -912,6 +918,8 @@ const DayWorkModal = ({
                     onChange={(e) =>
                       updateWorkPlan(selectedEquipment.id, {
                         date: dateKey,
+                        planStart: dateKey,
+                        equipmentName: selectedEquipment.name || selectedEquipment.label || selectedEquipment.id,
                         supervisorName: e.target.value,
                       })
                     }
@@ -930,6 +938,8 @@ const DayWorkModal = ({
                     onChange={(e) =>
                       updateWorkPlan(selectedEquipment.id, {
                         date: dateKey,
+                        planStart: dateKey,
+                        equipmentName: selectedEquipment.name || selectedEquipment.label || selectedEquipment.id,
                         supervisorPhone: e.target.value,
                       })
                     }
@@ -950,6 +960,8 @@ const DayWorkModal = ({
                     onChange={(e) =>
                       updateWorkPlan(selectedEquipment.id, {
                         date: dateKey,
+                        planStart: dateKey,
+                        equipmentName: selectedEquipment.name || selectedEquipment.label || selectedEquipment.id,
                         startTime: e.target.value,
                       })
                     }
@@ -967,6 +979,8 @@ const DayWorkModal = ({
                     onChange={(e) =>
                       updateWorkPlan(selectedEquipment.id, {
                         date: dateKey,
+                        planStart: dateKey,
+                        equipmentName: selectedEquipment.name || selectedEquipment.label || selectedEquipment.id,
                         endTime: e.target.value,
                       })
                     }
@@ -984,6 +998,8 @@ const DayWorkModal = ({
                   onChange={(e) =>
                     updateWorkPlan(selectedEquipment.id, {
                       date: dateKey,
+                      planStart: dateKey,
+                      equipmentName: selectedEquipment.name || selectedEquipment.label || selectedEquipment.id,
                       workDetail: e.target.value,
                     })
                   }
@@ -999,6 +1015,8 @@ const DayWorkModal = ({
                   onChange={(e) =>
                     updateWorkPlan(selectedEquipment.id, {
                       date: dateKey,
+                      planStart: dateKey,
+                      equipmentName: selectedEquipment.name || selectedEquipment.label || selectedEquipment.id,
                       isWorking: e.target.checked,
                     })
                   }
