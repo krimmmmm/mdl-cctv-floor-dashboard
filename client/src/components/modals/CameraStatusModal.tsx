@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CameraStatusModalProps {
   isOpen?: boolean;
@@ -40,6 +41,11 @@ const CameraStatusModal = ({
 
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userRole = user?.role || "customer";
+  const canEditProgress = userRole === "admin" || userRole === "staff";
+  const canManageLayout = userRole === "admin";
+  const canToggleUrgent = userRole === "admin" || userRole === "staff" || userRole === "customer";
 
   const modalOpen = isOpen ?? open ?? false;
 
@@ -108,6 +114,7 @@ const CameraStatusModal = ({
   };
 
   const toggleUrgent = async (value: boolean) => {
+    if (!canToggleUrgent) return;
     updateCameraField(camera.id, "isUrgent", value);
 
     const { error } = await supabase
@@ -126,6 +133,8 @@ const CameraStatusModal = ({
   };
 
   const updateStep = async (field: string, value: boolean) => {
+    if (!canEditProgress) return;
+
     updateCameraField(camera.id, field, value);
 
     if (field === "wiringUTP") {
@@ -177,6 +186,8 @@ const CameraStatusModal = ({
   };
 
   const updateStepProgress = async (field: string, value: number) => {
+    if (!canEditProgress) return;
+
     const safeValue = Math.min(100, Math.max(0, Number(value || 0)));
 
     updateCameraField(camera.id, field, safeValue);
@@ -223,6 +234,8 @@ const CameraStatusModal = ({
   const handleUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
+    if (!canEditProgress) return;
+
     try {
       const file = event.target.files?.[0];
       if (!file || !camera?.id) return;
@@ -277,6 +290,8 @@ const CameraStatusModal = ({
   };
 
   const handleDeletePhoto = async (fieldName: string) => {
+    if (!canEditProgress) return;
+
     const ok = confirm("ต้องการลบรูปนี้ใช่หรือไม่?");
     if (!ok) return;
 
@@ -330,6 +345,7 @@ const CameraStatusModal = ({
             onProgressChange={(value) =>
               updateStepProgress("wiringUTPProgress", value)
             }
+            disabled={!canEditProgress}
           />
 
           <StepCard
@@ -341,6 +357,7 @@ const CameraStatusModal = ({
             onProgressChange={(value) =>
               updateStepProgress("wallMountingProgress", value)
             }
+            disabled={!canEditProgress}
           />
 
           <StepCard
@@ -352,6 +369,7 @@ const CameraStatusModal = ({
             onProgressChange={(value) =>
               updateStepProgress("domeCameraProgress", value)
             }
+            disabled={!canEditProgress}
           />
 
 <StepCard
@@ -376,6 +394,7 @@ const CameraStatusModal = ({
       value
     )
   }
+  disabled={!canEditProgress}
 />
           
           <div style={styles.progressBox}>
@@ -425,14 +444,16 @@ const CameraStatusModal = ({
               <div style={styles.buttonRow}>
                 <button
                   style={styles.whiteButton}
-                  onClick={() => updateCameraStatus(camera.id, "online")}
+                  disabled={!canEditProgress}
+                  onClick={() => canEditProgress && updateCameraStatus(camera.id, "online")}
                 >
                   Mark as Online
                 </button>
 
                 <button
                   style={styles.blueButton}
-                  onClick={() => updateCameraStatus(camera.id, "idle")}
+                  disabled={!canEditProgress}
+                  onClick={() => canEditProgress && updateCameraStatus(camera.id, "idle")}
                 >
                   Mark as Idle
                 </button>
@@ -445,6 +466,7 @@ const CameraStatusModal = ({
               <input
                 type="checkbox"
                 checked={Boolean(camera.isUrgent)}
+                disabled={!canToggleUrgent}
                 onChange={(e) => toggleUrgent(e.target.checked)}
                 style={styles.urgentCheckbox}
               />
@@ -462,8 +484,9 @@ const CameraStatusModal = ({
               min="0"
               max="360"
               value={camera.rotation || 0}
+              disabled={!canEditProgress}
               onChange={(e) =>
-                updateCameraRotation(camera.id, Number(e.target.value))
+                canEditProgress && updateCameraRotation(camera.id, Number(e.target.value))
               }
               style={{ width: "100%" }}
             />
@@ -479,7 +502,7 @@ const CameraStatusModal = ({
             <div style={styles.photoHeader}>
               <b>▧ รูปหน้างาน ({photos.length}/4)</b>
 
-              {photos.length < 4 && (
+              {canEditProgress && photos.length < 4 && (
                 <label style={styles.uploadButton}>
                   {uploading ? "Uploading..." : "Upload Photo"}
                   <input
@@ -498,7 +521,8 @@ const CameraStatusModal = ({
                 {photos.map((photo, index) => (
                   <div key={index} style={styles.photoWrap}>
                     <button
-                      onClick={() => handleDeletePhoto(photo.field)}
+                      disabled={!canEditProgress}
+                      onClick={() => canEditProgress && handleDeletePhoto(photo.field)}
                       style={styles.deleteButton}
                     >
                       ×
@@ -523,10 +547,10 @@ const CameraStatusModal = ({
               style={styles.footerButton}
               onClick={() => {
                 closeModal();
-                if (onEditPosition) onEditPosition();
+                if (canManageLayout && onEditPosition) onEditPosition();
               }}
             >
-              Edit Position
+              {canManageLayout ? "Edit Position" : "Position Locked"}
             </button>
 
             <button style={styles.footerButton} onClick={closeModal}>
@@ -555,6 +579,7 @@ const StepCard = ({
   subTitle,
   onChange,
   onProgressChange,
+  disabled = false,
 }: {
   checked: boolean;
   progress: number;
@@ -568,6 +593,7 @@ const StepCard = ({
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
         style={styles.checkbox}
       />
@@ -585,6 +611,7 @@ const StepCard = ({
           min="0"
           max="100"
           value={progress}
+          disabled={disabled}
           onChange={(e) =>
             onProgressChange(
               Math.min(100, Math.max(0, Number(e.target.value)))
