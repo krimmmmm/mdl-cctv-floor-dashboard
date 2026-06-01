@@ -18,8 +18,20 @@ const toneClass: Record<Tone, string> = {
   orange: "from-orange-50 to-amber-50 border-orange-100",
 };
 
+
+const calculateCameraOverallProgress = (camera: any) => {
+  const values = [
+    Number(camera.wiringUTPProgress || 0),
+    Number(camera.wallMountingProgress || 0),
+    Number(camera.domeCameraProgress || 0),
+    Number(camera.onlineProgress || 0),
+  ];
+
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+};
+
 const getProgress = (item: any, type: string) => {
-  if (type === "camera") return Number(item.onlineProgress || 0);
+  if (type === "camera") return calculateCameraOverallProgress(item);
   if (type === "fiber") return Number(item.progress || 0);
 
   const keys =
@@ -302,10 +314,25 @@ const DashboardOverview: React.FC = () => {
               <MetricGrid
                 items={[
                   ["Total", cameraStats.total],
-                  ["Not Start", countByProgress(safeCameras, "onlineProgress").notStarted],
-                  ["In Progress", countByProgress(safeCameras, "onlineProgress").inProgress],
-                  ["Completed", countByProgress(safeCameras, "onlineProgress").completed],
-                  ["Overall", `${averageProgress(safeCameras, "onlineProgress")}%`],
+                  [
+                    "Not Start",
+                    countByOverallProgress(safeCameras, calculateCameraOverallProgress)
+                      .notStarted,
+                  ],
+                  [
+                    "In Progress",
+                    countByOverallProgress(safeCameras, calculateCameraOverallProgress)
+                      .inProgress,
+                  ],
+                  [
+                    "Completed",
+                    countByOverallProgress(safeCameras, calculateCameraOverallProgress)
+                      .completed,
+                  ],
+                  [
+                    "Overall",
+                    `${averageOverallProgress(safeCameras, calculateCameraOverallProgress)}%`,
+                  ],
                 ]}
               />
             </MetricCard>
