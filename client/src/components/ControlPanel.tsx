@@ -1,7 +1,9 @@
 import React, { useMemo } from "react";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import StatusCard from "./StatusCard";
+import { Card, CardContent } from "./ui/card";
+
+const cardBase =
+  "border border-slate-200/80 bg-white/95 shadow-sm rounded-xl flex-shrink-0";
 
 const ControlPanel: React.FC = () => {
   const { cameras, racks, cabinets, fiberRoutes } = useFloorPlan();
@@ -14,268 +16,258 @@ const ControlPanel: React.FC = () => {
 
     const totalCameras = safeCameras.length;
     const onlineCameras = safeCameras.filter(
-  (c) => Number(c.onlineProgress || 0) >= 100
-).length;
-
-    const type1Cameras = safeCameras.filter(
-      (c) => c.type === "type1"
+      (c) => Number(c.onlineProgress || 0) >= 100,
     ).length;
 
-    const type2Cameras = safeCameras.filter(
-      (c) => c.type === "type2"
+    const cameraNotStarted = safeCameras.filter(
+      (c) => Number(c.onlineProgress || 0) <= 0,
     ).length;
+
+    const cameraInProgress = safeCameras.filter(
+      (c) =>
+        Number(c.onlineProgress || 0) > 0 &&
+        Number(c.onlineProgress || 0) < 100,
+    ).length;
+
+    const cameraCompleted = safeCameras.filter(
+      (c) => Number(c.onlineProgress || 0) >= 100,
+    ).length;
+
+    const type1Cameras = safeCameras.filter((c) => c.type === "type1").length;
+
+    const type2Cameras = safeCameras.filter((c) => c.type === "type2").length;
 
     const totalRacks = safeRacks.length;
-    const onlineRacks = safeRacks.filter(
-      (r) => r.status === "online"
+    const onlineRacks = safeRacks.filter((r) => r.status === "online").length;
+
+    const rackNotStarted = safeRacks.filter(
+      (r) => r.installationStatus === "not_started",
     ).length;
 
-    const newRacks = safeRacks.filter(
-      (r) => r.type === "type1"
+    const rackInProgress = safeRacks.filter(
+      (r) => r.installationStatus === "in_progress",
     ).length;
 
-    const oldRacks = safeRacks.filter(
-      (r) => r.type === "type2"
+    const rackCompleted = safeRacks.filter(
+      (r) => r.installationStatus === "completed",
     ).length;
+
+    const newRacks = safeRacks.filter((r) => r.type === "type1").length;
+
+    const oldRacks = safeRacks.filter((r) => r.type === "type2").length;
 
     const totalCabinets = safeCabinets.length;
     const onlineCabinets = safeCabinets.filter(
-      (c) => c.status === "online"
+      (c) => c.status === "online",
+    ).length;
+
+    const cabinetNotStarted = safeCabinets.filter(
+      (c) => c.installationStatus === "not_started",
+    ).length;
+
+    const cabinetInProgress = safeCabinets.filter(
+      (c) => c.installationStatus === "in_progress",
+    ).length;
+
+    const cabinetCompleted = safeCabinets.filter(
+      (c) => c.installationStatus === "completed",
     ).length;
 
     const totalFiberRoutes = safeFiberRoutes.length;
 
     const completedFiberRoutes = safeFiberRoutes.filter(
-      (f) => (f.progress || 0) >= 100
+      (f) => Number(f.progress || 0) >= 100,
     ).length;
 
     const inProgressFiberRoutes = safeFiberRoutes.filter(
-      (f) =>
-        (f.progress || 0) > 0 &&
-        (f.progress || 0) < 100
+      (f) => Number(f.progress || 0) > 0 && Number(f.progress || 0) < 100,
     ).length;
 
     const totalFiberProgress =
       totalFiberRoutes > 0
         ? Math.round(
             safeFiberRoutes.reduce(
-              (sum, f) => sum + (f.progress || 0),
-              0
-            ) / totalFiberRoutes
+              (sum, f) => sum + Number(f.progress || 0),
+              0,
+            ) / totalFiberRoutes,
           )
         : 0;
+
+    const overallProgress =
+      totalCameras > 0 ? Math.round((onlineCameras / totalCameras) * 100) : 0;
 
     return {
       totalCameras,
       onlineCameras,
+      cameraNotStarted,
+      cameraInProgress,
+      cameraCompleted,
       type1Cameras,
       type2Cameras,
       totalRacks,
       onlineRacks,
+      rackNotStarted,
+      rackInProgress,
+      rackCompleted,
       newRacks,
       oldRacks,
       totalCabinets,
       onlineCabinets,
+      cabinetNotStarted,
+      cabinetInProgress,
+      cabinetCompleted,
       totalFiberRoutes,
       completedFiberRoutes,
       inProgressFiberRoutes,
       totalFiberProgress,
       safeFiberRoutes,
+      overallProgress,
     };
   }, [cameras, racks, cabinets, fiberRoutes]);
 
   return (
-    <div className="w-full bg-white">
-      <div className="px-6 py-4 flex gap-4 overflow-x-auto">
-        <div className="flex-shrink-0 flex flex-col justify-center min-w-max pr-4 border-r border-gray-200">
-          <h2 className="text-lg font-bold text-gray-900">Dashboard</h2>
-          <p className="text-xs text-gray-500 mt-1">MDL CCTV Project</p>
-        </div>
-
-        <StatusCard />
-
-        <Card className="border-0 bg-blue-50 flex-shrink-0 min-w-max">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700">
-              CCTV Cameras
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="space-y-1">
-            <div className="flex justify-between items-center gap-8">
-              <div>
-                <span className="text-xs text-gray-600">Total</span>
-                <div className="text-lg font-bold text-gray-900">
-                  {stats.totalCameras}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs text-gray-600">Online</span>
-                <div className="text-lg font-bold text-green-600">
-                  {stats.onlineCameras}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs text-gray-600">
-                  Type 1 (New)
-                </span>
-                <div className="text-lg font-bold text-yellow-600">
-                  {stats.type1Cameras}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs text-gray-600">
-                  Type 2 (Replace)
-                </span>
-                <div className="text-lg font-bold text-blue-600">
-                  {stats.type2Cameras}
-                </div>
-              </div>
+    <div className="w-full border-b border-slate-200 bg-slate-50/80 backdrop-blur">
+      <div className="flex items-start gap-2 overflow-x-auto px-2 py-2">
+        <Card
+          className={`${cardBase} min-w-[150px] bg-gradient-to-br from-slate-900 to-slate-700 text-white`}
+        >
+          <CardContent className="p-3">
+            <div className="text-[11px] font-medium text-slate-300">
+              MDL CCTV
+            </div>
+            <div className="mt-1 text-sm font-bold leading-tight">
+              Floor Dashboard
+            </div>
+            <div className="mt-2 h-1.5 w-full rounded-full bg-white/20">
+              <div
+                className="h-1.5 rounded-full bg-emerald-400"
+                style={{ width: `${stats.overallProgress}%` }}
+              />
+            </div>
+            <div className="mt-1 text-[10px] text-slate-300">
+              Overall {stats.overallProgress}%
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 bg-purple-50 flex-shrink-0 min-w-max">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700">
-              RACK Equipment
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="space-y-1">
-            <div className="flex justify-between items-center gap-8">
-              <div>
-                <span className="text-xs text-gray-600">Total</span>
-                <div className="text-lg font-bold text-gray-900">
-                  {stats.totalRacks}
-                </div>
+        <Card className={`${cardBase} min-w-[260px]`}>
+          <CardContent className="p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-xs font-bold text-slate-700">
+                Installation Status
               </div>
-
-              <div>
-                <span className="text-xs text-gray-600">Ready</span>
-                <div className="text-lg font-bold text-green-600">
-                  {stats.onlineRacks}
-                </div>
+              <div className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                Live
               </div>
+            </div>
 
-              <div>
-                <span className="text-xs text-gray-600">
-                  Type 1 New RACK
-                </span>
-                <div className="text-lg font-bold text-green-600">
-                  {stats.newRacks}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs text-gray-600">
-                  Type 2 Old RACK
-                </span>
-                <div className="text-lg font-bold text-blue-600">
-                  {stats.oldRacks}
-                </div>
-              </div>
+            <div className="space-y-1.5 text-[10px]">
+              <StatusMiniRow
+                label="Cameras"
+                notStarted={stats.cameraNotStarted}
+                inProgress={stats.cameraInProgress}
+                completed={stats.cameraCompleted}
+              />
+              <StatusMiniRow
+                label="Racks"
+                notStarted={stats.rackNotStarted}
+                inProgress={stats.rackInProgress}
+                completed={stats.rackCompleted}
+              />
+              <StatusMiniRow
+                label="Cabinets"
+                notStarted={stats.cabinetNotStarted}
+                inProgress={stats.cabinetInProgress}
+                completed={stats.cabinetCompleted}
+              />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-0 bg-orange-50 flex-shrink-0 min-w-max">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700">
-              CABINET Equipment
-            </CardTitle>
-          </CardHeader>
+        <MetricCard
+          title="CCTV Cameras"
+          tone="blue"
+          items={[
+            ["Total", stats.totalCameras, "text-slate-900"],
+            ["Online", stats.onlineCameras, "text-emerald-600"],
+            ["T1 New", stats.type1Cameras, "text-amber-600"],
+            ["T2 Replace", stats.type2Cameras, "text-blue-600"],
+          ]}
+        />
 
-          <CardContent className="space-y-1">
-            <div className="flex justify-between items-center gap-8">
-              <div>
-                <span className="text-xs text-gray-600">Total</span>
-                <div className="text-lg font-bold text-gray-900">
-                  {stats.totalCabinets}
-                </div>
-              </div>
+        <MetricCard
+          title="RACK Equipment"
+          tone="violet"
+          items={[
+            ["Total", stats.totalRacks, "text-slate-900"],
+            ["Ready", stats.onlineRacks, "text-emerald-600"],
+            ["Type 1", stats.newRacks, "text-green-600"],
+            ["Type 2", stats.oldRacks, "text-blue-600"],
+          ]}
+        />
 
-              <div>
-                <span className="text-xs text-gray-600">Ready</span>
-                <div className="text-lg font-bold text-green-600">
-                  {stats.onlineCabinets}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCard
+          title="CABINET Equipment"
+          tone="orange"
+          items={[
+            ["Total", stats.totalCabinets, "text-slate-900"],
+            ["Ready", stats.onlineCabinets, "text-emerald-600"],
+          ]}
+        />
 
-        <Card className="border-0 bg-green-50 flex-shrink-0 min-w-[420px]">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between gap-4">
-              <CardTitle className="text-sm font-semibold text-gray-700">
+        <Card className={`${cardBase} min-w-[300px]`}>
+          <CardContent className="p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-xs font-bold text-slate-700">
                 Fiber Optic Progress
-              </CardTitle>
-
-              <div className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 text-sm font-bold">
+              </div>
+              <div className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
                 รวม {stats.totalFiberProgress}%
               </div>
             </div>
-          </CardHeader>
 
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-4 text-sm">
-              <div>
-                ทั้งหมด{" "}
-                <span className="font-bold">
-                  {stats.totalFiberRoutes}
-                </span>{" "}
-                เส้น
-              </div>
-
-              <div className="text-green-600 font-bold">
+            <div className="mb-1 flex items-center gap-3 text-[10px] text-slate-600">
+              <span>
+                ทั้งหมด <b>{stats.totalFiberRoutes}</b> เส้น
+              </span>
+              <span className="font-bold text-emerald-600">
                 เสร็จ {stats.completedFiberRoutes}
-              </div>
-
-              <div className="text-yellow-600 font-bold">
+              </span>
+              <span className="font-bold text-amber-600">
                 กำลังทำ {stats.inProgressFiberRoutes}
-              </div>
+              </span>
             </div>
 
-            <div className="w-full h-3 rounded-full bg-gray-200 overflow-hidden">
+            <div className="mb-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
               <div
-                className="h-full bg-yellow-500 rounded-full"
-                style={{
-                  width: `${stats.totalFiberProgress}%`,
-                }}
+                className="h-full rounded-full bg-amber-500"
+                style={{ width: `${stats.totalFiberProgress}%` }}
               />
             </div>
 
-            <div className="space-y-2 max-h-[180px] overflow-auto pr-1">
+            <div className="max-h-[74px] space-y-1 overflow-auto pr-1">
               {stats.safeFiberRoutes.length > 0 ? (
                 stats.safeFiberRoutes.map((fiber) => (
                   <div
                     key={fiber.id}
-                    className="grid grid-cols-[120px_1fr_50px] gap-3 items-center"
+                    className="grid grid-cols-[90px_1fr_34px] items-center gap-2 text-[10px]"
                   >
-                    <div className="text-sm text-gray-700 truncate">
+                    <div className="truncate text-slate-600">
                       {fiber.name || fiber.label || "Fiber Route"}
                     </div>
-
-                    <div className="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
                       <div
-                        className="h-full bg-yellow-500 rounded-full"
-                        style={{
-                          width: `${fiber.progress || 0}%`,
-                        }}
+                        className="h-full rounded-full bg-amber-500"
+                        style={{ width: `${Number(fiber.progress || 0)}%` }}
                       />
                     </div>
-
-                    <div className="text-sm font-bold text-yellow-700 text-right">
-                      {fiber.progress || 0}%
+                    <div className="text-right font-bold text-amber-700">
+                      {Number(fiber.progress || 0)}%
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-xs text-gray-500">
+                <div className="text-[10px] text-slate-400">
                   ยังไม่มี Fiber Route
                 </div>
               )}
@@ -283,143 +275,181 @@ const ControlPanel: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-0 bg-gray-50 flex-shrink-0 min-w-[320px]">
-  <CardHeader className="pb-2">
-    <CardTitle className="text-sm font-semibold text-gray-700">
-      Legend
-    </CardTitle>
-  </CardHeader>
-
-  <CardContent className="space-y-3 text-xs">
-    
-    {/* Camera Type 1 */}
-    <div className="flex items-center gap-3">
-      <div className="relative w-10 h-8">
-  <div className="absolute left-0 top-0 w-5 h-8 bg-red-500 rounded-l-full"></div>
-
-  <div className="absolute right-0 top-0 w-5 h-8 bg-yellow-300 border-2 border-red-500 rounded-r-sm"></div>
-</div>
-
-      <span>Camera Type 1 (New)</span>
-    </div>
-
-    {/* Camera Type 2 */}
-    <div className="flex items-center gap-3">
-      <div className="relative w-10 h-8">
-  <div className="absolute left-0 top-0 w-5 h-8 bg-blue-600 rounded-l-full"></div>
-
-  <div className="absolute right-0 top-0 w-5 h-8 bg-yellow-300 border-2 border-blue-600 rounded-r-sm"></div>
-</div>
-
-      <span>Camera Type 2 (Replace)</span>
-    </div>
-
-    {/* Rack Type 1 */}
-    <div className="flex items-center gap-3">
-      <div className="w-8 h-8 border-2 border-green-600 bg-green-400 rounded flex items-center justify-center text-[10px] font-bold text-black">
-        R
-      </div>
-
-      <span>Rack Type 1 - New RACK</span>
-    </div>
-
-    {/* Rack Type 2 */}
-    <div className="flex items-center gap-3">
-      <div className="w-8 h-8 border-2 border-blue-600 bg-blue-400 rounded flex items-center justify-center text-[10px] font-bold text-black">
-        R
-      </div>
-
-      <span>Rack Type 2 - Old RACK (Existing)</span>
-    </div>
-
-    {/* Cabinet */}
-    <div className="flex items-center gap-3">
-      <div className="w-8 h-8 border-2 border-orange-500 bg-orange-200 rounded flex items-center justify-center text-[10px] font-bold text-black">
-        CAB
-      </div>
-
-      <span>Cabinet</span>
-    </div>
-
-    {/* Fiber */}
-    <div className="flex items-center gap-3">
-      <div className="w-8 h-1 bg-red-500 rounded"></div>
-
-      <span>Fiber</span>
-    </div>
-  </CardContent>
-</Card>
-
-        <Card className="border-0 bg-blue-50 flex-shrink-0 min-w-max">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700">
-              How to Use
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="space-y-1 text-xs text-gray-600">
-            <p>1. Click equipment to view</p>
-            <p>2. Update status step by step</p>
-            <p>3. Mark as Online when done</p>
-            <p>4. Scroll to zoom, right-click to pan</p>
+        <Card className={`${cardBase} min-w-[190px]`}>
+          <CardContent className="p-3">
+            <div className="mb-2 text-xs font-bold text-slate-700">Legend</div>
+            <div className="grid grid-cols-1 gap-1 text-[9px] text-slate-600">
+              <LegendItem label="Camera Type 1 (New)">
+                <CameraLegendIcon color="red" />
+              </LegendItem>
+              <LegendItem label="Camera Type 2 (Replace)">
+                <CameraLegendIcon color="blue" />
+              </LegendItem>
+              <LegendItem label="Rack Type 1 - New RACK">
+                <RackLegendIcon color="green" />
+              </LegendItem>
+              <LegendItem label="Rack Type 2 - Old RACK">
+                <RackLegendIcon color="blue" />
+              </LegendItem>
+              <LegendItem label="Cabinet">
+                <CabinetLegendIcon />
+              </LegendItem>
+              <LegendItem label="Fiber">
+                <div className="h-0.5 w-6 rounded bg-red-500" />
+              </LegendItem>
+            </div>
           </CardContent>
         </Card>
 
-        <div className="flex-shrink-0 flex flex-col justify-center min-w-max pl-4 border-l border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">
-            Status Summary
-          </h3>
-
-          <div className="space-y-1 text-xs">
-            <p>
-              <span className="font-semibold">Total Cameras:</span>{" "}
-              {stats.totalCameras}
-            </p>
-
-            <p>
-              <span className="font-semibold">Cameras Online:</span>{" "}
-              <span className="text-green-600 font-bold">
-                {stats.onlineCameras}
-              </span>
-            </p>
-
-            <p>
-              <span className="font-semibold">RACK Ready:</span>{" "}
-              <span className="text-green-600 font-bold">
-                {stats.onlineRacks}/{stats.totalRacks}
-              </span>
-            </p>
-
-            <p>
-              <span className="font-semibold">CABINET Ready:</span>{" "}
-              <span className="text-green-600 font-bold">
-                {stats.onlineCabinets}/{stats.totalCabinets}
-              </span>
-            </p>
-
-            <p>
-              <span className="font-semibold">Fiber Progress:</span>{" "}
-              <span className="text-yellow-600 font-bold">
-                {stats.totalFiberProgress}%
-              </span>
-            </p>
-
-            <p>
-              <span className="font-semibold">Overall Progress:</span>{" "}
-              <span className="text-blue-600 font-bold">
-                {stats.totalCameras > 0
-                  ? Math.round(
-                      (stats.onlineCameras / stats.totalCameras) * 100
-                    )
-                  : 0}
-                %
-              </span>
-            </p>
-          </div>
-        </div>
+        <Card className={`${cardBase} min-w-[155px]`}>
+          <CardContent className="p-3">
+            <div className="mb-2 text-xs font-bold text-slate-700">
+              Status Summary
+            </div>
+            <div className="space-y-1 text-[10px] text-slate-600">
+              <SummaryLine
+                label="Cameras"
+                value={`${stats.onlineCameras}/${stats.totalCameras}`}
+              />
+              <SummaryLine
+                label="RACK"
+                value={`${stats.onlineRacks}/${stats.totalRacks}`}
+              />
+              <SummaryLine
+                label="CABINET"
+                value={`${stats.onlineCabinets}/${stats.totalCabinets}`}
+              />
+              <SummaryLine
+                label="Fiber"
+                value={`${stats.totalFiberProgress}%`}
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 };
+
+const MetricCard = ({
+  title,
+  tone,
+  items,
+}: {
+  title: string;
+  tone: "blue" | "violet" | "orange";
+  items: [string, number, string][];
+}) => {
+  const toneClass = {
+    blue: "from-blue-50 to-sky-50",
+    violet: "from-violet-50 to-purple-50",
+    orange: "from-orange-50 to-amber-50",
+  }[tone];
+
+  return (
+    <Card
+      className={`${cardBase} min-w-[230px] bg-gradient-to-br ${toneClass}`}
+    >
+      <CardContent className="p-3">
+        <div className="mb-2 text-xs font-bold text-slate-700">{title}</div>
+        <div className="flex items-center justify-between gap-3">
+          {items.map(([label, value, color]) => (
+            <div key={label} className="min-w-max">
+              <div className="text-[10px] text-slate-500">{label}</div>
+              <div className={`text-sm font-black ${color}`}>{value}</div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const StatusMiniRow = ({
+  label,
+  notStarted,
+  inProgress,
+  completed,
+}: {
+  label: string;
+  notStarted: number;
+  inProgress: number;
+  completed: number;
+}) => (
+  <div className="grid grid-cols-[58px_1fr] items-center gap-2">
+    <div className="font-semibold text-slate-600">{label}</div>
+    <div className="flex gap-1">
+      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-bold text-slate-600">
+        NS {notStarted}
+      </span>
+      <span className="rounded-full bg-amber-100 px-1.5 py-0.5 font-bold text-amber-700">
+        IP {inProgress}
+      </span>
+      <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 font-bold text-emerald-700">
+        C {completed}
+      </span>
+    </div>
+  </div>
+);
+
+const SummaryLine = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex items-center justify-between gap-4">
+    <span>{label}</span>
+    <b className="text-slate-800">{value}</b>
+  </div>
+);
+
+const LegendItem = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <div className="flex items-center gap-2">
+    <div className="flex h-5 w-7 items-center justify-center">{children}</div>
+    <span className="truncate">{label}</span>
+  </div>
+);
+
+const CameraLegendIcon = ({ color }: { color: "red" | "blue" }) => {
+  const mainColor =
+    color === "red"
+      ? "bg-red-500 border-red-500"
+      : "bg-blue-600 border-blue-600";
+  const borderColor = color === "red" ? "border-red-500" : "border-blue-600";
+
+  return (
+    <div className="relative h-5 w-7">
+      <div
+        className={`absolute left-0 top-0 h-5 w-3.5 rounded-l-full ${mainColor}`}
+      />
+      <div
+        className={`absolute right-0 top-0 h-5 w-3.5 rounded-r-sm border ${borderColor} bg-yellow-300`}
+      />
+    </div>
+  );
+};
+
+const RackLegendIcon = ({ color }: { color: "green" | "blue" }) => {
+  const className =
+    color === "green"
+      ? "border-green-600 bg-green-300"
+      : "border-blue-600 bg-blue-300";
+
+  return (
+    <div
+      className={`flex h-5 w-5 items-center justify-center rounded border text-[8px] font-black text-slate-800 ${className}`}
+    >
+      R
+    </div>
+  );
+};
+
+const CabinetLegendIcon = () => (
+  <div className="flex h-5 w-5 items-center justify-center rounded border border-orange-500 bg-orange-200 text-[7px] font-black text-slate-800">
+    C
+  </div>
+);
 
 export default ControlPanel;
