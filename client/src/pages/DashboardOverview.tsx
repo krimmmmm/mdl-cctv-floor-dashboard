@@ -854,6 +854,7 @@ const DayWorkModal = ({
   const [selectedEquipmentId, setSelectedEquipmentId] = useState(
     equipmentRows[0]?.id || ""
   );
+  const [showDayJobsModal, setShowDayJobsModal] = useState(false);
 
   const selectedEquipment = equipmentRows.find(
     (row) => row.id === selectedEquipmentId
@@ -900,6 +901,44 @@ const DayWorkModal = ({
 
           {selectedEquipment && (
             <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-600">
+                    ชื่อหัวหน้างาน / Supervisor
+                  </label>
+                  <input
+                    type="text"
+                    value={currentPlan.supervisorName || ""}
+                    onChange={(e) =>
+                      updateWorkPlan(selectedEquipment.id, {
+                        date: dateKey,
+                        supervisorName: e.target.value,
+                      })
+                    }
+                    placeholder="ระบุชื่อหัวหน้างาน"
+                    className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-600">
+                    เบอร์โทร / Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={currentPlan.supervisorPhone || ""}
+                    onChange={(e) =>
+                      updateWorkPlan(selectedEquipment.id, {
+                        date: dateKey,
+                        supervisorPhone: e.target.value,
+                      })
+                    }
+                    placeholder="ระบุเบอร์โทร"
+                    className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-bold text-slate-600">
@@ -967,7 +1006,150 @@ const DayWorkModal = ({
                 />
                 เข้าทำงานวันนี้ / On Site
               </label>
+
+              <button
+                type="button"
+                onClick={() => setShowDayJobsModal(true)}
+                className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white hover:bg-slate-700 transition"
+              >
+                ดูงานทั้งหมดของวันนี้
+              </button>
             </>
+          )}
+        </div>
+      </div>
+
+      {showDayJobsModal && (
+        <DayJobListModal
+          dateKey={dateKey}
+          equipmentRows={equipmentRows}
+          workPlans={workPlans}
+          onClose={() => setShowDayJobsModal(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+
+const DayJobListModal = ({
+  dateKey,
+  equipmentRows,
+  workPlans,
+  onClose,
+}: {
+  dateKey: string;
+  equipmentRows: any[];
+  workPlans: Record<string, any>;
+  onClose: () => void;
+}) => {
+  const dayJobs = equipmentRows.filter((row) => {
+    const plan = workPlans[row.id] || {};
+    return plan.date === dateKey || row.planStartDate === dateKey;
+  });
+
+  return (
+    <div className="fixed inset-0 z-[10000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6">
+      <div className="w-full max-w-4xl rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-black text-slate-900">
+              รายการงานของวันนี้
+            </h2>
+            <p className="text-sm text-slate-500">{dateKey}</p>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold"
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="p-6 max-h-[70vh] overflow-auto">
+          {dayJobs.length > 0 ? (
+            <div className="space-y-3">
+              {dayJobs.map((row) => {
+                const plan = workPlans[row.id] || {};
+
+                return (
+                  <div
+                    key={`${row.typeKey}-${row.id}`}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-base font-black text-slate-900">
+                          {row.equipmentType} - {row.name || row.label || row.id}
+                        </div>
+
+                        <div className="mt-1 text-xs text-slate-500">
+                          Status: <b>{row.statusLabel}</b> · Progress: <b>{row.progress}%</b>
+                        </div>
+                      </div>
+
+                      {plan.isWorking && (
+                        <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-black text-yellow-700">
+                          ON SITE
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-xl bg-white border border-slate-200 p-3">
+                        <div className="text-xs font-bold text-slate-500">
+                          หัวหน้างาน
+                        </div>
+                        <div className="font-semibold text-slate-900">
+                          {plan.supervisorName || "-"}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl bg-white border border-slate-200 p-3">
+                        <div className="text-xs font-bold text-slate-500">
+                          เบอร์โทร
+                        </div>
+                        <div className="font-semibold text-slate-900">
+                          {plan.supervisorPhone || "-"}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl bg-white border border-slate-200 p-3">
+                        <div className="text-xs font-bold text-slate-500">
+                          เวลาเริ่ม
+                        </div>
+                        <div className="font-semibold text-slate-900">
+                          {plan.startTime || "-"}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl bg-white border border-slate-200 p-3">
+                        <div className="text-xs font-bold text-slate-500">
+                          เวลาจบ
+                        </div>
+                        <div className="font-semibold text-slate-900">
+                          {plan.endTime || "-"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 rounded-xl bg-white border border-slate-200 p-3">
+                      <div className="text-xs font-bold text-slate-500">
+                        รายละเอียดงาน
+                      </div>
+                      <div className="mt-1 whitespace-pre-wrap text-sm text-slate-800">
+                        {plan.workDetail || "-"}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+              ยังไม่มีรายการงานในวันนี้
+            </div>
           )}
         </div>
       </div>
