@@ -4,6 +4,7 @@ import { ActivityLog } from '@/components/ActivityLog';
 import { useFloorPlan } from '@/contexts/FloorPlanContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Shield, Eye } from 'lucide-react';
+import { Link } from 'wouter';
 
 /**
  * MDL CCTV Floor Plan Dashboard
@@ -63,19 +64,19 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
-            <a
+            <Link
               href="/dashboard"
               className="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-semibold shadow-sm hover:bg-slate-700 transition"
             >
               ← Dashboard
-            </a>
+            </Link>
 
-            <a
+            <Link
               href="/floorplan"
               className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-500 transition"
             >
               Floor Plan
-            </a>
+            </Link>
 
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200">
               <Shield className="w-4 h-4 text-slate-600" />
