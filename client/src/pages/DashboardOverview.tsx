@@ -71,6 +71,55 @@ const countByProgress = (items: any[], key: string) => ({
   notStarted: items.filter((item) => Number(item[key] || 0) <= 0).length,
 });
 
+
+const calculateRackOverallProgress = (rack: any) => {
+  const values = [
+    Number(rack.acPowerProgress || 0),
+    Number(rack.utpProgress || 0),
+    Number(rack.poeSwitchProgress || 0),
+    Number(rack.fiberOpticProgress || 0),
+    Number(rack.readyProgress || 0),
+  ];
+
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+};
+
+const calculateCabinetOverallProgress = (cabinet: any) => {
+  const values = [
+    Number(cabinet.installCabinetProgress || 0),
+    Number(cabinet.acPowerProgress || 0),
+    Number(cabinet.utpProgress || 0),
+    Number(cabinet.poeSwitchProgress || 0),
+    Number(cabinet.fiberOpticProgress || 0),
+    Number(cabinet.readyProgress || 0),
+  ];
+
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+};
+
+const countByOverallProgress = (
+  items: any[],
+  calculateProgress: (item: any) => number
+) => ({
+  completed: items.filter((item) => calculateProgress(item) >= 100).length,
+  inProgress: items.filter((item) => {
+    const progress = calculateProgress(item);
+    return progress > 0 && progress < 100;
+  }).length,
+  notStarted: items.filter((item) => calculateProgress(item) <= 0).length,
+});
+
+const averageOverallProgress = (
+  items: any[],
+  calculateProgress: (item: any) => number
+) => {
+  if (!items.length) return 0;
+
+  return Math.round(
+    items.reduce((sum, item) => sum + calculateProgress(item), 0) / items.length
+  );
+};
+
 const DashboardOverview: React.FC = () => {
   const { cameras, racks, cabinets, fiberRoutes } = useFloorPlan();
 
@@ -265,10 +314,25 @@ const DashboardOverview: React.FC = () => {
               <MetricGrid
                 items={[
                   ["Total", rackStats.total],
-                  ["Not Start", countByProgress(safeRacks, "readyProgress").notStarted],
-                  ["In Progress", countByProgress(safeRacks, "readyProgress").inProgress],
-                  ["Completed", countByProgress(safeRacks, "readyProgress").completed],
-                  ["Overall", `${averageProgress(safeRacks, "readyProgress")}%`],
+                  [
+                    "Not Start",
+                    countByOverallProgress(safeRacks, calculateRackOverallProgress)
+                      .notStarted,
+                  ],
+                  [
+                    "In Progress",
+                    countByOverallProgress(safeRacks, calculateRackOverallProgress)
+                      .inProgress,
+                  ],
+                  [
+                    "Completed",
+                    countByOverallProgress(safeRacks, calculateRackOverallProgress)
+                      .completed,
+                  ],
+                  [
+                    "Overall",
+                    `${averageOverallProgress(safeRacks, calculateRackOverallProgress)}%`,
+                  ],
                 ]}
               />
             </MetricCard>
@@ -277,10 +341,25 @@ const DashboardOverview: React.FC = () => {
               <MetricGrid
                 items={[
                   ["Total", cabinetStats.total],
-                  ["Not Start", countByProgress(safeCabinets, "readyProgress").notStarted],
-                  ["In Progress", countByProgress(safeCabinets, "readyProgress").inProgress],
-                  ["Completed", countByProgress(safeCabinets, "readyProgress").completed],
-                  ["Overall", `${averageProgress(safeCabinets, "readyProgress")}%`],
+                  [
+                    "Not Start",
+                    countByOverallProgress(safeCabinets, calculateCabinetOverallProgress)
+                      .notStarted,
+                  ],
+                  [
+                    "In Progress",
+                    countByOverallProgress(safeCabinets, calculateCabinetOverallProgress)
+                      .inProgress,
+                  ],
+                  [
+                    "Completed",
+                    countByOverallProgress(safeCabinets, calculateCabinetOverallProgress)
+                      .completed,
+                  ],
+                  [
+                    "Overall",
+                    `${averageOverallProgress(safeCabinets, calculateCabinetOverallProgress)}%`,
+                  ],
                 ]}
               />
             </MetricCard>
