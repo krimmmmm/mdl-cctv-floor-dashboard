@@ -36,7 +36,7 @@ function Router() {
       <ProtectedRoute
         path="/floorplan"
         component={Home}
-        allowedRoles={["admin", "staff"]}
+        allowedRoles={["admin", "staff", "customer"]}
       />
 
       <Route path="/404" component={NotFound} />
