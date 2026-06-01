@@ -372,6 +372,15 @@ const DashboardOverview: React.FC = () => {
             </p>
           </div>
 
+          {userRole === "admin" && (
+            <Link
+              href="/admin/users"
+              className="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold shadow-sm hover:bg-slate-700 transition"
+            >
+              Admin Permission
+            </Link>
+          )}
+
           <Link
             href="/floorplan"
             className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-500 transition"
