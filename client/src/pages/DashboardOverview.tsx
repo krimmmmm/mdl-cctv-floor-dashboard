@@ -132,9 +132,18 @@ const DashboardOverview: React.FC = () => {
   }, [equipmentRows]);
 
   const donutData = [
-    { name: "Completed", value: summary.completed },
-    { name: "In Progress", value: summary.inProgress },
-    { name: "Not Started", value: summary.notStarted },
+    {
+      name: `Completed ${summary.completed} (${summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0}%)`,
+      value: summary.completed,
+    },
+    {
+      name: `In Progress ${summary.inProgress} (${summary.total > 0 ? Math.round((summary.inProgress / summary.total) * 100) : 0}%)`,
+      value: summary.inProgress,
+    },
+    {
+      name: `Not Started ${summary.notStarted} (${summary.total > 0 ? Math.round((summary.notStarted / summary.total) * 100) : 0}%)`,
+      value: summary.notStarted,
+    },
   ];
 
   const cameraStats = {
@@ -232,7 +241,7 @@ const DashboardOverview: React.FC = () => {
       <main className="p-5 space-y-5">
         <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <KpiCard title="Overall" value={`${summary.overall}%`} tone="blue" />
-          <KpiCard title="Total Equipment" value={summary.total} tone="slate" />
+          <KpiCard title="Total Work" value={summary.total} tone="slate" />
           <KpiCard title="Completed" value={summary.completed} tone="green" />
           <KpiCard title="In Progress" value={summary.inProgress} tone="yellow" />
           <KpiCard title="Not Started" value={summary.notStarted} tone="gray" />
@@ -244,9 +253,10 @@ const DashboardOverview: React.FC = () => {
               <MetricGrid
                 items={[
                   ["Total", cameraStats.total],
-                  ["Online", cameraStats.online],
-                  ["T1 New", cameraStats.type1],
-                  ["T2 Replace", cameraStats.type2],
+                  ["Not Start", countByProgress(safeCameras, "onlineProgress").notStarted],
+                  ["In Progress", countByProgress(safeCameras, "onlineProgress").inProgress],
+                  ["Completed", countByProgress(safeCameras, "onlineProgress").completed],
+                  ["Overall", `${averageProgress(safeCameras, "onlineProgress")}%`],
                 ]}
               />
             </MetricCard>
@@ -255,9 +265,10 @@ const DashboardOverview: React.FC = () => {
               <MetricGrid
                 items={[
                   ["Total", rackStats.total],
-                  ["Ready", rackStats.ready],
-                  ["Type 1", rackStats.type1],
-                  ["Type 2", rackStats.type2],
+                  ["Not Start", countByProgress(safeRacks, "readyProgress").notStarted],
+                  ["In Progress", countByProgress(safeRacks, "readyProgress").inProgress],
+                  ["Completed", countByProgress(safeRacks, "readyProgress").completed],
+                  ["Overall", `${averageProgress(safeRacks, "readyProgress")}%`],
                 ]}
               />
             </MetricCard>
@@ -266,7 +277,10 @@ const DashboardOverview: React.FC = () => {
               <MetricGrid
                 items={[
                   ["Total", cabinetStats.total],
-                  ["Ready", cabinetStats.ready],
+                  ["Not Start", countByProgress(safeCabinets, "readyProgress").notStarted],
+                  ["In Progress", countByProgress(safeCabinets, "readyProgress").inProgress],
+                  ["Completed", countByProgress(safeCabinets, "readyProgress").completed],
+                  ["Overall", `${averageProgress(safeCabinets, "readyProgress")}%`],
                 ]}
               />
             </MetricCard>
@@ -408,7 +422,14 @@ const DashboardOverview: React.FC = () => {
                         className="border-t border-slate-100 hover:bg-slate-50"
                       >
                         <td className="p-3 font-semibold">{row.equipmentType}</td>
-                        <td className="p-3">{row.name || row.label || row.id}</td>
+                        <td className="p-3">
+                          <a
+                            href={`/floorplan?focus=${row.typeKey}:${row.id}`}
+                            className="text-blue-600 font-semibold hover:underline"
+                          >
+                            {row.name || row.label || row.id}
+                          </a>
+                        </td>
                         <td className="p-3">
                           <StatusPill status={row.statusLabel} />
                         </td>
@@ -621,7 +642,7 @@ const MetricCard = ({
 );
 
 const MetricGrid = ({ items }: { items: Array<[string, any]> }) => (
-  <div className="grid grid-cols-4 gap-3">
+  <div className="grid grid-cols-5 gap-3">
     {items.map(([label, value]) => (
       <div key={label}>
         <div className="text-[11px] text-slate-500">{label}</div>
