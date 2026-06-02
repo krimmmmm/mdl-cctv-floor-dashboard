@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
@@ -16,6 +16,8 @@ const FiberRouteStatusModal: React.FC<Props> = ({
   onUpdate,
   onDelete,
 }) => {
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
   const { user } = useAuth();
   const userRole = user?.role || "customer";
   const canEditFiber = userRole === "admin" || userRole === "staff";
@@ -170,7 +172,8 @@ const FiberRouteStatusModal: React.FC<Props> = ({
                       <img
                         src={photos[idx]}
                         alt=""
-                        className="rounded-lg w-full h-36 object-cover border"
+                        onClick={() => setPreviewImage(String(photos[idx]))}
+                        className="rounded-lg w-full h-36 object-cover border cursor-zoom-in hover:ring-2 hover:ring-red-400"
                       />
                     </div>
                   ) : (
@@ -225,6 +228,27 @@ const FiberRouteStatusModal: React.FC<Props> = ({
         </div>
       </div>
     </div>
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[999999] bg-black/95 flex items-center justify-center cursor-zoom-out"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-5 right-5 h-12 w-12 rounded-full bg-white/15 text-white text-2xl font-black hover:bg-white/25"
+          >
+            ×
+          </button>
+
+          <img
+            src={previewImage}
+            alt="preview"
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-[96vw] max-h-[96vh] object-contain rounded-2xl shadow-2xl"
+          />
+        </div>
+      )}
   );
 };
 
