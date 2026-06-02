@@ -1038,7 +1038,7 @@ const DashboardOverview: React.FC = () => {
                                 <button
                                   key={idx}
                                   onClick={() => setSelectedPhoto(photo)}
-                                  className="w-8 h-8 rounded-lg overflow-hidden border border-slate-200"
+                                  className="w-8 h-8 rounded-lg overflow-hidden border border-slate-200 cursor-zoom-in hover:ring-2 hover:ring-blue-400"
                                 >
                                   <img
                                     src={photo}
@@ -1153,13 +1153,22 @@ const DashboardOverview: React.FC = () => {
 
       {selectedPhoto && (
         <div
-          className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center"
+          className="fixed inset-0 z-[999999] bg-black/95 flex items-center justify-center cursor-zoom-out"
           onClick={() => setSelectedPhoto(null)}
         >
+          <button
+            type="button"
+            onClick={() => setSelectedPhoto(null)}
+            className="absolute top-5 right-5 h-12 w-12 rounded-full bg-white/15 text-white text-2xl font-black hover:bg-white/25"
+          >
+            ×
+          </button>
+
           <img
             src={selectedPhoto}
             alt="preview"
-            className="max-w-[92vw] max-h-[92vh] rounded-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-[96vw] max-h-[96vh] object-contain rounded-2xl shadow-2xl"
           />
         </div>
       )}
