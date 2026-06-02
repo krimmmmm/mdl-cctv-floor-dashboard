@@ -236,6 +236,15 @@ const FloorPlanCanvas: React.FC<Props> = ({
     setZoom(newZoom);
   };
 
+  const placeMovingEquipment = () => {
+    if (!isMovingEquipment || !draggedItem) return false;
+
+    setIsMovingEquipment(false);
+    setShowPositionModal(true);
+
+    return true;
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!canManageLayout && !(canManageFiber && canvasMode === 'draw_fiber')) {
       if (e.button === 0 || e.button === 2) {
@@ -265,14 +274,10 @@ const FloorPlanCanvas: React.FC<Props> = ({
       return;
     }
 
-    if (e.button === 0 && isMovingEquipment && draggedItem) {
-  e.preventDefault();
-
-  setIsMovingEquipment(false);
-  setShowPositionModal(true);
-
-  return;
-}
+    if (e.button === 0 && placeMovingEquipment()) {
+      e.preventDefault();
+      return;
+    }
 
     if (e.button === 0 && !isMovingEquipment) {
       const target = e.target as SVGElement;
@@ -771,21 +776,117 @@ const FloorPlanCanvas: React.FC<Props> = ({
           const isSelected = selectedItem?.type === 'camera' && selectedItem.id === camera.id;
           const isDraggedItem = draggedItem?.type === 'camera' && draggedItem.id === camera.id && (isMovingEquipment || showPositionModal);
           const displayCamera = isDraggedItem ? { ...camera, x: tempPosition.x, y: tempPosition.y } : camera;
-          return <g key={camera.id} onMouseDown={(e) => { e.stopPropagation(); handleCameraClick(camera); }} style={{ cursor: !canManageLayout ? 'pointer' : canvasMode === 'draw_fiber' ? 'crosshair' : isSelected ? 'grab' : 'pointer' }}><CameraMarker camera={displayCamera} isSelected={isSelected} onClick={() => handleCameraClick(camera)} /></g>;
+          return (
+            <g
+              key={camera.id}
+              onMouseDown={(e) => {
+                if (isMovingEquipment) {
+                  e.preventDefault();
+                  placeMovingEquipment();
+                  return;
+                }
+
+                e.stopPropagation();
+                handleCameraClick(camera);
+              }}
+              style={{
+                cursor: !canManageLayout
+                  ? 'pointer'
+                  : canvasMode === 'draw_fiber'
+                    ? 'crosshair'
+                    : isSelected
+                      ? 'grab'
+                      : 'pointer',
+              }}
+            >
+              <CameraMarker
+                camera={displayCamera}
+                isSelected={isSelected}
+                onClick={() => {
+                  if (isMovingEquipment) return;
+                  handleCameraClick(camera);
+                }}
+              />
+            </g>
+          );
         })}
 
         {(racks || []).map((rack) => {
           const isSelected = selectedItem?.type === 'rack' && selectedItem.id === rack.id;
           const isDraggedItem = draggedItem?.type === 'rack' && draggedItem.id === rack.id && (isMovingEquipment || showPositionModal);
           const displayRack = isDraggedItem ? { ...rack, x: tempPosition.x, y: tempPosition.y } : rack;
-          return <g key={rack.id} onMouseDown={(e) => { e.stopPropagation(); handleRackClick(rack); }} style={{ cursor: !canManageLayout ? 'pointer' : canvasMode === 'draw_fiber' ? 'crosshair' : isSelected ? 'grab' : 'pointer' }}><RackMarker rack={displayRack} isSelected={isSelected} onClick={() => handleRackClick(rack)} /></g>;
+          return (
+            <g
+              key={rack.id}
+              onMouseDown={(e) => {
+                if (isMovingEquipment) {
+                  e.preventDefault();
+                  placeMovingEquipment();
+                  return;
+                }
+
+                e.stopPropagation();
+                handleRackClick(rack);
+              }}
+              style={{
+                cursor: !canManageLayout
+                  ? 'pointer'
+                  : canvasMode === 'draw_fiber'
+                    ? 'crosshair'
+                    : isSelected
+                      ? 'grab'
+                      : 'pointer',
+              }}
+            >
+              <RackMarker
+                rack={displayRack}
+                isSelected={isSelected}
+                onClick={() => {
+                  if (isMovingEquipment) return;
+                  handleRackClick(rack);
+                }}
+              />
+            </g>
+          );
         })}
 
         {(cabinets || []).map((cabinet) => {
           const isSelected = selectedItem?.type === 'cabinet' && selectedItem.id === cabinet.id;
           const isDraggedItem = draggedItem?.type === 'cabinet' && draggedItem.id === cabinet.id && (isMovingEquipment || showPositionModal);
           const displayCabinet = isDraggedItem ? { ...cabinet, x: tempPosition.x, y: tempPosition.y } : cabinet;
-          return <g key={cabinet.id} onMouseDown={(e) => { e.stopPropagation(); handleCabinetClick(cabinet); }} style={{ cursor: !canManageLayout ? 'pointer' : canvasMode === 'draw_fiber' ? 'crosshair' : isSelected ? 'grab' : 'pointer' }}><CabinetMarker cabinet={displayCabinet} isSelected={isSelected} onClick={() => handleCabinetClick(cabinet)} /></g>;
+          return (
+            <g
+              key={cabinet.id}
+              onMouseDown={(e) => {
+                if (isMovingEquipment) {
+                  e.preventDefault();
+                  placeMovingEquipment();
+                  return;
+                }
+
+                e.stopPropagation();
+                handleCabinetClick(cabinet);
+              }}
+              style={{
+                cursor: !canManageLayout
+                  ? 'pointer'
+                  : canvasMode === 'draw_fiber'
+                    ? 'crosshair'
+                    : isSelected
+                      ? 'grab'
+                      : 'pointer',
+              }}
+            >
+              <CabinetMarker
+                cabinet={displayCabinet}
+                isSelected={isSelected}
+                onClick={() => {
+                  if (isMovingEquipment) return;
+                  handleCabinetClick(cabinet);
+                }}
+              />
+            </g>
+          );
         })}
       </svg>
 
