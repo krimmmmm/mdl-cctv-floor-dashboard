@@ -6,6 +6,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (changes: any) => void;
+  onDelete?: () => void;
 }
 
 const FiberRouteStatusModal: React.FC<Props> = ({
@@ -13,10 +14,12 @@ const FiberRouteStatusModal: React.FC<Props> = ({
   isOpen,
   onClose,
   onUpdate,
+  onDelete,
 }) => {
   const { user } = useAuth();
   const userRole = user?.role || "customer";
   const canEditFiber = userRole === "admin" || userRole === "staff";
+  const isAdmin = userRole === "admin";
 
   if (!isOpen) return null;
 
@@ -191,6 +194,27 @@ const FiberRouteStatusModal: React.FC<Props> = ({
               ))}
             </div>
           </div>
+
+          {isAdmin && (
+            <button
+              onClick={() => {
+                const confirmed = window.confirm(
+                  `Delete ${route.name || "Fiber Route"} ?`
+                );
+
+                if (!confirmed) return;
+
+                if (onDelete) {
+                  onDelete();
+                }
+
+                onClose();
+              }}
+              className="w-full h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition"
+            >
+              Delete Fiber Route
+            </button>
+          )}
 
           <button
             onClick={onClose}
