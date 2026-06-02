@@ -151,8 +151,64 @@ const ControlPanel: React.FC = () => {
       "readyProgress",
     );
 
+    const calculateCameraOverallProgress = (camera: any) => {
+      const values = [
+        Number(camera.wiringUTPProgress || 0),
+        Number(camera.wallMountingProgress || 0),
+        Number(camera.domeCameraProgress || 0),
+        Number(camera.onlineProgress || 0),
+      ];
+
+      return Math.round(
+        values.reduce((sum, value) => sum + value, 0) / values.length,
+      );
+    };
+
+    const calculateRackOverallProgress = (rack: any) => {
+      const values = [
+        Number(rack.acPowerProgress || 0),
+        Number(rack.utpProgress || 0),
+        Number(rack.poeSwitchProgress || 0),
+        Number(rack.fiberOpticProgress || 0),
+        Number(rack.readyProgress || 0),
+      ];
+
+      return Math.round(
+        values.reduce((sum, value) => sum + value, 0) / values.length,
+      );
+    };
+
+    const calculateCabinetOverallProgress = (cabinet: any) => {
+      const values = [
+        Number(cabinet.installCabinetProgress || 0),
+        Number(cabinet.acPowerProgress || 0),
+        Number(cabinet.utpProgress || 0),
+        Number(cabinet.poeSwitchProgress || 0),
+        Number(cabinet.fiberOpticProgress || 0),
+        Number(cabinet.readyProgress || 0),
+      ];
+
+      return Math.round(
+        values.reduce((sum, value) => sum + value, 0) / values.length,
+      );
+    };
+
+    const equipmentProgressRows = [
+      ...safeCameras.map(calculateCameraOverallProgress),
+      ...safeRacks.map(calculateRackOverallProgress),
+      ...safeCabinets.map(calculateCabinetOverallProgress),
+      ...safeFiberRoutes.map((fiber) => Number(fiber.progress || 0)),
+    ];
+
     const overallProgress =
-      totalCameras > 0 ? Math.round((onlineCameras / totalCameras) * 100) : 0;
+      equipmentProgressRows.length > 0
+        ? Math.round(
+            equipmentProgressRows.reduce(
+              (sum, value) => sum + value,
+              0,
+            ) / equipmentProgressRows.length,
+          )
+        : 0;
 
     return {
       totalCameras,
