@@ -110,7 +110,6 @@ const CameraStatusModal = ({
 
   const refreshAfterChange = async () => {
     if (onUpdate) await onUpdate();
-    window.location.reload();
   };
 
   const toggleUrgent = async (value: boolean) => {
@@ -508,8 +507,9 @@ const CameraStatusModal = ({
                   <input
                     type="file"
                     accept="image/*"
+                    onClick={(e) => e.stopPropagation()}
                     onChange={handleUpload}
-                    disabled={uploading}
+                    disabled={uploading || !canEditProgress}
                     style={{ display: "none" }}
                   />
                 </label>
