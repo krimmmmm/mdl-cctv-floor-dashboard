@@ -249,36 +249,6 @@ const buildReportHtml = ({
   const summary = getReportSummary(equipmentRows);
   const generatedAt = new Date().toLocaleString("th-TH");
 
-  const getCategorySummary = (label: string, typeKey: string) => {
-    const rows = equipmentRows.filter((row) => row.typeKey === typeKey);
-    const cat = getReportSummary(rows);
-
-    const status =
-      cat.completed === cat.total && cat.total > 0
-        ? "Completed"
-        : cat.inProgress > 0
-          ? "In Progress"
-          : "Not Started";
-
-    return `
-      <div class="card">
-        <div class="label">${label}</div>
-        <div class="value">${cat.overall}%</div>
-        <div class="subvalue">Status: ${status}</div>
-        <div class="subvalue">Total ${cat.total} · Completed ${cat.completed} · In Progress ${cat.inProgress} · Not Started ${cat.notStarted}</div>
-      </div>
-    `;
-  };
-
-  const categoryRowsHtml = `
-    <div class="summary category-summary">
-      ${getCategorySummary("CCTV Cameras", "camera")}
-      ${getCategorySummary("RACK Equipment", "rack")}
-      ${getCategorySummary("CABINET Equipment", "cabinet")}
-      ${getCategorySummary("Fiber Optic Progress", "fiber")}
-    </div>
-  `;
-
   const rowsHtml = reportRows
     .map((row) => {
       const plan = workPlans[row.id] || {};
@@ -342,10 +312,6 @@ const buildReportHtml = ({
       gap: 14px;
       margin: 24px 0;
     }
-    .category-summary {
-      grid-template-columns: repeat(4, 1fr);
-      margin-top: -10px;
-    }
     .card {
       background: white;
       border: 1px solid #e2e8f0;
@@ -363,13 +329,6 @@ const buildReportHtml = ({
       font-size: 30px;
       font-weight: 900;
       color: #0f172a;
-    }
-    .subvalue {
-      margin-top: 6px;
-      color: #475569;
-      font-size: 12px;
-      font-weight: 700;
-      line-height: 1.35;
     }
     h2 {
       margin: 28px 0 12px;
@@ -434,8 +393,6 @@ const buildReportHtml = ({
       <div class="card"><div class="label">In Progress</div><div class="value">${summary.inProgress}</div></div>
       <div class="card"><div class="label">Not Started</div><div class="value">${summary.notStarted}</div></div>
     </div>
-
-    ${categoryRowsHtml}
 
     <h2>Work Detail</h2>
     ${
@@ -661,7 +618,7 @@ const DashboardOverview: React.FC = () => {
         const day = dayIndex + 1;
         const key = `${monthKey}-${String(day).padStart(2, "0")}`;
         const jobs = getJobsForDate(key);
-        const isWorking = key === todayKey && hasWorkingOnDate(key);
+        const isWorking = hasWorkingOnDate(key);
         const isToday = key === todayKey;
 
         return {
@@ -888,40 +845,41 @@ const DashboardOverview: React.FC = () => {
             <StepProgressPanel
               title="Rack Installation Steps"
               steps={[
+                // Sync from Rack Type1 + Rack Type2 + Cabinet
                 {
                   title: "AC POWER",
                   subTitle: "Power supply installed",
-                  progress: averageProgress(safeRacks, "acPowerProgress"),
-                  checked: countByProgress(safeRacks, "acPowerProgress").completed,
-                  total: safeRacks.length,
+                  progress: averageProgress([...safeRacks, ...safeCabinets], "acPowerProgress"),
+                  checked: countByProgress([...safeRacks, ...safeCabinets], "acPowerProgress").completed,
+                  total: (safeRacks.length + safeCabinets.length),
                 },
                 {
                   title: "UTP",
                   subTitle: "Network cable installed",
-                  progress: averageProgress(safeRacks, "utpProgress"),
-                  checked: countByProgress(safeRacks, "utpProgress").completed,
-                  total: safeRacks.length,
+                  progress: averageProgress([...safeRacks, ...safeCabinets], "utpProgress"),
+                  checked: countByProgress([...safeRacks, ...safeCabinets], "utpProgress").completed,
+                  total: (safeRacks.length + safeCabinets.length),
                 },
                 {
                   title: "POE SWITCH",
                   subTitle: "Switch installed",
-                  progress: averageProgress(safeRacks, "poeSwitchProgress"),
-                  checked: countByProgress(safeRacks, "poeSwitchProgress").completed,
-                  total: safeRacks.length,
+                  progress: averageProgress([...safeRacks, ...safeCabinets], "poeSwitchProgress"),
+                  checked: countByProgress([...safeRacks, ...safeCabinets], "poeSwitchProgress").completed,
+                  total: (safeRacks.length + safeCabinets.length),
                 },
                 {
                   title: "FIBER OPTIC",
                   subTitle: "Fiber optic connected",
-                  progress: averageProgress(safeRacks, "fiberOpticProgress"),
-                  checked: countByProgress(safeRacks, "fiberOpticProgress").completed,
-                  total: safeRacks.length,
+                  progress: averageProgress([...safeRacks, ...safeCabinets], "fiberOpticProgress"),
+                  checked: countByProgress([...safeRacks, ...safeCabinets], "fiberOpticProgress").completed,
+                  total: (safeRacks.length + safeCabinets.length),
                 },
                 {
                   title: "READY",
                   subTitle: "Rack ready for use",
-                  progress: averageProgress(safeRacks, "readyProgress"),
-                  checked: countByProgress(safeRacks, "readyProgress").completed,
-                  total: safeRacks.length,
+                  progress: averageProgress([...safeRacks, ...safeCabinets], "readyProgress"),
+                  checked: countByProgress([...safeRacks, ...safeCabinets], "readyProgress").completed,
+                  total: (safeRacks.length + safeCabinets.length),
                 },
               ]}
             />
