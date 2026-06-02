@@ -310,6 +310,7 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
                   <input
                     type="file"
                     accept="image/*"
+                    onClick={(e) => e.stopPropagation()}
                     multiple
                     onChange={handlePhotoUpload}
                     style={{ display: "none" }}
