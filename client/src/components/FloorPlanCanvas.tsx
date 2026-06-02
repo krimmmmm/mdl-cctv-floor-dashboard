@@ -205,20 +205,28 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
       const rect = svgRef.current.getBoundingClientRect();
 
+      /*
+        Important:
+        The SVG itself is transformed by CSS:
+          translate(pan.x, pan.y) scale(zoom)
+
+        getBoundingClientRect() already includes that CSS transform.
+        So do NOT subtract pan or divide pan again here.
+        Map the click position directly from the transformed screen rectangle
+        back into the SVG viewBox coordinate system.
+      */
       const svgX =
-        (clientX - rect.left) / zoom -
-        pan.x / zoom;
+        ((clientX - rect.left) / rect.width) * 1400;
 
       const svgY =
-        (clientY - rect.top) / zoom -
-        pan.y / zoom;
+        ((clientY - rect.top) / rect.height) * 900;
 
       return {
         x: Math.max(0, Math.min(1400, svgX)),
         y: Math.max(0, Math.min(900, svgY)),
       };
     },
-    [zoom, pan]
+    []
   );
 
   const handleWheel = (e: React.WheelEvent) => {
