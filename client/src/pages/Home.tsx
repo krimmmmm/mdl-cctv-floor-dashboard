@@ -19,7 +19,12 @@ export default function Home() {
   const isAdmin = role === 'admin';
   const canViewFloorPlan = role === 'admin' || role === 'staff' || role === 'customer';
   const canManageLayout = isAdmin;
+  const canManageFiber = role === 'admin' || role === 'staff';
   const isCustomer = role === 'customer';
+
+  const handleResetFloorPlanView = () => {
+    window.dispatchEvent(new CustomEvent('resetFloorPlanView'));
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -73,12 +78,13 @@ export default function Home() {
               ← Dashboard
             </Link>
 
-            <Link
-              href="/floorplan"
+            <button
+              type="button"
+              onClick={handleResetFloorPlanView}
               className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-500 transition"
             >
-              Floor Plan
-            </Link>
+              Reset View
+            </button>
 
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200">
               <Shield className="w-4 h-4 text-slate-600" />
@@ -130,7 +136,11 @@ export default function Home() {
 
         {/* Floor Plan Canvas - Full Width Middle */}
         <div className="flex-1 overflow-hidden">
-          <FloorPlanCanvas readOnly={!canViewFloorPlan} canManageLayout={canManageLayout} />
+          <FloorPlanCanvas
+            readOnly={!canViewFloorPlan}
+            canManageLayout={canManageLayout}
+            canManageFiber={canManageFiber}
+          />
         </div>
 
         {/* Activity Log - Admin/Staff only */}
