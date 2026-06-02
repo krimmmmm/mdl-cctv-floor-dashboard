@@ -344,73 +344,6 @@ const ControlPanel: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className={`${cardBase} min-w-[300px]`}>
-          <CardContent className="p-3">
-            <div className="mb-2 text-xs font-bold text-blue-200">
-              Camera Installation Steps
-            </div>
-
-            <div className="space-y-2">
-              <StepProgressRow
-                title="Wiring UTP"
-                subTitle="Camera Type1 + Type2"
-                progress={stats.cameraWiringProgress}
-              />
-              <StepProgressRow
-                title="Install Wall Mounting"
-                subTitle="Camera Type1 + Type2"
-                progress={stats.cameraWallMountingProgress}
-              />
-              <StepProgressRow
-                title="Install Dome Camera"
-                subTitle="Camera Type1 + Type2"
-                progress={stats.cameraDomeCameraProgress}
-              />
-              <StepProgressRow
-                title="Camera Online"
-                subTitle="Camera Type1 + Type2"
-                progress={stats.cameraOnlineProgress}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className={`${cardBase} min-w-[300px]`}>
-          <CardContent className="p-3">
-            <div className="mb-2 text-xs font-bold text-blue-200">
-              Rack Installation Steps
-            </div>
-
-            <div className="space-y-2">
-              <StepProgressRow
-                title="AC POWER"
-                subTitle="Rack Type1 + Type2 + Cabinet"
-                progress={stats.rackAcPowerProgress}
-              />
-              <StepProgressRow
-                title="UTP"
-                subTitle="Rack Type1 + Type2 + Cabinet"
-                progress={stats.rackUtpProgress}
-              />
-              <StepProgressRow
-                title="FIBER OPTIC"
-                subTitle="Rack Type1 + Type2 + Cabinet"
-                progress={stats.rackFiberOpticProgress}
-              />
-              <StepProgressRow
-                title="POE SWITCH"
-                subTitle="Rack Type1 + Type2 + Cabinet"
-                progress={stats.rackPoeSwitchProgress}
-              />
-              <StepProgressRow
-                title="READY"
-                subTitle="Rack Type1 + Type2 + Cabinet"
-                progress={stats.rackReadyProgress}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className={`${cardBase} min-w-[190px]`}>
           <CardContent className="p-3">
             <div className="mb-2 text-xs font-bold text-slate-700">Legend</div>
@@ -466,45 +399,6 @@ const ControlPanel: React.FC = () => {
     </div>
   );
 };
-
-const StepProgressRow = ({
-  title,
-  subTitle,
-  progress,
-}: {
-  title: string;
-  subTitle: string;
-  progress: number;
-}) => (
-  <div className="rounded-xl bg-black px-3 py-2 text-white">
-    <div className="flex items-center gap-3">
-      <input
-        type="checkbox"
-        checked={progress >= 100}
-        readOnly
-        className="h-4 w-4 rounded border-white"
-      />
-
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-black">{title}</div>
-        <div className="truncate text-[10px] text-slate-200">{subTitle}</div>
-      </div>
-
-      <div className="w-16 rounded-lg border border-slate-500 px-2 py-1 text-center text-sm font-black">
-        {progress}
-      </div>
-
-      <div className="text-sm font-black text-blue-200">%</div>
-    </div>
-
-    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-700">
-      <div
-        className="h-full rounded-full bg-emerald-500"
-        style={{ width: `${progress}%` }}
-      />
-    </div>
-  </div>
-);
 
 const MetricCard = ({
   title,
