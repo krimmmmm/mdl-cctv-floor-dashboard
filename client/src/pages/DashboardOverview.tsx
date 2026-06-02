@@ -958,6 +958,7 @@ const DashboardOverview: React.FC = () => {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-slate-100 text-slate-600">
                   <tr>
+                    <th className="text-left p-3 w-[70px]">No.</th>
                     <th className="text-left p-3">Type</th>
                     <th className="text-left p-3">Label</th>
                     <th className="text-left p-3">Status</th>
@@ -969,7 +970,7 @@ const DashboardOverview: React.FC = () => {
                 </thead>
 
                 <tbody>
-                  {equipmentRows.map((row) => {
+                  {equipmentRows.map((row, index) => {
                     const photos = getPhotos(row);
 
                     return (
@@ -977,6 +978,9 @@ const DashboardOverview: React.FC = () => {
                         key={`${row.typeKey}-${row.id}`}
                         className="border-t border-slate-100 hover:bg-slate-50"
                       >
+                        <td className="p-3 font-black text-slate-700">
+                          {index + 1}
+                        </td>
                         <td className="p-3 font-semibold">{row.equipmentType}</td>
                         <td className="p-3">
                           <Link
