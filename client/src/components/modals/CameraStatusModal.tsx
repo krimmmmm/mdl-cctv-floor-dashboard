@@ -389,27 +389,58 @@ const CameraStatusModal = ({
           />
 
 <StepCard
-  checked={Boolean(camera.status === "online")}
+  // Camera can be Online only when progress = 100%
+  checked={Boolean(
+    camera.status === "online" &&
+    onlineProgress >= 100
+  )}
   progress={onlineProgress}
   title="Camera Online"
   subTitle="Device connected and online"
-  onChange={(value) => {
-    updateCameraStatus(
-      camera.id,
-      value ? "online" : "offline"
-    );
 
-    updateStepProgress(
-      "onlineProgress",
-      value ? 100 : 0
-    );
+  onChange={(value) => {
+    if (value) {
+      updateStepProgress(
+        "onlineProgress",
+        100
+      );
+
+      updateCameraStatus(
+        camera.id,
+        "online"
+      );
+    } else {
+      updateStepProgress(
+        "onlineProgress",
+        0
+      );
+
+      updateCameraStatus(
+        camera.id,
+        "offline"
+      );
+    }
   }}
-  onProgressChange={(value) =>
+
+  onProgressChange={(value) => {
     updateStepProgress(
       "onlineProgress",
       value
-    )
-  }
+    );
+
+    if (value >= 100) {
+      updateCameraStatus(
+        camera.id,
+        "online"
+      );
+    } else {
+      updateCameraStatus(
+        camera.id,
+        "in_progress"
+      );
+    }
+  }}
+
   disabled={!canEditProgress}
 />
           
@@ -459,9 +490,26 @@ const CameraStatusModal = ({
 
               <div style={styles.buttonRow}>
                 <button
-                  style={styles.whiteButton}
-                  disabled={!canEditProgress}
-                  onClick={() => canEditProgress && updateCameraStatus(camera.id, "online")}
+                  style={{
+                    ...styles.whiteButton,
+                    opacity: onlineProgress >= 100 ? 1 : 0.5,
+                    cursor: onlineProgress >= 100 ? "pointer" : "not-allowed",
+                  }}
+                  disabled={
+                    !canEditProgress ||
+                    onlineProgress < 100
+                  }
+                  onClick={() => {
+                    if (
+                      canEditProgress &&
+                      onlineProgress >= 100
+                    ) {
+                      updateCameraStatus(
+                        camera.id,
+                        "online"
+                      );
+                    }
+                  }}
                 >
                   Mark as Online
                 </button>
