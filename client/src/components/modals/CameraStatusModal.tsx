@@ -37,6 +37,7 @@ const CameraStatusModal = ({
     updateCameraRotation,
     updateCameraField,
     updateCameraInstallationStatus,
+    deleteCamera,
   } = useFloorPlan();
 
   const [uploading, setUploading] = useState(false);
@@ -307,6 +308,22 @@ const CameraStatusModal = ({
     await refreshAfterChange();
   };
 
+  const handleDeleteCamera = async () => {
+    if (!canManageLayout) return;
+
+    const ok = confirm(
+      `ยืนยันการลบ ${camera.name || "Camera"} ใช่หรือไม่?`
+    );
+
+    if (!ok) return;
+
+    const success = await deleteCamera(camera.id);
+
+    if (success !== false) {
+      closeModal();
+    }
+  };
+
   return (
     <>
       <div style={styles.overlay} onClick={closeModal}>
@@ -552,6 +569,12 @@ const CameraStatusModal = ({
             >
               {canManageLayout ? "Edit Position" : "Position Locked"}
             </button>
+
+            {canManageLayout && (
+              <button style={styles.deleteEquipmentButton} onClick={handleDeleteCamera}>
+                Delete Camera
+              </button>
+            )}
 
             <button style={styles.footerButton} onClick={closeModal}>
               Close
