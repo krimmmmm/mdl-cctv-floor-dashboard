@@ -198,24 +198,28 @@ const FloorPlanCanvas: React.FC<Props> = ({
   const [selectedFiberId, setSelectedFiberId] = useState<string | null>(null);
 
   const screenToSvg = useCallback(
-  (clientX: number, clientY: number) => {
-    if (!svgRef.current) return { x: 0, y: 0 };
+    (clientX: number, clientY: number) => {
+      if (!svgRef.current) {
+        return { x: 0, y: 0 };
+      }
 
-    const rect = svgRef.current.getBoundingClientRect();
+      const rect = svgRef.current.getBoundingClientRect();
 
-    const x =
-      (clientX - rect.left - pan.x) / zoom;
+      const svgX =
+        (clientX - rect.left) / zoom -
+        pan.x / zoom;
 
-    const y =
-      (clientY - rect.top - pan.y) / zoom;
+      const svgY =
+        (clientY - rect.top) / zoom -
+        pan.y / zoom;
 
-    return {
-      x: Math.max(0, Math.min(1400, x)),
-      y: Math.max(0, Math.min(900, y)),
-    };
-  },
-  [zoom, pan]
-);
+      return {
+        x: Math.max(0, Math.min(1400, svgX)),
+        y: Math.max(0, Math.min(900, svgY)),
+      };
+    },
+    [zoom, pan]
+  );
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -310,8 +314,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
     const routeId = `fiber_${Date.now()}`;
     const routeNum = (fiberRoutes || []).length + 1;
-    const clickedPos = screenToSvg(e.clientX, e.clientY);
-    const finalPoints = [...(drawingPoints || []), clickedPos];
+    const finalPoints = [...(drawingPoints || [])];
 
     const newRoute: FiberRoute = {
       id: routeId,
