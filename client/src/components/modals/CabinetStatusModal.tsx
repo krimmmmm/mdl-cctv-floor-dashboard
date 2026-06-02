@@ -21,6 +21,7 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
     updateCabinetField,
     updateCabinetInstallationStatus,
     updateCabinetPhotos,
+    deleteCabinet,
   } = useFloorPlan();
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -209,6 +210,22 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
     updateCabinetPhotos(cabinet.id, nextPhotos);
   };
 
+  const handleDeleteCabinet = async () => {
+    if (!canManageLayout) return;
+
+    const ok = confirm(
+      `ยืนยันการลบ ${cabinet.name || "Cabinet"} ใช่หรือไม่?`
+    );
+
+    if (!ok) return;
+
+    const success = await deleteCabinet(cabinet.id);
+
+    if (success !== false) {
+      onClose();
+    }
+  };
+
   return (
     <>
       <div style={styles.overlay} onClick={onClose}>
@@ -371,6 +388,12 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
               onClick={canManageLayout ? onEditPosition : undefined}>
               {canManageLayout ? "Edit Position" : "Position Locked"}
             </button>
+
+            {canManageLayout && (
+              <button style={styles.deleteEquipmentButton} onClick={handleDeleteCabinet}>
+                Delete Cabinet
+              </button>
+            )}
 
             <button style={styles.footerButton} onClick={onClose}>
               Close
