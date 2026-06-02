@@ -23,11 +23,13 @@ type CanvasMode = 'normal' | 'draw_fiber';
 type Props = {
   readOnly?: boolean;
   canManageLayout?: boolean;
+  canManageFiber?: boolean;
 };
 
 const FloorPlanCanvas: React.FC<Props> = ({
   readOnly = false,
   canManageLayout = false,
+  canManageFiber = false,
 }) => {
   const [, setLocation] = useLocation();
   const floorPlan = useFloorPlan();
@@ -73,14 +75,64 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
   const svgRef = React.useRef<SVGSVGElement>(null);
 
+  const resetView = useCallback(() => {
+    setZoom(0.9);
+    setPan({ x: 40, y: 20 });
+    setCanvasMode('normal');
+    setDrawingPoints([]);
+    setCursorPos(null);
+    setSelectedFiberId(null);
+    setSelectedItem(null);
+  }, []);
+
+  useEffect(() => {
+    const handleReset = () => resetView();
+
+    window.addEventListener('resetFloorPlanView', handleReset);
+
+    return () => {
+      window.removeEventListener('resetFloorPlanView', handleReset);
+    };
+  }, [resetView]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const focus = params.get('focus');
+    const resetViewParam = params.get('resetView');
+
+    if (resetViewParam) {
+      resetView();
+      setLocation('/floorplan', { replace: true });
+      return;
+    }
 
     if (!focus) return;
 
     const [type, id] = focus.split(':');
     if (!type || !id) return;
+
+    if (type === 'fiber') {
+      const fiber = (fiberRoutes || []).find((route) => route.id === id);
+      const firstPoint = fiber?.points?.[0];
+
+      if (!fiber || !firstPoint) return;
+
+      setSelectedFiberId(id);
+      setSelectedItem(null);
+
+      const focusZoom = 2.2;
+      setZoom(focusZoom);
+      setPan({
+        x: 700 - firstPoint.x * focusZoom,
+        y: 350 - firstPoint.y * focusZoom,
+      });
+
+      const timer = window.setTimeout(() => {
+        setLocation('/floorplan', { replace: true });
+      }, 1000);
+
+      return () => window.clearTimeout(timer);
+    }
 
     let target: any = null;
 
@@ -138,7 +190,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
     }, 1000);
 
     return () => window.clearTimeout(timer);
-  }, [cameras, racks, cabinets, setLocation]);
+  }, [cameras, racks, cabinets, fiberRoutes, setLocation, resetView]);
 
   const [canvasMode, setCanvasMode] = useState<CanvasMode>('normal');
   const [drawingPoints, setDrawingPoints] = useState<Array<{ x: number; y: number }>>([]);
@@ -173,7 +225,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!canManageLayout) {
+    if (!canManageLayout && !(canManageFiber && canvasMode === 'draw_fiber')) {
       if (e.button === 0 || e.button === 2) {
         e.preventDefault();
         setIsDragging(true);
@@ -251,7 +303,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   const handleMouseUp = () => setIsDragging(false);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
-    if (!canManageLayout) return;
+    if (!canManageFiber) return;
     if (canvasMode !== 'draw_fiber') return;
     e.preventDefault();
     if ((drawingPoints || []).length < 2) return;
@@ -280,7 +332,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!canManageLayout) {
+      if (!canManageFiber) {
         if (e.key === 'Escape') {
           setDrawingPoints([]);
           setCursorPos(null);
@@ -310,7 +362,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canvasMode, selectedFiberId, deleteFiberRoute, canManageLayout]);
+  }, [canvasMode, selectedFiberId, deleteFiberRoute, canManageFiber]);
 
   useEffect(() => {
     setCameraType1Count((cameras || []).filter((c) => c.type === 'type1').length);
@@ -381,7 +433,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   };
 
   const handleFiberClick = (routeId: string) => {
-    if (!canManageLayout) return;
+    if (!canManageFiber) return;
     if (canvasMode === 'draw_fiber') return;
     setSelectedFiberId((prev) => (prev === routeId ? null : routeId));
     setSelectedItem(null);
@@ -644,7 +696,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
         </div>
       )}
 
-      {canManageLayout && (
+      {canManageFiber && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
         {canvasMode === 'normal' ? (
           <button onClick={(e) => { e.stopPropagation(); setCanvasMode('draw_fiber'); setSelectedItem(null); setSelectedFiberId(null); setDrawingPoints([]); }} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg shadow-lg transition-all active:scale-95">
@@ -729,7 +781,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
       {selectedCamera && !isMovingEquipment && !showPositionModal && <CameraStatusModal camera={selectedCamera} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
       {selectedRack && !isMovingEquipment && !showPositionModal && <RackStatusModal rack={selectedRack} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
       {selectedCabinet && !isMovingEquipment && !showPositionModal && <CabinetStatusModal cabinet={selectedCabinet} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
-      {canManageLayout && selectedFiberRoute && !isMovingEquipment && !showPositionModal && <FiberRouteStatusModal route={selectedFiberRoute} isOpen={true} onClose={() => setSelectedFiberId(null)} onUpdate={(changes: any) => updateFiberRoute(selectedFiberRoute.id, changes)} />}
+      {canManageFiber && selectedFiberRoute && !isMovingEquipment && !showPositionModal && <FiberRouteStatusModal route={selectedFiberRoute} isOpen={true} onClose={() => setSelectedFiberId(null)} onUpdate={(changes: any) => updateFiberRoute(selectedFiberRoute.id, changes)} />}
 
       {canManageLayout && (
         <PositionConfirmationModal
