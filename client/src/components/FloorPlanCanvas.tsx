@@ -781,7 +781,30 @@ const FloorPlanCanvas: React.FC<Props> = ({
       {selectedCamera && !isMovingEquipment && !showPositionModal && <CameraStatusModal camera={selectedCamera} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
       {selectedRack && !isMovingEquipment && !showPositionModal && <RackStatusModal rack={selectedRack} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
       {selectedCabinet && !isMovingEquipment && !showPositionModal && <CabinetStatusModal cabinet={selectedCabinet} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
-      {canManageFiber && selectedFiberRoute && !isMovingEquipment && !showPositionModal && <FiberRouteStatusModal route={selectedFiberRoute} isOpen={true} onClose={() => setSelectedFiberId(null)} onUpdate={(changes: any) => updateFiberRoute(selectedFiberRoute.id, changes)} />}
+      {canManageFiber && selectedFiberRoute && !isMovingEquipment && !showPositionModal && (
+        <FiberRouteStatusModal
+          route={selectedFiberRoute}
+          isOpen={true}
+          onClose={() => setSelectedFiberId(null)}
+          onUpdate={(changes: any) =>
+            updateFiberRoute(
+              selectedFiberRoute.id,
+              changes
+            )
+          }
+          onDelete={
+            canManageLayout
+              ? () => {
+                  deleteFiberRoute(
+                    selectedFiberRoute.id
+                  );
+
+                  setSelectedFiberId(null);
+                }
+              : undefined
+          }
+        />
+      )}
 
       {canManageLayout && (
         <PositionConfirmationModal
