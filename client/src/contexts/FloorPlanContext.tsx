@@ -96,18 +96,21 @@ const FloorPlanContext = createContext<any>({
   updateCameraField: () => {},
   updateCameraPhotos: () => {},
   updateCameraInstallationStatus: () => {},
+  deleteCamera: () => {},
 
   updateRackPosition: () => {},
   updateRackStatus: () => {},
   updateRackField: () => {},
   updateRackInstallationStatus: () => {},
   updateRackPhotos: () => {},
+  deleteRack: () => {},
 
   updateCabinetPosition: () => {},
   updateCabinetStatus: () => {},
   updateCabinetField: () => {},
   updateCabinetInstallationStatus: () => {},
   updateCabinetPhotos: () => {},
+  deleteCabinet: () => {},
 
   addActivityLog: () => {},
   addFiberRoute: () => {},
@@ -1150,6 +1153,7 @@ export const FloorPlanProvider = ({
         updateCameraField,
         updateCameraPhotos,
         updateCameraInstallationStatus,
+        deleteCamera,
 
         setCameraCountByType,
         setRackCountByType,
@@ -1160,12 +1164,14 @@ export const FloorPlanProvider = ({
         updateRackField,
         updateRackInstallationStatus,
         updateRackPhotos,
+        deleteRack,
 
         updateCabinetPosition,
         updateCabinetStatus,
         updateCabinetField,
         updateCabinetInstallationStatus,
         updateCabinetPhotos,
+        deleteCabinet,
 
         addActivityLog: () => {},
         addFiberRoute,
