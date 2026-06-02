@@ -516,22 +516,14 @@ const FloorPlanCanvas: React.FC<Props> = ({
     }
   }
 
-  if (e) {
-    const mousePos = screenToSvg(
-      e.clientX,
-      e.clientY
-    );
-
-    setDragOffset({
-      x: mousePos.x - itemX,
-      y: mousePos.y - itemY,
-    });
-  } else {
-    setDragOffset({
-      x: 0,
-      y: 0,
-    });
-  }
+  // Important:
+  // Edit Position is clicked from the Modal, not from the equipment marker.
+  // Do not calculate dragOffset from that modal button click,
+  // otherwise the equipment will be far away from the mouse while moving.
+  setDragOffset({
+    x: 0,
+    y: 0,
+  });
 };
 
   const confirmPosition = () => {
@@ -747,7 +739,13 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
       <svg
         ref={svgRef}
-        className={`w-full h-full ${canvasMode === 'draw_fiber' ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
+        className={`w-full h-full ${
+          isMovingEquipment
+            ? 'cursor-none'
+            : canvasMode === 'draw_fiber'
+              ? 'cursor-crosshair'
+              : 'cursor-grab active:cursor-grabbing'
+        }`}
         viewBox="0 0 1400 900"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
@@ -890,9 +888,9 @@ const FloorPlanCanvas: React.FC<Props> = ({
         })}
       </svg>
 
-      {selectedCamera && !isMovingEquipment && !showPositionModal && <CameraStatusModal camera={selectedCamera} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
-      {selectedRack && !isMovingEquipment && !showPositionModal && <RackStatusModal rack={selectedRack} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
-      {selectedCabinet && !isMovingEquipment && !showPositionModal && <CabinetStatusModal cabinet={selectedCabinet} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
+      {selectedCamera && !isMovingEquipment && !showPositionModal && <CameraStatusModal camera={selectedCamera} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? () => startMovingEquipment() : undefined} />}
+      {selectedRack && !isMovingEquipment && !showPositionModal && <RackStatusModal rack={selectedRack} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? () => startMovingEquipment() : undefined} />}
+      {selectedCabinet && !isMovingEquipment && !showPositionModal && <CabinetStatusModal cabinet={selectedCabinet} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? () => startMovingEquipment() : undefined} />}
       {canManageFiber && selectedFiberRoute && !isMovingEquipment && !showPositionModal && (
         <FiberRouteStatusModal
           route={selectedFiberRoute}
