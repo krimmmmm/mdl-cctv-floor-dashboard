@@ -1029,12 +1029,12 @@ export const FloorPlanProvider = ({
             String(runningNumber).padStart(2, "0"),
           x:
             cameraType === "type1"
-              ? 420 + runningNumber * 20
-              : 560 + runningNumber * 20,
+              ? 420 + ((runningNumber - 1) % 8) * 45
+              : 760 + ((runningNumber - 1) % 8) * 45,
           y:
             cameraType === "type1"
-              ? 330 + runningNumber * 20
-              : 520 + runningNumber * 20,
+              ? 280 + Math.floor((runningNumber - 1) / 8) * 45
+              : 480 + Math.floor((runningNumber - 1) / 8) * 45,
         };
 
         const success = await saveCamera(newCamera);
@@ -1097,12 +1097,12 @@ export const FloorPlanProvider = ({
             String(runningNumber).padStart(2, "0"),
           x:
             rackType === "type1"
-              ? 300 + runningNumber * 25
-              : 700 + runningNumber * 25,
+              ? 260 + ((runningNumber - 1) % 6) * 80
+              : 760 + ((runningNumber - 1) % 6) * 80,
           y:
             rackType === "type1"
-              ? 250 + runningNumber * 25
-              : 500 + runningNumber * 25,
+              ? 180 + Math.floor((runningNumber - 1) / 6) * 80
+              : 480 + Math.floor((runningNumber - 1) / 6) * 80,
         };
 
         const success = await saveRack(newRack);
@@ -1155,8 +1155,10 @@ export const FloorPlanProvider = ({
           ...defaultCabinet,
           id: `cabinet-${Date.now()}-${i}`,
           name: `Cabinet ${String(runningNumber).padStart(2, "0")}`,
-          x: 850 + runningNumber * 25,
-          y: 420 + runningNumber * 25,
+          x:
+            880 + ((runningNumber - 1) % 5) * 90,
+          y:
+            220 + Math.floor((runningNumber - 1) / 5) * 90,
         };
 
         const success = await saveCabinet(newCabinet);
