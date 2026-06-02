@@ -942,6 +942,66 @@ export const FloorPlanProvider = ({
     }
   };
 
+  const deleteCamera = async (id: string) => {
+    const { error } = await supabase
+      .from("cameras")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Delete camera error:", error);
+      setHasDbError(true);
+      alert(error.message);
+      return false;
+    }
+
+    setCameras((prev) =>
+      prev.filter((camera) => camera.id !== id)
+    );
+
+    return true;
+  };
+
+  const deleteRack = async (id: string) => {
+    const { error } = await supabase
+      .from("racks")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Delete rack error:", error);
+      setHasDbError(true);
+      alert(error.message);
+      return false;
+    }
+
+    setRacks((prev) =>
+      prev.filter((rack) => rack.id !== id)
+    );
+
+    return true;
+  };
+
+  const deleteCabinet = async (id: string) => {
+    const { error } = await supabase
+      .from("cabinets")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Delete cabinet error:", error);
+      setHasDbError(true);
+      alert(error.message);
+      return false;
+    }
+
+    setCabinets((prev) =>
+      prev.filter((cabinet) => cabinet.id !== id)
+    );
+
+    return true;
+  };
+
   const setCameraCountByType = async (
     cameraType: string,
     targetCount: number
