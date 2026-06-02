@@ -21,6 +21,7 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
     updateRackField,
     updateRackInstallationStatus,
     updateRackPhotos,
+    deleteRack,
   } = useFloorPlan();
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -197,6 +198,22 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
     updateRackPhotos(rack.id, nextPhotos);
   };
 
+  const handleDeleteRack = async () => {
+    if (!canManageLayout) return;
+
+    const ok = confirm(
+      `ยืนยันการลบ ${rack.name || "Rack"} ใช่หรือไม่?`
+    );
+
+    if (!ok) return;
+
+    const success = await deleteRack(rack.id);
+
+    if (success !== false) {
+      onClose();
+    }
+  };
+
   return (
     <>
       <div style={styles.overlay} onClick={onClose}>
@@ -360,6 +377,12 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
               onClick={canManageLayout ? onEditPosition : undefined}>
               {canManageLayout ? "Edit Position" : "Position Locked"}
             </button>
+
+            {canManageLayout && (
+              <button style={styles.deleteEquipmentButton} onClick={handleDeleteRack}>
+                Delete Rack
+              </button>
+            )}
 
             <button style={styles.footerButton} onClick={onClose}>
               Close
