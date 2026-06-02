@@ -281,7 +281,18 @@ const CameraStatusModal = ({
         return;
       }
 
+      // Update local state immediately
+      updateCameraField(
+        camera.id,
+        updateField,
+        photoUrl
+      );
+
+      // Force refresh modal/dashboard
       await refreshAfterChange();
+
+      // Reset input
+      event.target.value = "";
     } catch (error) {
       console.error(error);
     } finally {
