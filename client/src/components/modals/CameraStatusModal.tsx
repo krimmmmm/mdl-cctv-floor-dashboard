@@ -1003,7 +1003,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#fff",
     padding: "9px 16px",
     borderRadius: "8px",
-    cursor: "pointer",
+    cursor: "zoom-out",
   },
   photoGrid: {
     display: "grid",
@@ -1019,7 +1019,7 @@ const styles: Record<string, React.CSSProperties> = {
     height: "180px",
     objectFit: "cover",
     borderRadius: "12px",
-    cursor: "pointer",
+    cursor: "zoom-out",
     border: "1px solid #333",
   },
   deleteButton: {
@@ -1033,7 +1033,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#ef4444",
     color: "#fff",
     fontWeight: 800,
-    cursor: "pointer",
+    cursor: "zoom-out",
     zIndex: 10,
   },
   emptyPhoto: {
@@ -1053,22 +1053,24 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid #334155",
     borderRadius: "10px",
     padding: "12px",
-    cursor: "pointer",
+    cursor: "zoom-out",
   },
   previewOverlay: {
     position: "fixed",
     inset: 0,
     background: "rgba(0,0,0,0.95)",
-    zIndex: 10000,
+    zIndex: 999999,
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    cursor: "pointer",
+    cursor: "zoom-out",
   },
   previewImage: {
-    maxWidth: "95vw",
-    maxHeight: "95vh",
+    maxWidth: "96vw",
+    maxHeight: "96vh",
     objectFit: "contain",
+    borderRadius: "12px",
+    boxShadow: "0 0 42px rgba(0,0,0,0.6)",
   },
 };
 
