@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 
-type UserRole = "admin" | "staffonly" | "staff" | "customer";
+type UserRole = "admin" | "newstaff" | "staffonly" | "staff" | "customer";
 
 export default function AdminUsers() {
   const [, setLocation] = useLocation();
@@ -137,6 +137,7 @@ export default function AdminUsers() {
             className="border rounded-xl px-4 py-3"
           >
             <option value="admin">Admin</option>
+            <option value="newstaff">New Staff</option>
             <option value="staffonly">Staff Only</option>
             <option value="staff">Staff (Legacy)</option>
             <option value="customer">Customer</option>
