@@ -26,7 +26,7 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { user } = useAuth();
-  const userRole = user?.role || "customer";
+  const userRole = String(user?.role || "customer").toLowerCase();
   const canEditProgress = userRole === "admin" || userRole === "staff";
   const canManageLayout = userRole === "admin";
   const canToggleUrgent = userRole === "admin" || userRole === "staff" || userRole === "customer";
