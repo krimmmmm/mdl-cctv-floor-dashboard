@@ -41,6 +41,7 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
 
   const isAdminUser =
     userRole === "admin" ||
+    userRole === "newstaff" ||
     userName.includes("admin");
 
   const isStaffOnlyUser =
