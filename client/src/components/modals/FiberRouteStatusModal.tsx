@@ -7,6 +7,8 @@ interface Props {
   onClose: () => void;
   onUpdate: (changes: any) => void;
   onDelete?: () => void;
+  canEditFiber?: boolean;
+  canManageLayout?: boolean;
 }
 
 const FiberRouteStatusModal: React.FC<Props> = ({
@@ -15,6 +17,8 @@ const FiberRouteStatusModal: React.FC<Props> = ({
   onClose,
   onUpdate,
   onDelete,
+  canEditFiber: canEditFiberProp,
+  canManageLayout: canManageLayoutProp,
 }) => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -40,11 +44,12 @@ const FiberRouteStatusModal: React.FC<Props> = ({
     userRole === "staff" ||
     userName.includes("staff");
 
-  // Admin + Staff can edit Fiber progress/photos/direction.
-  const canEditFiber = isAdminUser || isStaffUser;
+  const canEditFiber =
+    canEditFiberProp ?? (isAdminUser || isStaffUser);
 
   // Delete Fiber route remains Admin only.
-  const isAdmin = isAdminUser;
+  const isAdmin =
+    canManageLayoutProp ?? isAdminUser;
 
 if (!isOpen) return null;
 
