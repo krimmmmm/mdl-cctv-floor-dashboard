@@ -20,6 +20,7 @@ export default function Home() {
   const canViewFloorPlan = role === 'admin' || role === 'staff' || role === 'customer';
   const canManageLayout = isAdmin;
   const canManageFiber = role === 'admin' || role === 'staff';
+  const canEditProgress = role === 'admin' || role === 'staff';
   const isCustomer = role === 'customer';
 
   const handleResetFloorPlanView = () => {
@@ -140,6 +141,7 @@ export default function Home() {
             readOnly={!canViewFloorPlan}
             canManageLayout={canManageLayout}
             canManageFiber={canManageFiber}
+            canEditProgress={canEditProgress}
           />
         </div>
 
