@@ -7,7 +7,7 @@ interface RackStatusModalProps {
   rack: Rack;
   isOpen: boolean;
   onClose: () => void;
-  onEditPosition?: () => void;
+  onEditPosition?: (e?: React.MouseEvent) => void;
   canEditProgress?: boolean;
   canManageLayout?: boolean;
 }
