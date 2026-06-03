@@ -41,10 +41,10 @@ const FiberRouteStatusModal: React.FC<Props> = ({
     userName.includes("staff");
 
   // Admin + Staff can edit Fiber progress/photos/direction.
-  const canEditFiber = isAdminUser || isStaffUser;
+  const canEditFiber = userRole !== "customer";
 
   // Delete Fiber route remains Admin only.
-  const isAdmin = isAdminUser;
+  const isAdmin = userRole === "admin";
 
 if (!isOpen) return null;
 
