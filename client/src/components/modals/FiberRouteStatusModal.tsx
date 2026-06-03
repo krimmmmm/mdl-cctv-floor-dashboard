@@ -24,31 +24,29 @@ const FiberRouteStatusModal: React.FC<Props> = ({
       ? JSON.parse(localStorage.getItem("mdl_user") || "{}")
       : {};
 
-  const userRole = String(
-    user?.role || savedUser?.role || "customer"
-  )
+  const userRole = String(user?.role || savedUser?.role || "customer")
     .trim()
     .toLowerCase();
 
-  const userName = String(
-    user?.username || savedUser?.username || ""
-  )
+  const userName = String(user?.username || savedUser?.username || "")
     .trim()
     .toLowerCase();
 
   const isAdminUser =
     userRole === "admin" ||
-    userRole.includes("admin") ||
     userName.includes("admin");
 
   const isStaffUser =
     userRole === "staff" ||
-    userRole.includes("staff") ||
     userName.includes("staff");
+
+  // Admin + Staff can edit Fiber progress/photos/direction.
   const canEditFiber = isAdminUser || isStaffUser;
+
+  // Delete Fiber route remains Admin only.
   const isAdmin = isAdminUser;
 
-  if (!isOpen) return null;
+if (!isOpen) return null;
 
   const progress = Number(route.progress || 0);
   const direction = route.progressDirection || "start";
