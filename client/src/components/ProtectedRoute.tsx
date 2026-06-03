@@ -2,7 +2,7 @@ import React from "react";
 import { Redirect, Route } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 
-type Role = "admin" | "staff" | "customer";
+type Role = "admin" | "staffonly" | "staff" | "customer";
 
 type ProtectedRouteProps = {
   path?: string;
@@ -15,7 +15,7 @@ export default function ProtectedRoute({
   path,
   component: Component,
   children,
-  allowedRoles = ["admin", "staff", "customer"],
+  allowedRoles = ["admin", "staffonly", "staff", "customer"],
 }: ProtectedRouteProps) {
   const ProtectedContent = () => {
     const { user, isLoggedIn } = useAuth();
