@@ -316,6 +316,20 @@ const CameraStatusModal = ({
       return;
     }
 
+    // Update local state immediately so the deleted photo disappears from the modal
+    updateCameraField(
+      camera.id,
+      fieldName,
+      null
+    );
+
+    if (
+      previewImage &&
+      previewImage === camera[fieldName]
+    ) {
+      setPreviewImage(null);
+    }
+
     await refreshAfterChange();
   };
 
@@ -598,7 +612,13 @@ const CameraStatusModal = ({
                   <div key={index} style={styles.photoWrap}>
                     <button
                       disabled={!canEditProgress}
-                      onClick={() => canEditProgress && handleDeletePhoto(photo.field)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        if (canEditProgress) {
+                          handleDeletePhoto(photo.field);
+                        }
+                      }}
                       style={styles.deleteButton}
                     >
                       ×
