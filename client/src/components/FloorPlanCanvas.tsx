@@ -40,12 +40,6 @@ const FloorPlanCanvas: React.FC<Props> = ({
   const effectiveCanEditProgress = userRole === "admin" || userRole === "staff";
   const effectiveCanManageFiber = canManageFiber || effectiveCanEditProgress;
   const effectiveCanManageLayout = canManageLayout || userRole === "admin";
-  const { user } = useAuth();
-
-  const userRole = String(user?.role || "").trim().toLowerCase();
-  const effectiveCanEditProgress = userRole === "admin" || userRole === "staff";
-  const effectiveCanManageFiber = canManageFiber || effectiveCanEditProgress;
-  const effectiveCanManageLayout = canManageLayout || userRole === "admin";
 
   const {
     cameras,
