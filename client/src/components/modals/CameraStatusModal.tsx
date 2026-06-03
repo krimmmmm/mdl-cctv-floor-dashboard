@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -68,7 +68,7 @@ const CameraStatusModal = ({
     userRole === "staff" ||
     userName.includes("staff");
 
-  // FloorPlanCanvas is the source of truth for permissions.
+  // Home/FloorPlanCanvas is the source of truth for permissions.
   // Admin + Staff can edit progress/photos/status.
   const canEditProgress =
     canEditProgressFromParent ?? (isAdminUser || isStaffUser);
