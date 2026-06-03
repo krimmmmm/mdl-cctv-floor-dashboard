@@ -43,19 +43,35 @@ const CameraStatusModal = ({
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { user } = useAuth();
-  const savedUserRole =
+  const savedUser =
     typeof window !== "undefined"
-      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")?.role
-      : "";
+      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")
+      : {};
 
   const userRole = String(
-    user?.role || savedUserRole || "customer"
+    user?.role || savedUser?.role || "customer"
   )
     .trim()
     .toLowerCase();
-  const canEditProgress = userRole === "admin" || userRole === "staff" || userRole.includes("staff");
-  const canManageLayout = userRole === "admin";
-  const canToggleUrgent = userRole === "admin" || userRole === "staff" || userRole.includes("staff") || userRole === "customer";
+
+  const userName = String(
+    user?.username || savedUser?.username || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  const isAdminUser =
+    userRole === "admin" ||
+    userRole.includes("admin") ||
+    userName.includes("admin");
+
+  const isStaffUser =
+    userRole === "staff" ||
+    userRole.includes("staff") ||
+    userName.includes("staff");
+  const canEditProgress = isAdminUser || isStaffUser;
+  const canManageLayout = isAdminUser;
+  const canToggleUrgent = isAdminUser || isStaffUser || userRole === "customer";
 
   const modalOpen = isOpen ?? open ?? false;
 
