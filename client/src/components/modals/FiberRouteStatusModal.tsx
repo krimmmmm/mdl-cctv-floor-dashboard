@@ -44,7 +44,13 @@ const FiberRouteStatusModal: React.FC<Props> = ({
       route.photo3 || "",
       route.photo4 || "",
     ]);
-  }, [route?.id]);
+  }, [
+    route?.id,
+    route?.photo1,
+    route?.photo2,
+    route?.photo3,
+    route?.photo4,
+  ]);
 
   const photos = localPhotos;
 
@@ -61,11 +67,18 @@ const FiberRouteStatusModal: React.FC<Props> = ({
       setLocalPhotos((prev) => {
         const next = [...prev];
         next[index] = photoData;
-        return next;
-      });
 
-      onUpdate({
-        [`photo${index + 1}`]: photoData,
+        // Send all photo fields every time.
+        // This prevents old uploaded photos from being cleared
+        // if the parent update function replaces the route object.
+        onUpdate({
+          photo1: next[0] || "",
+          photo2: next[1] || "",
+          photo3: next[2] || "",
+          photo4: next[3] || "",
+        });
+
+        return next;
       });
     };
 
@@ -78,11 +91,17 @@ const FiberRouteStatusModal: React.FC<Props> = ({
     setLocalPhotos((prev) => {
       const next = [...prev];
       next[index] = "";
-      return next;
-    });
 
-    onUpdate({
-      [`photo${index + 1}`]: "",
+      // Send all photo fields every time.
+      // This keeps the other existing photos safe.
+      onUpdate({
+        photo1: next[0] || "",
+        photo2: next[1] || "",
+        photo3: next[2] || "",
+        photo4: next[3] || "",
+      });
+
+      return next;
     });
   };
 
