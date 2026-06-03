@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -216,6 +216,8 @@ const averageOverallProgress = (
 };
 
 const DashboardOverview: React.FC = () => {
+  const [, setLocation] = useLocation();
+
   const {
     cameras,
     racks,
@@ -748,7 +750,7 @@ const DashboardOverview: React.FC = () => {
                             onClick={() => {
                               const focusTarget = `${row.typeKey}:${row.id}`;
                               sessionStorage.setItem("mdl_focus_equipment", focusTarget);
-                              window.location.assign(`/floorplan?focus=${encodeURIComponent(focusTarget)}`);
+                              setLocation(`/floorplan?focus=${encodeURIComponent(focusTarget)}`);
                             }}
                             className="text-blue-600 font-semibold hover:underline"
                           >
@@ -1624,19 +1626,47 @@ const DateInput = ({
   disabled?: boolean;
 }) => {
   const isoValue = getIsoDateValue(value);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const openCalendar = () => {
+    if (disabled) return;
+
+    const input = inputRef.current;
+    if (!input) return;
+
+    if (typeof input.showPicker === "function") {
+      input.showPicker();
+    } else {
+      input.click();
+    }
+  };
 
   return (
-    <input
-      type="date"
-      lang="th-TH"
-      disabled={disabled}
-      value={isoValue}
-      onChange={(e) => {
-        if (e.target.value) onSave(e.target.value);
-      }}
-      title={isoValue ? formatDateDisplay(isoValue) : "เลือกวันที่"}
-      className="border border-slate-200 rounded-lg px-2 py-1 text-xs w-[132px] disabled:bg-slate-100 disabled:text-slate-400"
-    />
+    <div className="relative w-[132px]">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={openCalendar}
+        className="w-full border border-slate-200 rounded-lg px-2 py-1 text-xs text-left bg-white disabled:bg-slate-100 disabled:text-slate-400"
+        title={isoValue ? formatDateDisplay(isoValue) : "เลือกวันที่"}
+      >
+        {isoValue ? formatDateDisplay(isoValue) : "วัน/เดือน/ปี"}
+      </button>
+
+      <input
+        ref={inputRef}
+        type="date"
+        lang="th-TH"
+        disabled={disabled}
+        value={isoValue}
+        onChange={(e) => {
+          if (e.target.value) onSave(e.target.value);
+        }}
+        className="absolute left-0 top-0 h-0 w-0 opacity-0"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+    </div>
   );
 };
 
