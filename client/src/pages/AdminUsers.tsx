@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 
-type UserRole = "admin" | "staff" | "customer";
+type UserRole = "admin" | "staffonly" | "staff" | "customer";
 
 export default function AdminUsers() {
   const [, setLocation] = useLocation();
@@ -19,7 +19,7 @@ export default function AdminUsers() {
 
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<UserRole>("staff");
+  const [role, setRole] = useState<UserRole>("staffonly");
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function AdminUsers() {
 
     setUsername("");
     setPhone("");
-    setRole("staff");
+    setRole("staffonly");
     setIsSaving(false);
   };
 
@@ -137,7 +137,8 @@ export default function AdminUsers() {
             className="border rounded-xl px-4 py-3"
           >
             <option value="admin">Admin</option>
-            <option value="staff">Staff</option>
+            <option value="staffonly">Staff Only</option>
+            <option value="staff">Staff (Legacy)</option>
             <option value="customer">Customer</option>
           </select>
         </div>
