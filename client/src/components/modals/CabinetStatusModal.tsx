@@ -651,7 +651,7 @@ const styles: Record<string, React.CSSProperties> = {
   previewOverlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.95)",
+    background: "#000",
     zIndex: 999999,
     display: "flex",
     justifyContent: "center",
@@ -659,11 +659,12 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: "zoom-out",
   },
   previewImage: {
-    maxWidth: "96vw",
-    maxHeight: "96vh",
+    width: "100vw",
+    height: "100vh",
     objectFit: "contain",
-    borderRadius: "12px",
-    boxShadow: "0 0 42px rgba(0,0,0,0.6)",
+    background: "#000",
+    borderRadius: 0,
+    boxShadow: "none",
   },
 };
 
