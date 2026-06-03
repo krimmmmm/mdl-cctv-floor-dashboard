@@ -7,8 +7,6 @@ interface Props {
   onClose: () => void;
   onUpdate: (changes: any) => void;
   onDelete?: () => void;
-  canEditFiber?: boolean;
-  canManageLayout?: boolean;
 }
 
 const FiberRouteStatusModal: React.FC<Props> = ({
@@ -17,8 +15,6 @@ const FiberRouteStatusModal: React.FC<Props> = ({
   onClose,
   onUpdate,
   onDelete,
-  canEditFiber: canEditFiberFromParent,
-  canManageLayout: canManageLayoutFromParent,
 }) => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -44,14 +40,11 @@ const FiberRouteStatusModal: React.FC<Props> = ({
     userRole === "staff" ||
     userName.includes("staff");
 
-  // Home/FloorPlanCanvas is the source of truth for permissions.
   // Admin + Staff can edit Fiber progress/photos/direction.
-  const canEditFiber =
-    canEditFiberFromParent ?? (isAdminUser || isStaffUser);
+  const canEditFiber = isAdminUser || isStaffUser;
 
   // Delete Fiber route remains Admin only.
-  const isAdmin =
-    canManageLayoutFromParent ?? isAdminUser;
+  const isAdmin = isAdminUser;
 
 if (!isOpen) return null;
 
