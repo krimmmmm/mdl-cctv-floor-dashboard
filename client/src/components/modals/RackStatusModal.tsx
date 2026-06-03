@@ -41,6 +41,7 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
 
   const isAdminUser =
     userRole === "admin" ||
+    userRole === "newstaff" ||
     userName.includes("admin");
 
   const isStaffOnlyUser =
