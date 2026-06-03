@@ -48,12 +48,12 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
     userName.includes("staff");
 
   // Admin + Staff can edit progress/photos/status/urgent.
-  const canEditProgress = isAdminUser || isStaffUser;
+  const canEditProgress = userRole !== "customer";
 
   // Move/Delete equipment remains Admin only.
-  const canManageLayout = isAdminUser;
+  const canManageLayout = userRole === "admin";
 
-  const canToggleUrgent = isAdminUser || isStaffUser || userRole === "customer";
+  const canToggleUrgent = userRole !== "customer";
 
 if (!isOpen || !rack) return null;
 
