@@ -36,8 +36,17 @@ const FloorPlanCanvas: React.FC<Props> = ({
   const floorPlan = useFloorPlan();
   const { user } = useAuth();
 
-  const userRole = String(user?.role || "").trim().toLowerCase();
-  const effectiveCanEditProgress = userRole === "admin" || userRole === "staff";
+  const savedUserRole =
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")?.role
+      : "";
+
+  const userRole = String(
+    user?.role || savedUserRole || ""
+  )
+    .trim()
+    .toLowerCase();
+  const effectiveCanEditProgress = userRole === "admin" || userRole === "staff" || userRole.includes("staff");
   const effectiveCanManageFiber = canManageFiber || effectiveCanEditProgress;
   const effectiveCanManageLayout = canManageLayout || userRole === "admin";
 
