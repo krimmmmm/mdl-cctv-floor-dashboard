@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { useFloorPlan } from '@/contexts/FloorPlanContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Camera, Rack, Cabinet, FiberRoute } from '@/lib/floorPlanData';
 import CameraMarker from './equipment/CameraMarker';
 import RackMarker from './equipment/RackMarker';
@@ -33,6 +34,16 @@ const FloorPlanCanvas: React.FC<Props> = ({
 }) => {
   const [, setLocation] = useLocation();
   const floorPlan = useFloorPlan();
+  const { user } = useAuth();
+
+  const userRole = String(user?.role || "").toLowerCase();
+  const effectiveCanManageFiber =
+    canManageFiber ||
+    userRole === "admin" ||
+    userRole === "staff";
+  const effectiveCanManageLayout =
+    canManageLayout ||
+    userRole === "admin";
 
   const {
     cameras,
@@ -246,7 +257,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!canManageLayout && !(canManageFiber && canvasMode === 'draw_fiber')) {
+    if (!effectiveCanManageLayout && !(effectiveCanManageFiber && canvasMode === 'draw_fiber')) {
       if (e.button === 0 || e.button === 2) {
         e.preventDefault();
         setIsDragging(true);
@@ -320,7 +331,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   const handleMouseUp = () => setIsDragging(false);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
-    if (!canManageFiber) return;
+    if (!effectiveCanManageFiber) return;
     if (canvasMode !== 'draw_fiber') return;
     e.preventDefault();
     if ((drawingPoints || []).length < 2) return;
@@ -348,7 +359,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!canManageFiber) {
+      if (!effectiveCanManageFiber) {
         if (e.key === 'Escape') {
           setDrawingPoints([]);
           setCursorPos(null);
@@ -395,7 +406,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   }, [cabinets]);
 
   const handleCameraTypeCountChange = (cameraType: string, value: number) => {
-    if (!canManageLayout) return;
+    if (!effectiveCanManageLayout) return;
     const safeValue = Math.max(0, value);
     if (cameraType === 'type1') setCameraType1Count(safeValue);
     else setCameraType2Count(safeValue);
@@ -403,7 +414,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   };
 
   const handleRackTypeCountChange = (rackType: string, value: number) => {
-    if (!canManageLayout) return;
+    if (!effectiveCanManageLayout) return;
     const safeValue = Math.max(0, value);
     if (rackType === 'type1') setRackType1Count(safeValue);
     else setRackType2Count(safeValue);
@@ -423,7 +434,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   };
 
   const handleCabinetCountChange = (value: number) => {
-    if (!canManageLayout) return;
+    if (!effectiveCanManageLayout) return;
     const safeValue = Math.max(0, value);
     setCabinetCountInput(safeValue);
     if (typeof setCabinetCount === 'function') setCabinetCount(safeValue);
@@ -449,7 +460,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   };
 
   const handleFiberClick = (routeId: string) => {
-    if (!canManageFiber) return;
+    if (!effectiveCanManageFiber) return;
     if (canvasMode === 'draw_fiber') return;
     setSelectedFiberId((prev) => (prev === routeId ? null : routeId));
     setSelectedItem(null);
@@ -458,7 +469,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   const startMovingEquipment = (
   e?: React.MouseEvent
 ) => {
-  if (!canManageLayout) return;
+  if (!effectiveCanManageLayout) return;
   if (!selectedItem) return;
 
   setIsDragging(false);
@@ -516,18 +527,26 @@ const FloorPlanCanvas: React.FC<Props> = ({
     }
   }
 
-  // Important:
-  // Edit Position is clicked from the Modal, not from the equipment marker.
-  // Do not calculate dragOffset from that modal button click,
-  // otherwise the equipment will be far away from the mouse while moving.
-  setDragOffset({
-    x: 0,
-    y: 0,
-  });
+  if (e) {
+    const mousePos = screenToSvg(
+      e.clientX,
+      e.clientY
+    );
+
+    setDragOffset({
+      x: mousePos.x - itemX,
+      y: mousePos.y - itemY,
+    });
+  } else {
+    setDragOffset({
+      x: 0,
+      y: 0,
+    });
+  }
 };
 
   const confirmPosition = () => {
-    if (!canManageLayout) return;
+    if (!effectiveCanManageLayout) return;
     if (!draggedItem) return;
 
     const newX = Math.round(tempPosition.x);
@@ -595,7 +614,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   };
 
   const handlePositionChange = (x: number, y: number) => {
-    if (!canManageLayout) return;
+    if (!effectiveCanManageLayout) return;
     setTempPosition({ x, y });
   };
 
@@ -638,7 +657,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
       onContextMenu={(e) => e.preventDefault()}
       style={{ touchAction: 'none' }}
     >
-      {canManageLayout && (
+      {effectiveCanManageLayout && (
         <div className="absolute top-4 left-4 z-30 bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 w-80">
           <div className="text-xl font-bold text-gray-800 mb-5">Equipment Control</div>
 
@@ -704,7 +723,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
         </div>
       )}
 
-      {canManageFiber && (
+      {effectiveCanManageFiber && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
         {canvasMode === 'normal' ? (
           <button onClick={(e) => { e.stopPropagation(); setCanvasMode('draw_fiber'); setSelectedItem(null); setSelectedFiberId(null); setDrawingPoints([]); }} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg shadow-lg transition-all active:scale-95">
@@ -729,7 +748,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
         </div>
       )}
 
-      {!canManageLayout && (
+      {!effectiveCanManageLayout && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-xl bg-blue-50 border border-blue-200 px-4 py-2 shadow-lg">
           <span className="text-blue-700 text-sm font-semibold">
             Layout Locked
@@ -739,13 +758,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
       <svg
         ref={svgRef}
-        className={`w-full h-full ${
-          isMovingEquipment
-            ? 'cursor-none'
-            : canvasMode === 'draw_fiber'
-              ? 'cursor-crosshair'
-              : 'cursor-grab active:cursor-grabbing'
-        }`}
+        className={`w-full h-full ${canvasMode === 'draw_fiber' ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`}
         viewBox="0 0 1400 900"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
@@ -757,7 +770,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
         <rect width="1400" height="900" fill="#FFFFFF" opacity="0.08" />
 
         {(fiberRoutes || []).map((route) => (
-          <g key={route.id} onClick={(e) => { e.stopPropagation(); handleFiberClick(route.id); }} style={{ cursor: !canManageLayout ? 'default' : canvasMode === 'normal' ? 'pointer' : 'crosshair' }}>
+          <g key={route.id} onClick={(e) => { e.stopPropagation(); handleFiberClick(route.id); }} style={{ cursor: !effectiveCanManageLayout ? 'default' : canvasMode === 'normal' ? 'pointer' : 'crosshair' }}>
             <path d={(route.points || []).reduce((acc, pt, i) => (i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`), '')} fill="none" stroke="transparent" strokeWidth={16} />
             <FiberRouteMarker route={route} isSelected={selectedFiberId === route.id} />
           </g>
@@ -788,7 +801,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
                 handleCameraClick(camera);
               }}
               style={{
-                cursor: !canManageLayout
+                cursor: !effectiveCanManageLayout
                   ? 'pointer'
                   : canvasMode === 'draw_fiber'
                     ? 'crosshair'
@@ -827,7 +840,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
                 handleRackClick(rack);
               }}
               style={{
-                cursor: !canManageLayout
+                cursor: !effectiveCanManageLayout
                   ? 'pointer'
                   : canvasMode === 'draw_fiber'
                     ? 'crosshair'
@@ -866,7 +879,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
                 handleCabinetClick(cabinet);
               }}
               style={{
-                cursor: !canManageLayout
+                cursor: !effectiveCanManageLayout
                   ? 'pointer'
                   : canvasMode === 'draw_fiber'
                     ? 'crosshair'
@@ -888,10 +901,10 @@ const FloorPlanCanvas: React.FC<Props> = ({
         })}
       </svg>
 
-      {selectedCamera && !isMovingEquipment && !showPositionModal && <CameraStatusModal camera={selectedCamera} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? () => startMovingEquipment() : undefined} />}
-      {selectedRack && !isMovingEquipment && !showPositionModal && <RackStatusModal rack={selectedRack} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? () => startMovingEquipment() : undefined} />}
-      {selectedCabinet && !isMovingEquipment && !showPositionModal && <CabinetStatusModal cabinet={selectedCabinet} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={canManageLayout ? () => startMovingEquipment() : undefined} />}
-      {canManageFiber && selectedFiberRoute && !isMovingEquipment && !showPositionModal && (
+      {selectedCamera && !isMovingEquipment && !showPositionModal && <CameraStatusModal camera={selectedCamera} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={effectiveCanManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
+      {selectedRack && !isMovingEquipment && !showPositionModal && <RackStatusModal rack={selectedRack} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={effectiveCanManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
+      {selectedCabinet && !isMovingEquipment && !showPositionModal && <CabinetStatusModal cabinet={selectedCabinet} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={effectiveCanManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
+      {effectiveCanManageFiber && selectedFiberRoute && !isMovingEquipment && !showPositionModal && (
         <FiberRouteStatusModal
           route={selectedFiberRoute}
           isOpen={true}
@@ -916,7 +929,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
         />
       )}
 
-      {canManageLayout && (
+      {effectiveCanManageLayout && (
         <PositionConfirmationModal
         isOpen={showPositionModal}
         item={draggedItem ? draggedItem.type === 'camera' ? selectedCamera || null : draggedItem.type === 'rack' ? selectedRack || null : selectedCabinet || null : null}
