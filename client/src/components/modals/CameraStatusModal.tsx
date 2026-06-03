@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,10 +9,8 @@ interface CameraStatusModalProps {
   onClose?: () => void;
   onOpenChange?: (open: boolean) => void;
   camera: any;
-  onEditPosition?: (e?: React.MouseEvent) => void;
+  onEditPosition?: () => void;
   onUpdate?: () => void;
-  canEditProgress?: boolean;
-  canManageLayout?: boolean;
 }
 
 const CameraStatusModal = ({
@@ -23,8 +21,6 @@ const CameraStatusModal = ({
   camera,
   onEditPosition,
   onUpdate,
-  canEditProgress: canEditProgressFromParent,
-  canManageLayout: canManageLayoutFromParent,
 }: CameraStatusModalProps) => {
   const [modalPosition, setModalPosition] = useState({
     x: 0,
@@ -68,14 +64,11 @@ const CameraStatusModal = ({
     userRole === "staff" ||
     userName.includes("staff");
 
-  // Home/FloorPlanCanvas is the source of truth for permissions.
-  // Admin + Staff can edit progress/photos/status.
-  const canEditProgress =
-    canEditProgressFromParent ?? (isAdminUser || isStaffUser);
+  // Admin + Staff can edit progress/photos/status/urgent.
+  const canEditProgress = isAdminUser || isStaffUser;
 
   // Move/Delete equipment remains Admin only.
-  const canManageLayout =
-    canManageLayoutFromParent ?? isAdminUser;
+  const canManageLayout = isAdminUser;
 
   const canToggleUrgent = isAdminUser || isStaffUser || userRole === "customer";
 
