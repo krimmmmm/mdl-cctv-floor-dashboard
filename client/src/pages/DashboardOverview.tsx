@@ -392,7 +392,7 @@ const DashboardOverview: React.FC = () => {
         : 0,
   };
 
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = getDateKeyFromDate(new Date());
 
   const getJobsForDate = (dateKey: string) =>
     equipmentRows.filter(
@@ -429,6 +429,7 @@ const DashboardOverview: React.FC = () => {
       const totalJobs = days.reduce((sum, day) => sum + day.jobs.length, 0);
       const workingDays = days.filter((day) => day.isWorking).length;
       const isLive = days.some((day) => day.isToday && day.isWorking);
+      const isCurrentMonth = monthKey === todayKey.slice(0, 7);
 
       return {
         name,
@@ -438,6 +439,7 @@ const DashboardOverview: React.FC = () => {
         totalJobs,
         workingDays,
         isLive,
+        isCurrentMonth,
       };
     });
   }, [equipmentRows, workPlans, todayKey]);
@@ -1165,8 +1167,8 @@ const DashboardOverview: React.FC = () => {
                     key={month.monthKey}
                     onClick={() => setSelectedMonth(month.monthNumber)}
                     className={`rounded-2xl border bg-white p-4 text-left shadow-sm hover:bg-blue-50 hover:border-blue-300 transition ${
-                      month.isLive
-                        ? "border-yellow-400 border-4 animate-pulse shadow-yellow-200"
+                      month.isCurrentMonth
+                        ? "border-orange-400 border-4 animate-pulse shadow-orange-200"
                         : "border-slate-200"
                     }`}
                   >
@@ -1301,7 +1303,7 @@ const MonthCalendarModal = ({
                 onClick={() => onSelectDay(day.key)}
                 className={`min-h-[88px] rounded-2xl border p-3 text-left bg-white hover:bg-blue-50 transition ${
                   day.isToday && day.isWorking
-                    ? "border-yellow-400 border-4 animate-pulse shadow-yellow-200"
+                    ? "border-orange-400 border-4 animate-pulse shadow-orange-200"
                     : day.isWorking
                       ? "border-yellow-300 border-2"
                       : "border-slate-200"
@@ -1321,7 +1323,7 @@ const MonthCalendarModal = ({
                   {day.jobs.length} jobs
                 </div>
 
-                {day.isWorking && (
+                {day.isToday && day.isWorking && (
                   <div className="text-[10px] font-black text-yellow-700 mt-1">
                     LIVE WORKING
                   </div>
@@ -1859,7 +1861,7 @@ const OnlineUsersBox = ({
 }) => {
   const knownUsers = users || [];
 
-  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayKey = getDateKeyFromDate(new Date());
 
   const loginToday = (loginSessions || []).filter(
     (item: any) => String(item.loginAt || "").slice(0, 10) === todayKey
