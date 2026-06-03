@@ -31,32 +31,31 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
       ? JSON.parse(localStorage.getItem("mdl_user") || "{}")
       : {};
 
-  const userRole = String(
-    user?.role || savedUser?.role || "customer"
-  )
+  const userRole = String(user?.role || savedUser?.role || "customer")
     .trim()
     .toLowerCase();
 
-  const userName = String(
-    user?.username || savedUser?.username || ""
-  )
+  const userName = String(user?.username || savedUser?.username || "")
     .trim()
     .toLowerCase();
 
   const isAdminUser =
     userRole === "admin" ||
-    userRole.includes("admin") ||
     userName.includes("admin");
 
   const isStaffUser =
     userRole === "staff" ||
-    userRole.includes("staff") ||
     userName.includes("staff");
+
+  // Admin + Staff can edit progress/photos/status/urgent.
   const canEditProgress = isAdminUser || isStaffUser;
+
+  // Move/Delete equipment remains Admin only.
   const canManageLayout = isAdminUser;
+
   const canToggleUrgent = isAdminUser || isStaffUser || userRole === "customer";
 
-  if (!isOpen || !cabinet) return null;
+if (!isOpen || !cabinet) return null;
 
   const steps = [
     {
