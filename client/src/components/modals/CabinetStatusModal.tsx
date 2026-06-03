@@ -43,17 +43,20 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
     userRole === "admin" ||
     userName.includes("admin");
 
+  const isStaffOnlyUser =
+    userRole === "staffonly";
+
   const isStaffUser =
     userRole === "staff" ||
     userName.includes("staff");
 
   // Admin + Staff can edit progress/photos/status/urgent.
-  const canEditProgress = userRole !== "customer";
+  const canEditProgress = isAdminUser || isStaffOnlyUser;
 
   // Move/Delete equipment remains Admin only.
-  const canManageLayout = userRole === "admin";
+  const canManageLayout = isAdminUser;
 
-  const canToggleUrgent = userRole !== "customer";
+  const canToggleUrgent = isAdminUser || isStaffOnlyUser;
 
 if (!isOpen || !cabinet) return null;
 
