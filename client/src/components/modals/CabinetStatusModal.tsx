@@ -8,6 +8,8 @@ interface CabinetStatusModalProps {
   isOpen: boolean;
   onClose: () => void;
   onEditPosition?: () => void;
+  canEditProgress?: boolean;
+  canManageLayout?: boolean;
 }
 
 const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
@@ -15,6 +17,8 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
   isOpen,
   onClose,
   onEditPosition,
+  canEditProgress: canEditProgressProp,
+  canManageLayout: canManageLayoutProp,
 }) => {
   const {
     updateCabinetStatus,
@@ -47,11 +51,12 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
     userRole === "staff" ||
     userName.includes("staff");
 
-  // Admin + Staff can edit progress/photos/status/urgent.
-  const canEditProgress = isAdminUser || isStaffUser;
+  const canEditProgress =
+    canEditProgressProp ?? (isAdminUser || isStaffUser);
 
   // Move/Delete equipment remains Admin only.
-  const canManageLayout = isAdminUser;
+  const canManageLayout =
+    canManageLayoutProp ?? isAdminUser;
 
   const canToggleUrgent = isAdminUser || isStaffUser || userRole === "customer";
 
