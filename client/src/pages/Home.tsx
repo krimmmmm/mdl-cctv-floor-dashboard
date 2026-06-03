@@ -16,7 +16,8 @@ export default function Home() {
   const { user, logout } = useAuth();
 
   const role = user?.role || 'customer';
-  const isAdmin = role === 'admin' || role === 'newstaff';
+  const isAdmin = role === 'admin';
+  const isNewStaff = role === 'newstaff';
   const isStaffOnly = role === 'staffonly';
   const canViewFloorPlan = role === 'admin' || role === 'newstaff' || role === 'staffonly' || role === 'staff' || role === 'customer';
   const canManageLayout = isAdmin;
