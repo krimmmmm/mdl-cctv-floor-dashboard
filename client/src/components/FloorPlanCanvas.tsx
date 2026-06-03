@@ -143,7 +143,11 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const focus = params.get('focus');
+    const focus =
+      params.get('focus') ||
+      (typeof window !== "undefined"
+        ? sessionStorage.getItem("mdl_focus_equipment")
+        : null);
     const resetViewParam = params.get('resetView');
 
     if (resetViewParam) {
@@ -173,11 +177,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
         y: 350 - firstPoint.y * focusZoom,
       });
 
-      const timer = window.setTimeout(() => {
-        setLocation('/floorplan', { replace: true });
-      }, 1000);
-
-      return () => window.clearTimeout(timer);
+      sessionStorage.removeItem("mdl_focus_equipment");
     }
 
     let target: any = null;
@@ -231,11 +231,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
       y: 350 - target.y * focusZoom,
     });
 
-    const timer = window.setTimeout(() => {
-      setLocation('/floorplan', { replace: true });
-    }, 1000);
-
-    return () => window.clearTimeout(timer);
+    sessionStorage.removeItem("mdl_focus_equipment");
   }, [cameras, racks, cabinets, fiberRoutes, setLocation, resetView]);
 
   const [canvasMode, setCanvasMode] = useState<CanvasMode>('normal');
