@@ -7,9 +7,7 @@ interface RackStatusModalProps {
   rack: Rack;
   isOpen: boolean;
   onClose: () => void;
-  onEditPosition?: (e?: React.MouseEvent) => void;
-  canEditProgress?: boolean;
-  canManageLayout?: boolean;
+  onEditPosition?: () => void;
 }
 
 const RackStatusModal: React.FC<RackStatusModalProps> = ({
@@ -17,8 +15,6 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
   isOpen,
   onClose,
   onEditPosition,
-  canEditProgress: canEditProgressFromParent,
-  canManageLayout: canManageLayoutFromParent,
 }) => {
   const {
     updateRackStatus,
@@ -51,14 +47,11 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
     userRole === "staff" ||
     userName.includes("staff");
 
-  // Home/FloorPlanCanvas is the source of truth for permissions.
-  // Admin + Staff can edit progress/photos/status.
-  const canEditProgress =
-    canEditProgressFromParent ?? (isAdminUser || isStaffUser);
+  // Admin + Staff can edit progress/photos/status/urgent.
+  const canEditProgress = isAdminUser || isStaffUser;
 
   // Move/Delete equipment remains Admin only.
-  const canManageLayout =
-    canManageLayoutFromParent ?? isAdminUser;
+  const canManageLayout = isAdminUser;
 
   const canToggleUrgent = isAdminUser || isStaffUser || userRole === "customer";
 
