@@ -25,12 +25,14 @@ type Props = {
   readOnly?: boolean;
   canManageLayout?: boolean;
   canManageFiber?: boolean;
+  canEditProgress?: boolean;
 };
 
 const FloorPlanCanvas: React.FC<Props> = ({
   readOnly = false,
   canManageLayout = false,
   canManageFiber = false,
+  canEditProgress = false,
 }) => {
   const [, setLocation] = useLocation();
   const floorPlan = useFloorPlan();
@@ -66,8 +68,9 @@ const FloorPlanCanvas: React.FC<Props> = ({
     canManageLayout || isAdminUser;
 
   // Progress / Status / Photo / Fiber work can be edited by Admin + Staff.
+  // Home.tsx passes this explicitly from AuthContext role.
   const effectiveCanEditProgress =
-    isAdminUser || isStaffUser;
+    canEditProgress || isAdminUser || isStaffUser;
 
   const {
     cameras,
