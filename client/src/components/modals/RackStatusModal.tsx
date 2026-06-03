@@ -26,10 +26,19 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { user } = useAuth();
-  const userRole = String(user?.role || "customer").trim().toLowerCase();
-  const canEditProgress = userRole === "admin" || userRole === "staff";
+  const savedUserRole =
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")?.role
+      : "";
+
+  const userRole = String(
+    user?.role || savedUserRole || "customer"
+  )
+    .trim()
+    .toLowerCase();
+  const canEditProgress = userRole === "admin" || userRole === "staff" || userRole.includes("staff");
   const canManageLayout = userRole === "admin";
-  const canToggleUrgent = userRole === "admin" || userRole === "staff" || userRole === "customer";
+  const canToggleUrgent = userRole === "admin" || userRole === "staff" || userRole.includes("staff") || userRole === "customer";
 
   if (!isOpen || !rack) return null;
 
