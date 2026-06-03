@@ -8,6 +8,8 @@ interface RackStatusModalProps {
   isOpen: boolean;
   onClose: () => void;
   onEditPosition?: () => void;
+  canEditProgress?: boolean;
+  canManageLayout?: boolean;
 }
 
 const RackStatusModal: React.FC<RackStatusModalProps> = ({
@@ -15,6 +17,8 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
   isOpen,
   onClose,
   onEditPosition,
+  canEditProgress: canEditProgressProp,
+  canManageLayout: canManageLayoutProp,
 }) => {
   const {
     updateRackStatus,
@@ -47,11 +51,12 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
     userRole === "staff" ||
     userName.includes("staff");
 
-  // Admin + Staff can edit progress/photos/status/urgent.
-  const canEditProgress = isAdminUser || isStaffUser;
+  const canEditProgress =
+    canEditProgressProp ?? (isAdminUser || isStaffUser);
 
   // Move/Delete equipment remains Admin only.
-  const canManageLayout = isAdminUser;
+  const canManageLayout =
+    canManageLayoutProp ?? isAdminUser;
 
   const canToggleUrgent = isAdminUser || isStaffUser || userRole === "customer";
 
