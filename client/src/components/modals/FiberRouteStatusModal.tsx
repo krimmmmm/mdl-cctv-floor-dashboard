@@ -34,6 +34,7 @@ const FiberRouteStatusModal: React.FC<Props> = ({
 
   const isAdminUser =
     userRole === "admin" ||
+    userRole === "newstaff" ||
     userName.includes("admin");
 
   const isStaffOnlyUser =
