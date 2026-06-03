@@ -927,13 +927,15 @@ const FloorPlanCanvas: React.FC<Props> = ({
         })}
       </svg>
 
-      {selectedCamera && !isMovingEquipment && !showPositionModal && <CameraStatusModal camera={selectedCamera} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={effectiveCanManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
-      {selectedRack && !isMovingEquipment && !showPositionModal && <RackStatusModal rack={selectedRack} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={effectiveCanManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
-      {selectedCabinet && !isMovingEquipment && !showPositionModal && <CabinetStatusModal cabinet={selectedCabinet} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={effectiveCanManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
+      {selectedCamera && !isMovingEquipment && !showPositionModal && <CameraStatusModal camera={selectedCamera} isOpen={true} onClose={() => setSelectedItem(null)} canEditProgress={effectiveCanEditProgress} canManageLayout={effectiveCanManageLayout} onEditPosition={effectiveCanManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
+      {selectedRack && !isMovingEquipment && !showPositionModal && <RackStatusModal rack={selectedRack} isOpen={true} onClose={() => setSelectedItem(null)} canEditProgress={effectiveCanEditProgress} canManageLayout={effectiveCanManageLayout} onEditPosition={effectiveCanManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
+      {selectedCabinet && !isMovingEquipment && !showPositionModal && <CabinetStatusModal cabinet={selectedCabinet} isOpen={true} onClose={() => setSelectedItem(null)} canEditProgress={effectiveCanEditProgress} canManageLayout={effectiveCanManageLayout} onEditPosition={effectiveCanManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
       {effectiveCanEditProgress && selectedFiberRoute && !isMovingEquipment && !showPositionModal && (
         <FiberRouteStatusModal
           route={selectedFiberRoute}
           isOpen={true}
+          canEditFiber={effectiveCanEditProgress}
+          canManageLayout={effectiveCanManageLayout}
           onClose={() => setSelectedFiberId(null)}
           onUpdate={(changes: any) =>
             updateFiberRoute(
