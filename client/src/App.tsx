@@ -30,13 +30,13 @@ function Router() {
       <ProtectedRoute
         path="/dashboard"
         component={DashboardOverview}
-        allowedRoles={["admin", "staff", "customer"]}
+        allowedRoles={["admin", "staffonly", "staff", "customer"]}
       />
 
       <ProtectedRoute
         path="/floorplan"
         component={Home}
-        allowedRoles={["admin", "staff", "customer"]}
+        allowedRoles={["admin", "staffonly", "staff", "customer"]}
       />
 
       <Route path="/404" component={NotFound} />
