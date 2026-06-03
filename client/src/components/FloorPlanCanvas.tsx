@@ -65,6 +65,10 @@ const FloorPlanCanvas: React.FC<Props> = ({
   const effectiveCanManageLayout =
     canManageLayout || isAdminUser;
 
+  // Progress / Status / Photo / Fiber work can be edited by Admin + Staff.
+  const effectiveCanEditProgress =
+    isAdminUser || isStaffUser;
+
   const {
     cameras,
     racks,
@@ -409,7 +413,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canvasMode, selectedFiberId, deleteFiberRoute, canManageFiber]);
+  }, [canvasMode, selectedFiberId, deleteFiberRoute, effectiveCanManageFiber]);
 
   useEffect(() => {
     setCameraType1Count((cameras || []).filter((c) => c.type === 'type1').length);
@@ -761,7 +765,9 @@ const FloorPlanCanvas: React.FC<Props> = ({
         {selectedFiberId && canvasMode === 'normal' && (
           <div className="flex items-center gap-2 bg-yellow-50 border-2 border-yellow-400 rounded-lg px-3 py-2 shadow-lg">
             <span className="text-yellow-700 text-sm font-medium">Fiber selected</span>
-            <button onClick={(e) => { e.stopPropagation(); deleteFiberRoute(selectedFiberId); setSelectedFiberId(null); }} className="flex items-center gap-1 px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded transition-colors">Delete Route</button>
+            {effectiveCanManageLayout && (
+              <button onClick={(e) => { e.stopPropagation(); deleteFiberRoute(selectedFiberId); setSelectedFiberId(null); }} className="flex items-center gap-1 px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded transition-colors">Delete Route</button>
+            )}
             <button onClick={(e) => { e.stopPropagation(); setSelectedFiberId(null); }} className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs rounded transition-colors">Deselect</button>
           </div>
         )}
@@ -771,7 +777,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
       {!effectiveCanManageLayout && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-xl bg-blue-50 border border-blue-200 px-4 py-2 shadow-lg">
           <span className="text-blue-700 text-sm font-semibold">
-            Layout Locked
+            Equipment Control Locked
           </span>
         </div>
       )}
@@ -924,7 +930,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
       {selectedCamera && !isMovingEquipment && !showPositionModal && <CameraStatusModal camera={selectedCamera} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={effectiveCanManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
       {selectedRack && !isMovingEquipment && !showPositionModal && <RackStatusModal rack={selectedRack} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={effectiveCanManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
       {selectedCabinet && !isMovingEquipment && !showPositionModal && <CabinetStatusModal cabinet={selectedCabinet} isOpen={true} onClose={() => setSelectedItem(null)} onEditPosition={effectiveCanManageLayout ? (e) => startMovingEquipment(e) : undefined} />}
-      {effectiveCanManageFiber && selectedFiberRoute && !isMovingEquipment && !showPositionModal && (
+      {effectiveCanEditProgress && selectedFiberRoute && !isMovingEquipment && !showPositionModal && (
         <FiberRouteStatusModal
           route={selectedFiberRoute}
           isOpen={true}
