@@ -269,13 +269,13 @@ const FiberRouteStatusModal: React.FC<Props> = ({
 
       {previewImage && (
         <div
-          className="fixed inset-0 z-[999999] bg-black/95 flex items-center justify-center cursor-zoom-out"
+          className="fixed inset-0 z-[999999] bg-black flex items-center justify-center cursor-zoom-out"
           onClick={() => setPreviewImage(null)}
         >
           <button
             type="button"
             onClick={() => setPreviewImage(null)}
-            className="absolute top-5 right-5 h-12 w-12 rounded-full bg-white/15 text-white text-2xl font-black hover:bg-white/25"
+            className="absolute top-5 right-5 z-[1000000] h-12 w-12 rounded-full bg-white/15 text-white text-2xl font-black hover:bg-white/25"
           >
             ×
           </button>
@@ -284,7 +284,7 @@ const FiberRouteStatusModal: React.FC<Props> = ({
             src={previewImage}
             alt="preview"
             onClick={(e) => e.stopPropagation()}
-            className="max-w-[96vw] max-h-[96vh] object-contain rounded-2xl shadow-2xl"
+            className="w-screen h-screen object-contain bg-black"
           />
         </div>
       )}
