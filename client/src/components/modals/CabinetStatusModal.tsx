@@ -7,7 +7,7 @@ interface CabinetStatusModalProps {
   cabinet: Cabinet;
   isOpen: boolean;
   onClose: () => void;
-  onEditPosition?: () => void;
+  onEditPosition?: (e?: React.MouseEvent) => void;
   canEditProgress?: boolean;
   canManageLayout?: boolean;
 }
