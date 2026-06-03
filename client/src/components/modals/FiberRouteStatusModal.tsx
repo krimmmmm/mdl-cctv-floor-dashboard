@@ -19,7 +19,7 @@ const FiberRouteStatusModal: React.FC<Props> = ({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const { user } = useAuth();
-  const userRole = user?.role || "customer";
+  const userRole = String(user?.role || "customer").toLowerCase();
   const canEditFiber = userRole === "admin" || userRole === "staff";
   const isAdmin = userRole === "admin";
 
