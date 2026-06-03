@@ -60,6 +60,46 @@ const getProjectPlanStart = (workPlans: Record<string, any>) =>
 const getProjectPlanFinish = (workPlans: Record<string, any>) =>
   workPlans.__project_plan__?.finishDate || "";
 
+const getIsoDateValue = (dateValue?: string) => {
+  if (!dateValue) return "";
+  return String(dateValue).slice(0, 10);
+};
+
+const getProjectDurationDays = (start?: string, finish?: string) => {
+  const startIso = getIsoDateValue(start);
+  const finishIso = getIsoDateValue(finish);
+
+  if (!startIso || !finishIso) return "-";
+
+  const startDate = new Date(`${startIso}T00:00:00`);
+  const finishDate = new Date(`${finishIso}T00:00:00`);
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(finishDate.getTime())) {
+    return "-";
+  }
+
+  const diffDays =
+    Math.floor((finishDate.getTime() - startDate.getTime()) / 86400000) + 1;
+
+  return Math.max(0, diffDays);
+};
+
+const getRemainingProjectDays = (finish?: string) => {
+  const finishIso = getIsoDateValue(finish);
+  if (!finishIso) return "-";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const finishDate = new Date(`${finishIso}T00:00:00`);
+  if (Number.isNaN(finishDate.getTime())) return "-";
+
+  const diffDays =
+    Math.floor((finishDate.getTime() - today.getTime()) / 86400000) + 1;
+
+  return Math.max(0, diffDays);
+};
+
 
 
 const calculateCameraOverallProgress = (camera: any) => {
@@ -204,6 +244,14 @@ const DashboardOverview: React.FC = () => {
   const safeRacks = racks || [];
   const safeCabinets = cabinets || [];
   const safeFiberRoutes = fiberRoutes || [];
+
+  const projectPlanStart = getProjectPlanStart(workPlans);
+  const projectPlanFinish = getProjectPlanFinish(workPlans);
+  const projectDurationDays = getProjectDurationDays(
+    projectPlanStart,
+    projectPlanFinish
+  );
+  const projectRemainingDays = getRemainingProjectDays(projectPlanFinish);
 
   const equipmentRows = useMemo(() => {
     const cameraRows = safeCameras.map((item: any) => ({
@@ -391,7 +439,7 @@ const DashboardOverview: React.FC = () => {
       </header>
 
       <main className="p-5 space-y-5">
-        <section className="grid grid-cols-2 md:grid-cols-7 gap-3">
+        <section className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-9 gap-3">
           <KpiCard title="Overall" value={`${summary.overall}%`} tone="blue" />
           <KpiCard title="Total Work" value={summary.total} tone="slate" />
           <KpiCard title="Completed" value={summary.completed} tone="green" />
@@ -399,7 +447,7 @@ const DashboardOverview: React.FC = () => {
           <KpiCard title="Not Started" value={summary.notStarted} tone="gray" />
           <KpiDateInputCard
             title="Plan Start"
-            value={getProjectPlanStart(workPlans)}
+            value={projectPlanStart}
             tone="blue"
             disabled={!canEdit}
             onSave={(isoDate) =>
@@ -413,7 +461,7 @@ const DashboardOverview: React.FC = () => {
           />
           <KpiDateInputCard
             title="Plan Finish"
-            value={getProjectPlanFinish(workPlans)}
+            value={projectPlanFinish}
             tone="orange"
             disabled={!canEdit}
             onSave={(isoDate) =>
@@ -423,6 +471,16 @@ const DashboardOverview: React.FC = () => {
                 equipmentName: "Project Plan",
               })
             }
+          />
+          <KpiCard
+            title="Total Project Days"
+            value={projectDurationDays === "-" ? "-" : `${projectDurationDays} วัน`}
+            tone="purple"
+          />
+          <KpiCard
+            title="Remaining Days"
+            value={projectRemainingDays === "-" ? "-" : `${projectRemainingDays} วัน`}
+            tone="green"
           />
         </section>
 
@@ -662,6 +720,7 @@ const DashboardOverview: React.FC = () => {
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-slate-100 text-slate-600">
                   <tr>
+                    <th className="text-left p-3">No.</th>
                     <th className="text-left p-3">Type</th>
                     <th className="text-left p-3">Label</th>
                     <th className="text-left p-3">Status</th>
@@ -673,7 +732,7 @@ const DashboardOverview: React.FC = () => {
                 </thead>
 
                 <tbody>
-                  {equipmentRows.map((row) => {
+                  {equipmentRows.map((row, index) => {
                     const photos = getPhotos(row);
 
                     return (
@@ -681,14 +740,20 @@ const DashboardOverview: React.FC = () => {
                         key={`${row.typeKey}-${row.id}`}
                         className="border-t border-slate-100 hover:bg-slate-50"
                       >
+                        <td className="p-3 font-black text-slate-700">{index + 1}</td>
                         <td className="p-3 font-semibold">{row.equipmentType}</td>
                         <td className="p-3">
-                          <a
-                            href={`/floorplan?focus=${row.typeKey}:${row.id}`}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const focusTarget = `${row.typeKey}:${row.id}`;
+                              sessionStorage.setItem("mdl_focus_equipment", focusTarget);
+                              window.location.assign(`/floorplan?focus=${encodeURIComponent(focusTarget)}`);
+                            }}
                             className="text-blue-600 font-semibold hover:underline"
                           >
                             {row.name || row.label || row.id}
-                          </a>
+                          </button>
                         </td>
                         <td className="p-3">
                           <StatusPill status={row.statusLabel} />
@@ -1558,31 +1623,19 @@ const DateInput = ({
   onSave: (isoDate: string) => void;
   disabled?: boolean;
 }) => {
-  const [text, setText] = React.useState(formatDateDisplay(value));
-
-  React.useEffect(() => {
-    setText(formatDateDisplay(value));
-  }, [value]);
-
-  const commit = (nextText: string) => {
-    const isoDate = parseDisplayDate(nextText);
-    if (isoDate) onSave(isoDate);
-  };
+  const isoValue = getIsoDateValue(value);
 
   return (
     <input
-      type="text"
+      type="date"
+      lang="th-TH"
       disabled={disabled}
-      inputMode="numeric"
-      placeholder="วัน/เดือน/ปี"
-      value={text}
+      value={isoValue}
       onChange={(e) => {
-        const nextText = e.target.value;
-        setText(nextText);
-        if (nextText.length >= 10) commit(nextText);
+        if (e.target.value) onSave(e.target.value);
       }}
-      onBlur={() => commit(text)}
-      className="border border-slate-200 rounded-lg px-2 py-1 text-xs w-[120px] disabled:bg-slate-100 disabled:text-slate-400"
+      title={isoValue ? formatDateDisplay(isoValue) : "เลือกวันที่"}
+      className="border border-slate-200 rounded-lg px-2 py-1 text-xs w-[132px] disabled:bg-slate-100 disabled:text-slate-400"
     />
   );
 };
