@@ -44,7 +44,7 @@ const FiberRouteStatusModal: React.FC<Props> = ({
     userRole === "staff" ||
     userName.includes("staff");
 
-  // FloorPlanCanvas is the source of truth for permissions.
+  // Home/FloorPlanCanvas is the source of truth for permissions.
   // Admin + Staff can edit Fiber progress/photos/direction.
   const canEditFiber =
     canEditFiberFromParent ?? (isAdminUser || isStaffUser);
