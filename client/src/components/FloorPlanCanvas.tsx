@@ -41,30 +41,29 @@ const FloorPlanCanvas: React.FC<Props> = ({
       ? JSON.parse(localStorage.getItem("mdl_user") || "{}")
       : {};
 
-  const userRole = String(
-    user?.role || savedUser?.role || ""
-  )
+  const userRole = String(user?.role || savedUser?.role || "")
     .trim()
     .toLowerCase();
 
-  const userName = String(
-    user?.username || savedUser?.username || ""
-  )
+  const userName = String(user?.username || savedUser?.username || "")
     .trim()
     .toLowerCase();
 
   const isAdminUser =
     userRole === "admin" ||
-    userRole.includes("admin") ||
     userName.includes("admin");
 
   const isStaffUser =
     userRole === "staff" ||
-    userRole.includes("staff") ||
     userName.includes("staff");
-  const effectiveCanEditProgress = isAdminUser || isStaffUser;
-  const effectiveCanManageFiber = canManageFiber || effectiveCanEditProgress;
-  const effectiveCanManageLayout = canManageLayout || isAdminUser;
+
+  // Admin + Staff can draw/edit Fiber routes.
+  const effectiveCanManageFiber =
+    canManageFiber || isAdminUser || isStaffUser;
+
+  // Equipment Control add/remove and equipment move/delete remain Admin only.
+  const effectiveCanManageLayout =
+    canManageLayout || isAdminUser;
 
   const {
     cameras,
@@ -410,7 +409,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canvasMode, selectedFiberId, deleteFiberRoute, effectiveCanManageFiber]);
+  }, [canvasMode, selectedFiberId, deleteFiberRoute, canManageFiber]);
 
   useEffect(() => {
     setCameraType1Count((cameras || []).filter((c) => c.type === 'type1').length);
