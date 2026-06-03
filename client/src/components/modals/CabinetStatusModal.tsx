@@ -9,105 +9,6 @@ interface Props {
   onDelete?: () => void;
 }
 
-const getStoredUserRoleInfo = () => {
-  if (typeof window === "undefined") {
-    return {
-      role: "",
-      username: "",
-    };
-  }
-
-  const keysToCheck = [
-    "mdl_user",
-    "currentUser",
-    "user",
-    "auth_user",
-    "authUser",
-    "mdl_current_user",
-    "mdl-auth-user",
-  ];
-
-  const allValues = [
-    ...keysToCheck.map((key) => localStorage.getItem(key)),
-    ...Array.from({ length: localStorage.length }, (_, index) => {
-      const key = localStorage.key(index);
-      return key ? localStorage.getItem(key) : "";
-    }),
-  ].filter(Boolean);
-
-  for (const rawValue of allValues) {
-    try {
-      const parsed = JSON.parse(String(rawValue));
-
-      const candidates = Array.isArray(parsed)
-        ? parsed
-        : [
-            parsed,
-            parsed?.user,
-            parsed?.currentUser,
-            parsed?.session?.user,
-            parsed?.state?.user,
-            parsed?.state?.currentUser,
-          ];
-
-      for (const item of candidates) {
-        if (!item || typeof item !== "object") continue;
-
-        const role = String(item.role || item.userRole || item.type || "").toLowerCase();
-        const username = String(item.username || item.name || item.email || "").toLowerCase();
-
-        if (role || username) {
-          return {
-            role,
-            username,
-          };
-        }
-      }
-    } catch {
-      // Ignore non-JSON localStorage values
-    }
-  }
-
-  return {
-    role: "",
-    username: "",
-  };
-};
-
-const canUserEditProgress = (user: any) => {
-  const stored = getStoredUserRoleInfo();
-
-  const role = String(user?.role || stored.role || "").trim().toLowerCase();
-  const username = String(user?.username || stored.username || "").trim().toLowerCase();
-
-  return (
-    role === "admin" ||
-    role === "staff" ||
-    role.includes("admin") ||
-    role.includes("staff") ||
-    username.includes("admin") ||
-    username.includes("staff")
-  );
-};
-
-const isUserAdmin = (user: any) => {
-  const stored = getStoredUserRoleInfo();
-
-  const role = String(user?.role || stored.role || "").trim().toLowerCase();
-  const username = String(user?.username || stored.username || "").trim().toLowerCase();
-
-  return role === "admin" || role.includes("admin") || username.includes("admin");
-};
-
-const canUserToggleUrgent = (user: any) => {
-  const stored = getStoredUserRoleInfo();
-
-  const role = String(user?.role || stored.role || "customer").trim().toLowerCase();
-
-  return canUserEditProgress(user) || role === "customer";
-};
-
-
 const FiberRouteStatusModal: React.FC<Props> = ({
   route,
   isOpen,
@@ -118,10 +19,36 @@ const FiberRouteStatusModal: React.FC<Props> = ({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const { user } = useAuth();
-  const canEditFiber = canUserEditProgress(user);
-  const isAdmin = isUserAdmin(user);
+  const savedUser =
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")
+      : {};
 
-if (!isOpen) return null;
+  const userRole = String(
+    user?.role || savedUser?.role || "customer"
+  )
+    .trim()
+    .toLowerCase();
+
+  const userName = String(
+    user?.username || savedUser?.username || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  const isAdminUser =
+    userRole === "admin" ||
+    userRole.includes("admin") ||
+    userName.includes("admin");
+
+  const isStaffUser =
+    userRole === "staff" ||
+    userRole.includes("staff") ||
+    userName.includes("staff");
+  const canEditFiber = isAdminUser || isStaffUser;
+  const isAdmin = isAdminUser;
+
+  if (!isOpen) return null;
 
   const progress = Number(route.progress || 0);
   const direction = route.progressDirection || "start";
