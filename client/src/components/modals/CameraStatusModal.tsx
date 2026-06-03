@@ -9,8 +9,10 @@ interface CameraStatusModalProps {
   onClose?: () => void;
   onOpenChange?: (open: boolean) => void;
   camera: any;
-  onEditPosition?: () => void;
+  onEditPosition?: (e?: React.MouseEvent) => void;
   onUpdate?: () => void;
+  canEditProgress?: boolean;
+  canManageLayout?: boolean;
 }
 
 const CameraStatusModal = ({
