@@ -11,6 +11,8 @@ interface CameraStatusModalProps {
   camera: any;
   onEditPosition?: () => void;
   onUpdate?: () => void;
+  canEditProgress?: boolean;
+  canManageLayout?: boolean;
 }
 
 const CameraStatusModal = ({
@@ -21,6 +23,8 @@ const CameraStatusModal = ({
   camera,
   onEditPosition,
   onUpdate,
+  canEditProgress: canEditProgressProp,
+  canManageLayout: canManageLayoutProp,
 }: CameraStatusModalProps) => {
   const [modalPosition, setModalPosition] = useState({
     x: 0,
@@ -64,11 +68,14 @@ const CameraStatusModal = ({
     userRole === "staff" ||
     userName.includes("staff");
 
-  // Admin + Staff can edit progress/photos/status/urgent.
-  const canEditProgress = isAdminUser || isStaffUser;
+  // Parent component passes the final permission.
+  // This avoids Staff being detected as read-only inside the modal.
+  const canEditProgress =
+    canEditProgressProp ?? (isAdminUser || isStaffUser);
 
   // Move/Delete equipment remains Admin only.
-  const canManageLayout = isAdminUser;
+  const canManageLayout =
+    canManageLayoutProp ?? isAdminUser;
 
   const canToggleUrgent = isAdminUser || isStaffUser || userRole === "customer";
 
