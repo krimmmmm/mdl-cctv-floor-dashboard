@@ -13,6 +13,105 @@ interface CameraStatusModalProps {
   onUpdate?: () => void;
 }
 
+const getStoredUserRoleInfo = () => {
+  if (typeof window === "undefined") {
+    return {
+      role: "",
+      username: "",
+    };
+  }
+
+  const keysToCheck = [
+    "mdl_user",
+    "currentUser",
+    "user",
+    "auth_user",
+    "authUser",
+    "mdl_current_user",
+    "mdl-auth-user",
+  ];
+
+  const allValues = [
+    ...keysToCheck.map((key) => localStorage.getItem(key)),
+    ...Array.from({ length: localStorage.length }, (_, index) => {
+      const key = localStorage.key(index);
+      return key ? localStorage.getItem(key) : "";
+    }),
+  ].filter(Boolean);
+
+  for (const rawValue of allValues) {
+    try {
+      const parsed = JSON.parse(String(rawValue));
+
+      const candidates = Array.isArray(parsed)
+        ? parsed
+        : [
+            parsed,
+            parsed?.user,
+            parsed?.currentUser,
+            parsed?.session?.user,
+            parsed?.state?.user,
+            parsed?.state?.currentUser,
+          ];
+
+      for (const item of candidates) {
+        if (!item || typeof item !== "object") continue;
+
+        const role = String(item.role || item.userRole || item.type || "").toLowerCase();
+        const username = String(item.username || item.name || item.email || "").toLowerCase();
+
+        if (role || username) {
+          return {
+            role,
+            username,
+          };
+        }
+      }
+    } catch {
+      // Ignore non-JSON localStorage values
+    }
+  }
+
+  return {
+    role: "",
+    username: "",
+  };
+};
+
+const canUserEditProgress = (user: any) => {
+  const stored = getStoredUserRoleInfo();
+
+  const role = String(user?.role || stored.role || "").trim().toLowerCase();
+  const username = String(user?.username || stored.username || "").trim().toLowerCase();
+
+  return (
+    role === "admin" ||
+    role === "staff" ||
+    role.includes("admin") ||
+    role.includes("staff") ||
+    username.includes("admin") ||
+    username.includes("staff")
+  );
+};
+
+const isUserAdmin = (user: any) => {
+  const stored = getStoredUserRoleInfo();
+
+  const role = String(user?.role || stored.role || "").trim().toLowerCase();
+  const username = String(user?.username || stored.username || "").trim().toLowerCase();
+
+  return role === "admin" || role.includes("admin") || username.includes("admin");
+};
+
+const canUserToggleUrgent = (user: any) => {
+  const stored = getStoredUserRoleInfo();
+
+  const role = String(user?.role || stored.role || "customer").trim().toLowerCase();
+
+  return canUserEditProgress(user) || role === "customer";
+};
+
+
 const CameraStatusModal = ({
   isOpen,
   open,
@@ -43,37 +142,11 @@ const CameraStatusModal = ({
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { user } = useAuth();
-  const savedUser =
-    typeof window !== "undefined"
-      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")
-      : {};
+  const canEditProgress = canUserEditProgress(user);
+  const canManageLayout = isUserAdmin(user);
+  const canToggleUrgent = canUserToggleUrgent(user);
 
-  const userRole = String(
-    user?.role || savedUser?.role || "customer"
-  )
-    .trim()
-    .toLowerCase();
-
-  const userName = String(
-    user?.username || savedUser?.username || ""
-  )
-    .trim()
-    .toLowerCase();
-
-  const isAdminUser =
-    userRole === "admin" ||
-    userRole.includes("admin") ||
-    userName.includes("admin");
-
-  const isStaffUser =
-    userRole === "staff" ||
-    userRole.includes("staff") ||
-    userName.includes("staff");
-  const canEditProgress = isAdminUser || isStaffUser;
-  const canManageLayout = isAdminUser;
-  const canToggleUrgent = isAdminUser || isStaffUser || userRole === "customer";
-
-  const modalOpen = isOpen ?? open ?? false;
+const modalOpen = isOpen ?? open ?? false;
 
   if (!modalOpen || !camera) return null;
 
@@ -1048,7 +1121,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#fff",
     padding: "9px 16px",
     borderRadius: "8px",
-    cursor: "default",
+    cursor: "pointer",
   },
   photoGrid: {
     display: "grid",
@@ -1064,7 +1137,7 @@ const styles: Record<string, React.CSSProperties> = {
     height: "180px",
     objectFit: "cover",
     borderRadius: "12px",
-    cursor: "default",
+    cursor: "pointer",
     border: "1px solid #333",
   },
   deleteButton: {
@@ -1078,7 +1151,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#ef4444",
     color: "#fff",
     fontWeight: 800,
-    cursor: "default",
+    cursor: "pointer",
     zIndex: 10,
   },
   emptyPhoto: {
@@ -1098,7 +1171,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid #334155",
     borderRadius: "10px",
     padding: "12px",
-    cursor: "default",
+    cursor: "pointer",
   },
   previewOverlay: {
     position: "fixed",
@@ -1108,7 +1181,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    cursor: "default",
+    cursor: "pointer",
   },
   previewImage: {
     maxWidth: "98vw",
