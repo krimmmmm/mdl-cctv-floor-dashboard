@@ -1,426 +1,418 @@
-import React, { useMemo, useState } from "react";
-import { Cabinet } from "@/lib/floorPlanData";
-import { useFloorPlan } from "@/contexts/FloorPlanContext";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
-interface CabinetStatusModalProps {
-  cabinet: Cabinet;
+interface Props {
+  route: any;
   isOpen: boolean;
   onClose: () => void;
-  onEditPosition?: () => void;
+  onUpdate: (changes: any) => void;
+  onDelete?: () => void;
 }
 
-const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
-  cabinet,
-  isOpen,
-  onClose,
-  onEditPosition,
-}) => {
-  const {
-    updateCabinetStatus,
-    updateCabinetField,
-    updateCabinetInstallationStatus,
-    updateCabinetPhotos,
-    deleteCabinet,
-  } = useFloorPlan();
+const getStoredUserRoleInfo = () => {
+  if (typeof window === "undefined") {
+    return {
+      role: "",
+      username: "",
+    };
+  }
 
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const { user } = useAuth();
-  const savedUser =
-    typeof window !== "undefined"
-      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")
-      : {};
-
-  const userRole = String(
-    user?.role || savedUser?.role || "customer"
-  )
-    .trim()
-    .toLowerCase();
-
-  const userName = String(
-    user?.username || savedUser?.username || ""
-  )
-    .trim()
-    .toLowerCase();
-
-  const isAdminUser =
-    userRole === "admin" ||
-    userRole.includes("admin") ||
-    userName.includes("admin");
-
-  const isStaffUser =
-    userRole === "staff" ||
-    userRole.includes("staff") ||
-    userName.includes("staff");
-  const canEditProgress = isAdminUser || isStaffUser;
-  const canManageLayout = isAdminUser;
-  const canToggleUrgent = isAdminUser || isStaffUser || userRole === "customer";
-
-  if (!isOpen || !cabinet) return null;
-
-  const steps = [
-    {
-      key: "installCabinet",
-      title: "INSTALL CABINET",
-      desc: "Cabinet installed",
-      progressKey: "installCabinetProgress",
-      progress: Number((cabinet as any).installCabinetProgress || 0),
-      checked: Boolean((cabinet as any).installCabinet),
-    },
-    {
-      key: "acPower",
-      title: "AC POWER",
-      desc: "Power supply installed",
-      progressKey: "acPowerProgress",
-      progress: Number((cabinet as any).acPowerProgress || 0),
-      checked: Boolean((cabinet as any).acPower),
-    },
-    {
-      key: "utp",
-      title: "UTP",
-      desc: "Network cable installed",
-      progressKey: "utpProgress",
-      progress: Number((cabinet as any).utpProgress || 0),
-      checked: Boolean((cabinet as any).utp),
-    },
-    {
-      key: "poeSwitch",
-      title: "POE SWITCH",
-      desc: "Switch installed",
-      progressKey: "poeSwitchProgress",
-      progress: Number((cabinet as any).poeSwitchProgress || 0),
-      checked: Boolean((cabinet as any).poeSwitch),
-    },
-    {
-      key: "fiberOptic",
-      title: "FIBER OPTIC",
-      desc: "Fiber optic connected",
-      progressKey: "fiberOpticProgress",
-      progress: Number((cabinet as any).fiberOpticProgress || 0),
-      checked: Boolean((cabinet as any).fiberOptic),
-    },
-    {
-      key: "ready",
-      title: "READY",
-      desc: "Cabinet ready for use",
-      progressKey: "readyProgress",
-      progress: Number((cabinet as any).readyProgress || 0),
-      checked: Boolean((cabinet as any).ready),
-    },
+  const keysToCheck = [
+    "mdl_user",
+    "currentUser",
+    "user",
+    "auth_user",
+    "authUser",
+    "mdl_current_user",
+    "mdl-auth-user",
   ];
 
-  const totalProgress = useMemo(() => {
-    return Math.round(
-      steps.reduce((sum, item) => sum + item.progress, 0) / steps.length
-    );
-  }, [cabinet]);
-
-  const computedStatus =
-    totalProgress <= 0
-      ? "not_started"
-      : totalProgress >= 100
-      ? "completed"
-      : "in_progress";
-
-  const statusText =
-    computedStatus === "completed"
-      ? "Completed"
-      : computedStatus === "in_progress"
-      ? "In Progress"
-      : "Not Started";
-
-  const syncStatus = (progressValue: number) => {
-    const nextStatus =
-      progressValue <= 0
-        ? "not_started"
-        : progressValue >= 100
-        ? "completed"
-        : "in_progress";
-
-    updateCabinetInstallationStatus(cabinet.id, nextStatus);
-  };
-
-  const updateStepProgress = (
-    progressKey: string,
-    stepKey: string,
-    value: number
-  ) => {
-    if (!canEditProgress) return;
-    const safeValue = Math.min(100, Math.max(0, Number(value || 0)));
-
-    updateCabinetField(cabinet.id, progressKey, safeValue);
-    updateCabinetField(cabinet.id, stepKey, safeValue > 0);
-
-    const nextSteps = steps.map((step) =>
-      step.progressKey === progressKey ? { ...step, progress: safeValue } : step
-    );
-
-    const nextTotal = Math.round(
-      nextSteps.reduce((sum, item) => sum + item.progress, 0) / nextSteps.length
-    );
-
-    syncStatus(nextTotal);
-  };
-
-  const updateStepCheck = (
-    stepKey: string,
-    progressKey: string,
-    checked: boolean
-  ) => {
-    if (!canEditProgress) return;
-    updateCabinetField(cabinet.id, stepKey, checked);
-    updateCabinetField(cabinet.id, progressKey, checked ? 100 : 0);
-
-    const nextSteps = steps.map((step) =>
-      step.key === stepKey ? { ...step, progress: checked ? 100 : 0 } : step
-    );
-
-    const nextTotal = Math.round(
-      nextSteps.reduce((sum, item) => sum + item.progress, 0) / nextSteps.length
-    );
-
-    syncStatus(nextTotal);
-  };
-
-  const photos = [
-    (cabinet as any).photo1,
-    (cabinet as any).photo2,
-    (cabinet as any).photo3,
-    (cabinet as any).photo4,
+  const allValues = [
+    ...keysToCheck.map((key) => localStorage.getItem(key)),
+    ...Array.from({ length: localStorage.length }, (_, index) => {
+      const key = localStorage.key(index);
+      return key ? localStorage.getItem(key) : "";
+    }),
   ].filter(Boolean);
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!canEditProgress) return;
-    const files = e.target.files;
-    if (!files) return;
+  for (const rawValue of allValues) {
+    try {
+      const parsed = JSON.parse(String(rawValue));
 
-    const currentPhotos = [
-      (cabinet as any).photo1 || "",
-      (cabinet as any).photo2 || "",
-      (cabinet as any).photo3 || "",
-      (cabinet as any).photo4 || "",
-    ].filter(Boolean);
+      const candidates = Array.isArray(parsed)
+        ? parsed
+        : [
+            parsed,
+            parsed?.user,
+            parsed?.currentUser,
+            parsed?.session?.user,
+            parsed?.state?.user,
+            parsed?.state?.currentUser,
+          ];
 
-    const remaining = 4 - currentPhotos.length;
-    const selectedFiles = Array.from(files).slice(0, remaining);
+      for (const item of candidates) {
+        if (!item || typeof item !== "object") continue;
 
-    const newPhotos: string[] = [];
+        const role = String(item.role || item.userRole || item.type || "").toLowerCase();
+        const username = String(item.username || item.name || item.email || "").toLowerCase();
 
-    for (const file of selectedFiles) {
-      const reader = new FileReader();
-
-      await new Promise<void>((resolve) => {
-        reader.onloadend = () => {
-          newPhotos.push(reader.result as string);
-          resolve();
-        };
-
-        reader.readAsDataURL(file);
-      });
+        if (role || username) {
+          return {
+            role,
+            username,
+          };
+        }
+      }
+    } catch {
+      // Ignore non-JSON localStorage values
     }
+  }
 
-    updateCabinetPhotos(cabinet.id, [...currentPhotos, ...newPhotos]);
+  return {
+    role: "",
+    username: "",
+  };
+};
+
+const canUserEditProgress = (user: any) => {
+  const stored = getStoredUserRoleInfo();
+
+  const role = String(user?.role || stored.role || "").trim().toLowerCase();
+  const username = String(user?.username || stored.username || "").trim().toLowerCase();
+
+  return (
+    role === "admin" ||
+    role === "staff" ||
+    role.includes("admin") ||
+    role.includes("staff") ||
+    username.includes("admin") ||
+    username.includes("staff")
+  );
+};
+
+const isUserAdmin = (user: any) => {
+  const stored = getStoredUserRoleInfo();
+
+  const role = String(user?.role || stored.role || "").trim().toLowerCase();
+  const username = String(user?.username || stored.username || "").trim().toLowerCase();
+
+  return role === "admin" || role.includes("admin") || username.includes("admin");
+};
+
+const canUserToggleUrgent = (user: any) => {
+  const stored = getStoredUserRoleInfo();
+
+  const role = String(user?.role || stored.role || "customer").trim().toLowerCase();
+
+  return canUserEditProgress(user) || role === "customer";
+};
+
+
+const FiberRouteStatusModal: React.FC<Props> = ({
+  route,
+  isOpen,
+  onClose,
+  onUpdate,
+  onDelete,
+}) => {
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  const { user } = useAuth();
+  const canEditFiber = canUserEditProgress(user);
+  const isAdmin = isUserAdmin(user);
+
+if (!isOpen) return null;
+
+  const progress = Number(route.progress || 0);
+  const direction = route.progressDirection || "start";
+
+  const [localPhotos, setLocalPhotos] = useState<string[]>([
+    route?.photo1 || "",
+    route?.photo2 || "",
+    route?.photo3 || "",
+    route?.photo4 || "",
+  ]);
+
+  useEffect(() => {
+    if (!route?.id) return;
+
+    setLocalPhotos([
+      route.photo1 || "",
+      route.photo2 || "",
+      route.photo3 || "",
+      route.photo4 || "",
+    ]);
+  }, [
+    route?.id,
+    route?.photo1,
+    route?.photo2,
+    route?.photo3,
+    route?.photo4,
+  ]);
+
+  const photos = localPhotos;
+
+  const filledPhotos = photos.filter(Boolean).length;
+
+  const handlePhotoUpload = (index: number, file: File) => {
+    if (!canEditFiber) return;
+
+    const reader = new FileReader();
+
+    reader.onloadend = () => {
+      const photoData = String(reader.result || "");
+
+      setLocalPhotos((prev) => {
+        const next = [...prev];
+        next[index] = photoData;
+
+        // Send all photo fields every time.
+        // This prevents old uploaded photos from being cleared
+        // if the parent update function replaces the route object.
+        onUpdate({
+          photo1: next[0] || "",
+          photo2: next[1] || "",
+          photo3: next[2] || "",
+          photo4: next[3] || "",
+        });
+
+        return next;
+      });
+    };
+
+    reader.readAsDataURL(file);
   };
 
   const deletePhoto = (index: number) => {
-    if (!canEditProgress) return;
-    const nextPhotos = [
-      (cabinet as any).photo1 || "",
-      (cabinet as any).photo2 || "",
-      (cabinet as any).photo3 || "",
-      (cabinet as any).photo4 || "",
-    ];
+    if (!canEditFiber) return;
 
-    nextPhotos[index] = "";
-    updateCabinetPhotos(cabinet.id, nextPhotos);
-  };
+    setLocalPhotos((prev) => {
+      const next = [...prev];
+      next[index] = "";
 
-  const handleDeleteCabinet = async () => {
-    if (!canManageLayout) return;
+      // Send all photo fields every time.
+      // This keeps the other existing photos safe.
+      onUpdate({
+        photo1: next[0] || "",
+        photo2: next[1] || "",
+        photo3: next[2] || "",
+        photo4: next[3] || "",
+      });
 
-    const ok = confirm(
-      `ยืนยันการลบ ${cabinet.name || "Cabinet"} ใช่หรือไม่?`
-    );
-
-    if (!ok) return;
-
-    const success = await deleteCabinet(cabinet.id);
-
-    if (success !== false) {
-      onClose();
-    }
+      return next;
+    });
   };
 
   return (
     <>
-      <div style={styles.overlay} onClick={onClose}>
-        <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-          <h2 style={styles.title}>{cabinet.name}</h2>
-
-          <div style={styles.typeBox}>
-            <b>Type:</b> CCTV OUTDOOR STEEL CABINET
-          </div>
-
-          <div style={styles.statusBox}>
-            Installation Status: {statusText}
-          </div>
-
-          <label style={styles.urgentBox}>
-            <input
-              type="checkbox"
-              checked={Boolean((cabinet as any).isUrgent)}
-              disabled={!canToggleUrgent}
-              onChange={(e) =>
-                canToggleUrgent && updateCabinetField(cabinet.id, "isUrgent", e.target.checked)
-              }
-            />
-            🚨 งานเร่งด่วน (Urgent Work)
-          </label>
-
-          <div style={styles.sectionLabel}>Installation Steps</div>
-
-          {steps.map((step) => (
-            <div key={step.key} style={styles.stepCard}>
-              <input
-                type="checkbox"
-                checked={step.checked}
-                disabled={!canEditProgress}
-                onChange={(e) =>
-                  updateStepCheck(step.key, step.progressKey, e.target.checked)
-                }
-                style={styles.checkbox}
-              />
-
-              <div style={{ flex: 1 }}>
-                <div style={styles.stepTitle}>{step.title}</div>
-                <div style={styles.stepSub}>{step.desc}</div>
+      <div
+        className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center"
+        onClick={onClose}
+      >
+        <div
+          className="w-[620px] max-h-[92vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-gray-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+            <div>
+              <div className="text-xl font-bold">
+                {route.name || "Fiber Route"}
               </div>
+              <div className="text-red-100 text-sm">
+                Fiber Optic Route Progress
+              </div>
+            </div>
 
-              <div style={styles.checkMark}>
-                {step.progress >= 100 ? "✓" : step.progress > 0 ? "◔" : ""}
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="p-6 space-y-6">
+            <div className="rounded-2xl bg-green-50 border border-green-200 p-5">
+              <div className="flex justify-between mb-3">
+                <span className="font-bold text-gray-700">
+                  Installation Progress
+                </span>
+                <span className="font-black text-green-700 text-xl">
+                  {progress}%
+                </span>
               </div>
 
               <input
-                type="number"
+                type="range"
                 min={0}
                 max={100}
-                value={step.progress}
-                disabled={!canEditProgress}
+                value={progress}
+                disabled={!canEditFiber}
                 onChange={(e) =>
-                  updateStepProgress(
-                    step.progressKey,
-                    step.key,
-                    Number(e.target.value)
-                  )
+                  canEditFiber &&
+                  onUpdate({
+                    progress: Number(e.target.value),
+                  })
                 }
-                style={styles.progressInput}
+                className="w-full accent-green-600"
               />
 
-              <span style={styles.percent}>%</span>
-            </div>
-          ))}
+              <div className="mt-3 h-4 rounded-full bg-gray-200 overflow-hidden">
+                <div
+                  className="h-full bg-green-600 transition-all"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
 
-          <div style={styles.progressBox}>
-            <div style={styles.progressHeader}>
-              <b>Progress การติดตั้งรวม</b>
-              <span style={styles.badge}>{statusText}</span>
-            </div>
-
-            <div style={styles.track}>
-              <div
-                style={{
-                  ...styles.fill,
-                  width: `${totalProgress}%`,
-                }}
-              />
+              <div className="mt-2 text-sm text-gray-500">
+                เส้นสีเขียวจะแสดงเฉพาะระยะตาม % Progress เท่านั้น
+              </div>
             </div>
 
-            <div style={styles.progressText}>{totalProgress}%</div>
+            <div>
+              <div className="font-bold text-gray-700 mb-3">
+                Progress Direction
+              </div>
 
-            <div style={styles.averageText}>
-              คำนวณอัตโนมัติจากค่าเฉลี่ย step progress
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  disabled={!canEditFiber}
+                  onClick={() =>
+                    canEditFiber &&
+                    onUpdate({
+                      progressDirection: "start",
+                    })
+                  }
+                  className={`px-4 py-3 rounded-xl border font-bold ${
+                    direction === "start"
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-white text-gray-700 border-gray-300"
+                  }`}
+                >
+                  Start → End
+                </button>
+
+                <button
+                  disabled={!canEditFiber}
+                  onClick={() =>
+                    canEditFiber &&
+                    onUpdate({
+                      progressDirection: "end",
+                    })
+                  }
+                  className={`px-4 py-3 rounded-xl border font-bold ${
+                    direction === "end"
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-white text-gray-700 border-gray-300"
+                  }`}
+                >
+                  End → Start
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div style={styles.photoSection}>
-            <div style={styles.photoHeader}>
-              <b>▧ รูปหน้างาน Cabinet ({photos.length}/4)</b>
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-bold text-gray-700">
+                  Upload Fiber Photos ({filledPhotos}/4)
+                </div>
 
-              {canEditProgress && photos.length < 4 && (
-                <label style={styles.uploadButton}>
-                  Upload Photo
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onClick={(e) => e.stopPropagation()}
-                    multiple
-                    onChange={handlePhotoUpload}
-                    style={{ display: "none" }}
-                  />
-                </label>
-              )}
-            </div>
+                {!canEditFiber && (
+                  <span className="text-xs font-bold text-gray-500">
+                    View only
+                  </span>
+                )}
+              </div>
 
-            {photos.length > 0 ? (
-              <div style={styles.photoGrid}>
-                {photos.map((photo, index) => (
-                  <div key={index} style={styles.photoWrap}>
-                    <button
-                      style={styles.deleteButton}
-                      disabled={!canEditProgress}
-                      onClick={() => canEditProgress && deletePhoto(index)}
-                    >
-                      ×
-                    </button>
+              <div className="grid grid-cols-2 gap-4">
+                {[0, 1, 2, 3].map((idx) => (
+                  <div
+                    key={idx}
+                    className="border-2 border-dashed border-gray-300 rounded-xl p-3 bg-gray-50"
+                  >
+                    {photos[idx] ? (
+                      <div className="relative">
+                        <button
+                          disabled={!canEditFiber}
+                          onClick={(e) => {
+                            e.stopPropagation();
 
-                    <img
-                      src={photo}
-                      style={styles.photo}
-                      onClick={() => setPreviewImage(photo)}
-                    />
+                            if (canEditFiber) {
+                              deletePhoto(idx);
+                            }
+                          }}
+                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-600 text-white font-bold z-10"
+                        >
+                          ×
+                        </button>
+
+                        <img
+                          src={photos[idx]}
+                          alt=""
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewImage(String(photos[idx]));
+                          }}
+                          className="rounded-lg w-full h-36 object-cover border cursor-zoom-in hover:ring-2 hover:ring-red-400"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-sm text-gray-500 mb-2">
+                          Photo {idx + 1}
+                        </div>
+
+                        <input
+                          type="file"
+                          accept="image/*"
+                          disabled={!canEditFiber}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            e.stopPropagation();
+
+                            const file = e.target.files?.[0];
+
+                            if (file) {
+                              handlePhotoUpload(idx, file);
+                              e.target.value = "";
+                            }
+                          }}
+                          className="w-full text-sm cursor-pointer"
+                        />
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
-            ) : (
-              <div style={styles.emptyPhoto}>ยังไม่มีรูปหน้างาน</div>
-            )}
-          </div>
-
-          <div style={styles.statusPanel}>
-            <b>Current Status:</b> {cabinet.status || "offline"}
-
-            <div style={styles.buttonRow}>
-              <button
-                style={styles.onlineButton}
-                disabled={!canEditProgress}
-                onClick={() => canEditProgress && updateCabinetStatus(cabinet.id, "online")}
-              >
-                Mark as Online
-              </button>
-
-              <button
-                style={styles.idleButton}
-                disabled={!canEditProgress}
-                onClick={() => canEditProgress && updateCabinetStatus(cabinet.id, "idle")}
-              >
-                Mark as Idle
-              </button>
             </div>
-          </div>
 
-          <div style={styles.footer}>
-            <button style={styles.footerButton} disabled={!canManageLayout}
-              onClick={canManageLayout ? onEditPosition : undefined}>
-              {canManageLayout ? "Edit Position" : "Position Locked"}
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  const confirmed = window.confirm(
+                    `Delete ${route.name || "Fiber Route"} ?`
+                  );
 
-            {canManageLayout && (
-              <button style={styles.deleteEquipmentButton} onClick={handleDeleteCabinet}>
-                Delete Cabinet
+                  if (!confirmed) return;
+
+                  if (onDelete) {
+                    onDelete();
+                  }
+
+                  onClose();
+                }}
+                className="w-full h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition"
+              >
+                Delete Fiber Route
               </button>
             )}
 
-            <button style={styles.footerButton} onClick={onClose}>
+            <button
+              onClick={onClose}
+              className="w-full h-12 rounded-xl bg-gray-900 text-white font-bold hover:bg-black"
+            >
               Close
             </button>
           </div>
@@ -428,268 +420,28 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
       </div>
 
       {previewImage && (
-        <div style={styles.previewOverlay} onClick={() => setPreviewImage(null)}>
-          <img src={previewImage} style={styles.previewImage} />
+        <div
+          className="fixed inset-0 z-[999999] bg-black flex items-center justify-center"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-5 right-5 z-[1000000] h-12 w-12 rounded-full bg-white/15 text-white text-2xl font-black hover:bg-white/25"
+          >
+            ×
+          </button>
+
+          <img
+            src={previewImage}
+            alt="preview"
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-[98vw] max-h-[98vh] object-contain"
+          />
         </div>
       )}
     </>
   );
 };
 
-const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.45)",
-    zIndex: 9999,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "flex-start",
-    paddingTop: 35,
-  },
-  modal: {
-    width: 760,
-    maxHeight: "90vh",
-    overflowY: "auto",
-    background: "#030303",
-    color: "#fff",
-    borderRadius: 16,
-    border: "1px solid #2563eb",
-    padding: 24,
-    boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 800,
-    marginBottom: 18,
-  },
-  typeBox: {
-    background: "#fff",
-    color: "#111",
-    padding: "12px 16px",
-    borderRadius: 12,
-    width: 330,
-    marginBottom: 16,
-  },
-  statusBox: {
-    background: "#fff7bf",
-    color: "#8a4b00",
-    padding: "14px 16px",
-    borderRadius: 12,
-    fontWeight: 800,
-    marginBottom: 16,
-  },
-  urgentBox: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    background: "#ffe4f4",
-    color: "#c2185b",
-    border: "2px solid #ff4db8",
-    borderRadius: 12,
-    padding: 14,
-    fontWeight: 800,
-    marginBottom: 18,
-  },
-  sectionLabel: {
-    color: "#94a3b8",
-    marginBottom: 8,
-  },
-  stepCard: {
-    display: "flex",
-    alignItems: "center",
-    gap: 14,
-    border: "1px solid #334155",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-    background: "#020202",
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-  },
-  stepTitle: {
-    fontSize: 18,
-    fontWeight: 800,
-  },
-  stepSub: {
-    fontSize: 13,
-    color: "#64748b",
-  },
-  checkMark: {
-    color: "#00ff66",
-    fontSize: 22,
-    width: 26,
-    textAlign: "center",
-  },
-  progressInput: {
-    width: 78,
-    padding: 8,
-    borderRadius: 8,
-    border: "1px solid #cbd5e1",
-    textAlign: "center",
-    fontWeight: 800,
-    fontSize: 18,
-  },
-  percent: {
-    color: "#94a3b8",
-    fontWeight: 800,
-  },
-  progressBox: {
-    background: "#ecfdf3",
-    color: "#111",
-    borderRadius: 12,
-    padding: 20,
-    marginTop: 22,
-  },
-  progressHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    color: "#00843d",
-    fontSize: 22,
-  },
-  badge: {
-    background: "#fff1a8",
-    color: "#b45309",
-    padding: "8px 14px",
-    borderRadius: 999,
-    fontWeight: 800,
-  },
-  track: {
-    height: 20,
-    background: "#e5e7eb",
-    borderRadius: 999,
-    marginTop: 18,
-  },
-  fill: {
-    height: 20,
-    background: "#d68a00",
-    borderRadius: 999,
-  },
-  progressText: {
-    textAlign: "center",
-    fontSize: 48,
-    fontWeight: 900,
-    color: "#d68a00",
-    marginTop: 20,
-  },
-  averageText: {
-    color: "#64748b",
-    textAlign: "center",
-    fontSize: 16,
-  },
-  photoSection: {
-    borderTop: "1px solid #1f2937",
-    marginTop: 22,
-    paddingTop: 14,
-  },
-  photoHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  uploadButton: {
-    background: "#2563eb",
-    color: "#fff",
-    padding: "9px 16px",
-    borderRadius: 8,
-    cursor: "default",
-  },
-  photoGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 12,
-    marginTop: 16,
-  },
-  photoWrap: {
-    position: "relative",
-  },
-  photo: {
-    width: "100%",
-    height: 180,
-    objectFit: "cover",
-    borderRadius: 12,
-    cursor: "default",
-  },
-  deleteButton: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    border: "none",
-    background: "#ef4444",
-    color: "#fff",
-    fontWeight: 900,
-    cursor: "default",
-  },
-  emptyPhoto: {
-    color: "#64748b",
-    textAlign: "center",
-    padding: 32,
-  },
-  statusPanel: {
-    background: "#eff6ff",
-    color: "#111",
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 18,
-  },
-  buttonRow: {
-    display: "flex",
-    gap: 10,
-    marginTop: 12,
-  },
-  onlineButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    border: "none",
-    background: "#2563eb",
-    color: "#fff",
-    fontWeight: 800,
-  },
-  idleButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    border: "1px solid #ddd",
-    background: "#fff",
-    fontWeight: 800,
-  },
-  footer: {
-    display: "flex",
-    gap: 12,
-    marginTop: 20,
-  },
-  footerButton: {
-    flex: 1,
-    background: "#111",
-    color: "#fff",
-    border: "1px solid #334155",
-    borderRadius: 10,
-    padding: 12,
-    cursor: "default",
-  },
-  previewOverlay: {
-    position: "fixed",
-    inset: 0,
-    background: "#000",
-    zIndex: 999999,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    cursor: "default",
-  },
-  previewImage: {
-    maxWidth: "98vw",
-    maxHeight: "98vh",
-    objectFit: "contain",
-    borderRadius: "12px",
-    boxShadow: "0 0 42px rgba(0,0,0,0.6)",
-  },
-};
-
-export default CabinetStatusModal;
+export default FiberRouteStatusModal;
