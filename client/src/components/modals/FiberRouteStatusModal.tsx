@@ -19,18 +19,34 @@ const FiberRouteStatusModal: React.FC<Props> = ({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const { user } = useAuth();
-  const savedUserRole =
+  const savedUser =
     typeof window !== "undefined"
-      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")?.role
-      : "";
+      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")
+      : {};
 
   const userRole = String(
-    user?.role || savedUserRole || "customer"
+    user?.role || savedUser?.role || "customer"
   )
     .trim()
     .toLowerCase();
-  const canEditFiber = userRole === "admin" || userRole === "staff" || userRole.includes("staff");
-  const isAdmin = userRole === "admin";
+
+  const userName = String(
+    user?.username || savedUser?.username || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  const isAdminUser =
+    userRole === "admin" ||
+    userRole.includes("admin") ||
+    userName.includes("admin");
+
+  const isStaffUser =
+    userRole === "staff" ||
+    userRole.includes("staff") ||
+    userName.includes("staff");
+  const canEditFiber = isAdminUser || isStaffUser;
+  const isAdmin = isAdminUser;
 
   if (!isOpen) return null;
 
