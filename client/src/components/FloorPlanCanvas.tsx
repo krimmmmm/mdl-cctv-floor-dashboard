@@ -36,14 +36,16 @@ const FloorPlanCanvas: React.FC<Props> = ({
   const floorPlan = useFloorPlan();
   const { user } = useAuth();
 
-  const userRole = String(user?.role || "").toLowerCase();
-  const effectiveCanManageFiber =
-    canManageFiber ||
-    userRole === "admin" ||
-    userRole === "staff";
-  const effectiveCanManageLayout =
-    canManageLayout ||
-    userRole === "admin";
+  const userRole = String(user?.role || "").trim().toLowerCase();
+  const effectiveCanEditProgress = userRole === "admin" || userRole === "staff";
+  const effectiveCanManageFiber = canManageFiber || effectiveCanEditProgress;
+  const effectiveCanManageLayout = canManageLayout || userRole === "admin";
+  const { user } = useAuth();
+
+  const userRole = String(user?.role || "").trim().toLowerCase();
+  const effectiveCanEditProgress = userRole === "admin" || userRole === "staff";
+  const effectiveCanManageFiber = canManageFiber || effectiveCanEditProgress;
+  const effectiveCanManageLayout = canManageLayout || userRole === "admin";
 
   const {
     cameras,
@@ -389,7 +391,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canvasMode, selectedFiberId, deleteFiberRoute, canManageFiber]);
+  }, [canvasMode, selectedFiberId, deleteFiberRoute, effectiveCanManageFiber]);
 
   useEffect(() => {
     setCameraType1Count((cameras || []).filter((c) => c.type === 'type1').length);
@@ -916,7 +918,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
             )
           }
           onDelete={
-            canManageLayout
+            effectiveCanManageLayout
               ? () => {
                   deleteFiberRoute(
                     selectedFiberRoute.id
