@@ -55,22 +55,24 @@ const FloorPlanCanvas: React.FC<Props> = ({
     userRole === "admin" ||
     userName.includes("admin");
 
+  const isStaffOnlyUser =
+    userRole === "staffonly";
+
   const isStaffUser =
     userRole === "staff" ||
     userName.includes("staff");
 
-  // Admin + Staff can draw/edit Fiber routes.
+  // Admin + staffonly can draw/edit Fiber routes.
   const effectiveCanManageFiber =
-    canManageFiber || isAdminUser || isStaffUser;
+    canManageFiber || isAdminUser || isStaffOnlyUser;
 
   // Equipment Control add/remove and equipment move/delete remain Admin only.
   const effectiveCanManageLayout =
     canManageLayout || isAdminUser;
 
-  // Progress / Status / Photo / Fiber work can be edited by Admin + Staff.
-  // Home.tsx passes this explicitly from AuthContext role.
+  // Progress / Status / Photo / Fiber work can be edited by Admin + staffonly.
   const effectiveCanEditProgress =
-    canEditProgress || isAdminUser || isStaffUser;
+    canEditProgress || isAdminUser || isStaffOnlyUser;
 
   const {
     cameras,
