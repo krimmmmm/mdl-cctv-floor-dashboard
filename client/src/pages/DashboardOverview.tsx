@@ -94,11 +94,50 @@ const getRemainingProjectDays = (finish?: string) => {
   const finishDate = new Date(`${finishIso}T00:00:00`);
   if (Number.isNaN(finishDate.getTime())) return "-";
 
+  // Plan Finish - today + 1
   const diffDays =
     Math.floor((finishDate.getTime() - today.getTime()) / 86400000) + 1;
 
   return Math.max(0, diffDays);
 };
+
+const getDateKeyFromDate = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getWeekDateKeysFromTuesday = (dateKey: string) => {
+  const baseDate = new Date(`${dateKey}T00:00:00`);
+  if (Number.isNaN(baseDate.getTime())) return [dateKey];
+
+  // Weekly report uses Monday-Sunday week containing the selected Tuesday.
+  const jsDay = baseDate.getDay(); // Sunday = 0, Monday = 1, Tuesday = 2
+  const diffToMonday = (jsDay + 6) % 7;
+
+  const monday = new Date(baseDate);
+  monday.setDate(baseDate.getDate() - diffToMonday);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + index);
+    return getDateKeyFromDate(day);
+  });
+};
+
+const isTuesdayDateKey = (dateKey: string) => {
+  const date = new Date(`${dateKey}T00:00:00`);
+  return !Number.isNaN(date.getTime()) && date.getDay() === 2;
+};
+
+const escapeHtml = (value: any) =>
+  String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 
 
 
@@ -375,6 +414,7 @@ const DashboardOverview: React.FC = () => {
         const jobs = getJobsForDate(key);
         const isWorking = hasWorkingOnDate(key);
         const isToday = key === todayKey;
+        const isTuesday = isTuesdayDateKey(key);
 
         return {
           day,
@@ -382,6 +422,7 @@ const DashboardOverview: React.FC = () => {
           jobs,
           isWorking,
           isToday,
+          isTuesday,
         };
       });
 
@@ -400,6 +441,289 @@ const DashboardOverview: React.FC = () => {
       };
     });
   }, [equipmentRows, workPlans, todayKey]);
+
+  const buildReportJobRows = (dateKeys: string[]) => {
+    const dateSet = new Set(dateKeys);
+
+    return equipmentRows
+      .map((row) => {
+        const plan = workPlans[row.id] || {};
+        const planDate = plan.date || row.planStartDate || "";
+
+        return {
+          row,
+          plan,
+          planDate,
+        };
+      })
+      .filter((item) => item.planDate && dateSet.has(item.planDate));
+  };
+
+  const downloadWorkReport = (
+    reportType: "Daily" | "Weekly",
+    title: string,
+    dateKeys: string[]
+  ) => {
+    const jobs = buildReportJobRows(dateKeys);
+    const dateLabel =
+      dateKeys.length === 1
+        ? formatDateDisplay(dateKeys[0])
+        : `${formatDateDisplay(dateKeys[0])} - ${formatDateDisplay(dateKeys[dateKeys.length - 1])}`;
+
+    const jobRowsHtml = jobs.length
+      ? jobs
+          .map(({ row, plan, planDate }, index) => {
+            const timeText =
+              plan.startTime || plan.endTime
+                ? `${plan.startTime || "-"} - ${plan.endTime || "-"}`
+                : "-";
+
+            return `
+              <tr>
+                <td>${index + 1}</td>
+                <td>${escapeHtml(formatDateDisplay(planDate))}</td>
+                <td>${escapeHtml(row.equipmentType)}</td>
+                <td>${escapeHtml(row.name || row.label || row.id)}</td>
+                <td>${escapeHtml(plan.supervisorName || "-")}</td>
+                <td>${escapeHtml(plan.supervisorPhone || "-")}</td>
+                <td>${escapeHtml(timeText)}</td>
+                <td>${escapeHtml(plan.workDetail || "-")}</td>
+                <td>${plan.isWorking ? "On Site" : "Planned"}</td>
+              </tr>
+            `;
+          })
+          .join("")
+      : `
+          <tr>
+            <td colspan="9" class="empty">ไม่มีข้อมูลการเข้าทำงานในช่วงเวลานี้</td>
+          </tr>
+        `;
+
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 28px;
+      font-family: Arial, Tahoma, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .header {
+      background: linear-gradient(135deg, #0f172a, #1d4ed8);
+      color: white;
+      border-radius: 22px;
+      padding: 26px 30px;
+      margin-bottom: 22px;
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+    }
+    .header h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+    .header p {
+      margin: 0;
+      color: #dbeafe;
+      font-size: 14px;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.07);
+    }
+    .card .label {
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .card .value {
+      font-size: 28px;
+      font-weight: 900;
+      color: #0f172a;
+    }
+    .card.blue .value { color: #2563eb; }
+    .card.green .value { color: #16a34a; }
+    .card.orange .value { color: #d97706; }
+    .card.purple .value { color: #7c3aed; }
+    .section {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 20px;
+      margin-top: 18px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+    }
+    .section h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12px;
+    }
+    th {
+      background: #e2e8f0;
+      color: #334155;
+      text-align: left;
+      padding: 10px;
+    }
+    td {
+      border-top: 1px solid #e2e8f0;
+      padding: 10px;
+      vertical-align: top;
+    }
+    .empty {
+      text-align: center;
+      color: #64748b;
+      padding: 24px;
+      font-weight: 700;
+    }
+    .footer {
+      margin-top: 18px;
+      color: #64748b;
+      font-size: 11px;
+      text-align: right;
+    }
+    @media print {
+      body { background: white; padding: 12px; }
+      .card, .section, .header { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${escapeHtml(title)}</h1>
+    <p>MDL CCTV Monitoring Dashboard · ${escapeHtml(dateLabel)}</p>
+  </div>
+
+  <div class="cards">
+    <div class="card blue">
+      <div class="label">Overall Progress</div>
+      <div class="value">${summary.overall}%</div>
+    </div>
+    <div class="card">
+      <div class="label">Total Work</div>
+      <div class="value">${summary.total}</div>
+    </div>
+    <div class="card green">
+      <div class="label">Completed</div>
+      <div class="value">${summary.completed}</div>
+    </div>
+    <div class="card orange">
+      <div class="label">In Progress</div>
+      <div class="value">${summary.inProgress}</div>
+    </div>
+    <div class="card">
+      <div class="label">Not Started</div>
+      <div class="value">${summary.notStarted}</div>
+    </div>
+    <div class="card blue">
+      <div class="label">Plan Start</div>
+      <div class="value" style="font-size:20px;">${escapeHtml(formatDateDisplay(projectPlanStart) || "-")}</div>
+    </div>
+    <div class="card orange">
+      <div class="label">Plan Finish</div>
+      <div class="value" style="font-size:20px;">${escapeHtml(formatDateDisplay(projectPlanFinish) || "-")}</div>
+    </div>
+    <div class="card purple">
+      <div class="label">Total Project Days</div>
+      <div class="value">${projectDurationDays === "-" ? "-" : `${projectDurationDays} วัน`}</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card blue">
+      <div class="label">CCTV Cameras</div>
+      <div class="value">${cameraStats.total}</div>
+      <div>Online ${cameraStats.online} · Type1 ${cameraStats.type1} · Type2 ${cameraStats.type2}</div>
+    </div>
+    <div class="card purple">
+      <div class="label">RACK Equipment</div>
+      <div class="value">${rackStats.total}</div>
+      <div>Ready ${rackStats.ready} · Type1 ${rackStats.type1} · Type2 ${rackStats.type2}</div>
+    </div>
+    <div class="card orange">
+      <div class="label">CABINET Equipment</div>
+      <div class="value">${cabinetStats.total}</div>
+      <div>Ready ${cabinetStats.ready}</div>
+    </div>
+    <div class="card green">
+      <div class="label">Fiber Optic Progress</div>
+      <div class="value">${fiberStats.overall}%</div>
+      <div>Total ${fiberStats.total} · Completed ${fiberStats.completed} · In Progress ${fiberStats.inProgress}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>รายละเอียดการเข้าทำงาน (${reportType} Work Detail)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Equipment / Location</th>
+          <th>Supervisor</th>
+          <th>Phone</th>
+          <th>Time</th>
+          <th>Work Detail</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>${jobRowsHtml}</tbody>
+    </table>
+  </div>
+
+  <div class="footer">
+    Generated by MDL CCTV Dashboard · ${escapeHtml(new Date().toLocaleString("th-TH"))}
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const fileName = `${reportType.toLowerCase()}-report-${dateKeys[0]}.html`;
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const downloadDailyReport = (dateKey: string) => {
+    downloadWorkReport(
+      "Daily",
+      `Daily Work Report - ${formatDateDisplay(dateKey)}`,
+      [dateKey]
+    );
+  };
+
+  const downloadWeeklyReport = (tuesdayDateKey: string) => {
+    const weekKeys = getWeekDateKeysFromTuesday(tuesdayDateKey);
+
+    downloadWorkReport(
+      "Weekly",
+      `Weekly Work Report - ${formatDateDisplay(weekKeys[0])} ถึง ${formatDateDisplay(weekKeys[6])}`,
+      weekKeys
+    );
+  };
 
 
   return (
@@ -902,6 +1226,7 @@ const DashboardOverview: React.FC = () => {
             setSelectedDate(dateKey);
             setSelectedDayModal(dateKey);
           }}
+          onDownloadWeeklyReport={downloadWeeklyReport}
         />
       )}
 
@@ -912,6 +1237,7 @@ const DashboardOverview: React.FC = () => {
           workPlans={workPlans}
           updateWorkPlan={updateWorkPlan}
           canEdit={canEdit}
+          onDownloadDailyReport={downloadDailyReport}
           onClose={() => setSelectedDayModal(null)}
         />
       )}
@@ -937,10 +1263,12 @@ const MonthCalendarModal = ({
   month,
   onClose,
   onSelectDay,
+  onDownloadWeeklyReport,
 }: {
   month: any;
   onClose: () => void;
   onSelectDay: (dateKey: string) => void;
+  onDownloadWeeklyReport: (dateKey: string) => void;
 }) => {
   if (!month) return null;
 
@@ -998,6 +1326,27 @@ const MonthCalendarModal = ({
                     LIVE WORKING
                   </div>
                 )}
+
+                {day.isTuesday && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onDownloadWeeklyReport(day.key);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onDownloadWeeklyReport(day.key);
+                      }
+                    }}
+                    className="mt-2 block w-full rounded-xl bg-blue-600 px-2 py-1 text-center text-[10px] font-black text-white hover:bg-blue-700"
+                  >
+                    Download Weekly Report
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -1013,6 +1362,7 @@ const DayWorkModal = ({
   workPlans,
   updateWorkPlan,
   canEdit,
+  onDownloadDailyReport,
   onClose,
 }: {
   dateKey: string;
@@ -1020,6 +1370,7 @@ const DayWorkModal = ({
   workPlans: Record<string, any>;
   updateWorkPlan: (id: string, changes: any) => void;
   canEdit: boolean;
+  onDownloadDailyReport: (dateKey: string) => void;
   onClose: () => void;
 }) => {
   const [selectedEquipmentId, setSelectedEquipmentId] = useState(
@@ -1196,13 +1547,23 @@ const DayWorkModal = ({
                 เข้าทำงานวันนี้ / On Site
               </label>
 
-              <button
-                type="button"
-                onClick={() => setShowDayJobsModal(true)}
-                className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white hover:bg-slate-700 transition"
-              >
-                ดูงานทั้งหมดของวันนี้
-              </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDayJobsModal(true)}
+                  className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white hover:bg-slate-700 transition"
+                >
+                  ดูงานทั้งหมดของวันนี้
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onDownloadDailyReport(dateKey)}
+                  className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700 transition"
+                >
+                  Download Daily Report
+                </button>
+              </div>
             </>
           )}
         </div>
