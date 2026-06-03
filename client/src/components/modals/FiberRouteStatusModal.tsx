@@ -269,7 +269,7 @@ const FiberRouteStatusModal: React.FC<Props> = ({
 
       {previewImage && (
         <div
-          className="fixed inset-0 z-[999999] bg-black flex items-center justify-center cursor-zoom-out"
+          className="fixed inset-0 z-[999999] bg-black flex items-center justify-center"
           onClick={() => setPreviewImage(null)}
         >
           <button
@@ -284,7 +284,7 @@ const FiberRouteStatusModal: React.FC<Props> = ({
             src={previewImage}
             alt="preview"
             onClick={(e) => e.stopPropagation()}
-            className="w-screen h-screen object-contain bg-black"
+            className="max-w-[98vw] max-h-[98vh] object-contain"
           />
         </div>
       )}
