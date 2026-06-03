@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
@@ -28,12 +28,25 @@ const FiberRouteStatusModal: React.FC<Props> = ({
   const progress = Number(route.progress || 0);
   const direction = route.progressDirection || "start";
 
-  const photos = [
-    route.photo1 || "",
-    route.photo2 || "",
-    route.photo3 || "",
-    route.photo4 || "",
-  ];
+  const [localPhotos, setLocalPhotos] = useState<string[]>([
+    route?.photo1 || "",
+    route?.photo2 || "",
+    route?.photo3 || "",
+    route?.photo4 || "",
+  ]);
+
+  useEffect(() => {
+    if (!route?.id) return;
+
+    setLocalPhotos([
+      route.photo1 || "",
+      route.photo2 || "",
+      route.photo3 || "",
+      route.photo4 || "",
+    ]);
+  }, [route?.id]);
+
+  const photos = localPhotos;
 
   const filledPhotos = photos.filter(Boolean).length;
 
@@ -43,8 +56,16 @@ const FiberRouteStatusModal: React.FC<Props> = ({
     const reader = new FileReader();
 
     reader.onloadend = () => {
+      const photoData = String(reader.result || "");
+
+      setLocalPhotos((prev) => {
+        const next = [...prev];
+        next[index] = photoData;
+        return next;
+      });
+
       onUpdate({
-        [`photo${index + 1}`]: reader.result,
+        [`photo${index + 1}`]: photoData,
       });
     };
 
@@ -53,6 +74,12 @@ const FiberRouteStatusModal: React.FC<Props> = ({
 
   const deletePhoto = (index: number) => {
     if (!canEditFiber) return;
+
+    setLocalPhotos((prev) => {
+      const next = [...prev];
+      next[index] = "";
+      return next;
+    });
 
     onUpdate({
       [`photo${index + 1}`]: "",
@@ -192,7 +219,10 @@ const FiberRouteStatusModal: React.FC<Props> = ({
                           disabled={!canEditFiber}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (canEditFiber) deletePhoto(idx);
+
+                            if (canEditFiber) {
+                              deletePhoto(idx);
+                            }
                           }}
                           className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-600 text-white font-bold z-10"
                         >
@@ -202,9 +232,10 @@ const FiberRouteStatusModal: React.FC<Props> = ({
                         <img
                           src={photos[idx]}
                           alt=""
-                          onClick={() =>
-                            setPreviewImage(String(photos[idx]))
-                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewImage(String(photos[idx]));
+                          }}
                           className="rounded-lg w-full h-36 object-cover border cursor-zoom-in hover:ring-2 hover:ring-red-400"
                         />
                       </div>
@@ -218,8 +249,12 @@ const FiberRouteStatusModal: React.FC<Props> = ({
                           type="file"
                           accept="image/*"
                           disabled={!canEditFiber}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
                           onClick={(e) => e.stopPropagation()}
                           onChange={(e) => {
+                            e.stopPropagation();
+
                             const file = e.target.files?.[0];
 
                             if (file) {
@@ -227,7 +262,7 @@ const FiberRouteStatusModal: React.FC<Props> = ({
                               e.target.value = "";
                             }
                           }}
-                          className="w-full text-sm"
+                          className="w-full text-sm cursor-pointer"
                         />
                       </>
                     )}
