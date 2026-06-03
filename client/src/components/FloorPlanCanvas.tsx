@@ -36,19 +36,35 @@ const FloorPlanCanvas: React.FC<Props> = ({
   const floorPlan = useFloorPlan();
   const { user } = useAuth();
 
-  const savedUserRole =
+  const savedUser =
     typeof window !== "undefined"
-      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")?.role
-      : "";
+      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")
+      : {};
 
   const userRole = String(
-    user?.role || savedUserRole || ""
+    user?.role || savedUser?.role || ""
   )
     .trim()
     .toLowerCase();
-  const effectiveCanEditProgress = userRole === "admin" || userRole === "staff" || userRole.includes("staff");
+
+  const userName = String(
+    user?.username || savedUser?.username || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  const isAdminUser =
+    userRole === "admin" ||
+    userRole.includes("admin") ||
+    userName.includes("admin");
+
+  const isStaffUser =
+    userRole === "staff" ||
+    userRole.includes("staff") ||
+    userName.includes("staff");
+  const effectiveCanEditProgress = isAdminUser || isStaffUser;
   const effectiveCanManageFiber = canManageFiber || effectiveCanEditProgress;
-  const effectiveCanManageLayout = canManageLayout || userRole === "admin";
+  const effectiveCanManageLayout = canManageLayout || isAdminUser;
 
   const {
     cameras,
