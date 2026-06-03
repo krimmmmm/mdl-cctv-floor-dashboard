@@ -10,105 +10,6 @@ interface RackStatusModalProps {
   onEditPosition?: () => void;
 }
 
-const getStoredUserRoleInfo = () => {
-  if (typeof window === "undefined") {
-    return {
-      role: "",
-      username: "",
-    };
-  }
-
-  const keysToCheck = [
-    "mdl_user",
-    "currentUser",
-    "user",
-    "auth_user",
-    "authUser",
-    "mdl_current_user",
-    "mdl-auth-user",
-  ];
-
-  const allValues = [
-    ...keysToCheck.map((key) => localStorage.getItem(key)),
-    ...Array.from({ length: localStorage.length }, (_, index) => {
-      const key = localStorage.key(index);
-      return key ? localStorage.getItem(key) : "";
-    }),
-  ].filter(Boolean);
-
-  for (const rawValue of allValues) {
-    try {
-      const parsed = JSON.parse(String(rawValue));
-
-      const candidates = Array.isArray(parsed)
-        ? parsed
-        : [
-            parsed,
-            parsed?.user,
-            parsed?.currentUser,
-            parsed?.session?.user,
-            parsed?.state?.user,
-            parsed?.state?.currentUser,
-          ];
-
-      for (const item of candidates) {
-        if (!item || typeof item !== "object") continue;
-
-        const role = String(item.role || item.userRole || item.type || "").toLowerCase();
-        const username = String(item.username || item.name || item.email || "").toLowerCase();
-
-        if (role || username) {
-          return {
-            role,
-            username,
-          };
-        }
-      }
-    } catch {
-      // Ignore non-JSON localStorage values
-    }
-  }
-
-  return {
-    role: "",
-    username: "",
-  };
-};
-
-const canUserEditProgress = (user: any) => {
-  const stored = getStoredUserRoleInfo();
-
-  const role = String(user?.role || stored.role || "").trim().toLowerCase();
-  const username = String(user?.username || stored.username || "").trim().toLowerCase();
-
-  return (
-    role === "admin" ||
-    role === "staff" ||
-    role.includes("admin") ||
-    role.includes("staff") ||
-    username.includes("admin") ||
-    username.includes("staff")
-  );
-};
-
-const isUserAdmin = (user: any) => {
-  const stored = getStoredUserRoleInfo();
-
-  const role = String(user?.role || stored.role || "").trim().toLowerCase();
-  const username = String(user?.username || stored.username || "").trim().toLowerCase();
-
-  return role === "admin" || role.includes("admin") || username.includes("admin");
-};
-
-const canUserToggleUrgent = (user: any) => {
-  const stored = getStoredUserRoleInfo();
-
-  const role = String(user?.role || stored.role || "customer").trim().toLowerCase();
-
-  return canUserEditProgress(user) || role === "customer";
-};
-
-
 const RackStatusModal: React.FC<RackStatusModalProps> = ({
   rack,
   isOpen,
@@ -125,11 +26,37 @@ const RackStatusModal: React.FC<RackStatusModalProps> = ({
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { user } = useAuth();
-  const canEditProgress = canUserEditProgress(user);
-  const canManageLayout = isUserAdmin(user);
-  const canToggleUrgent = canUserToggleUrgent(user);
+  const savedUser =
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")
+      : {};
 
-if (!isOpen || !rack) return null;
+  const userRole = String(
+    user?.role || savedUser?.role || "customer"
+  )
+    .trim()
+    .toLowerCase();
+
+  const userName = String(
+    user?.username || savedUser?.username || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  const isAdminUser =
+    userRole === "admin" ||
+    userRole.includes("admin") ||
+    userName.includes("admin");
+
+  const isStaffUser =
+    userRole === "staff" ||
+    userRole.includes("staff") ||
+    userName.includes("staff");
+  const canEditProgress = isAdminUser || isStaffUser;
+  const canManageLayout = isAdminUser;
+  const canToggleUrgent = isAdminUser || isStaffUser || userRole === "customer";
+
+  if (!isOpen || !rack) return null;
 
   const steps = [
     {
@@ -656,7 +583,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#fff",
     padding: "9px 16px",
     borderRadius: 8,
-    cursor: "pointer",
+    cursor: "default",
   },
   photoGrid: {
     display: "grid",
@@ -672,7 +599,7 @@ const styles: Record<string, React.CSSProperties> = {
     height: 180,
     objectFit: "cover",
     borderRadius: 12,
-    cursor: "pointer",
+    cursor: "default",
   },
   deleteButton: {
     position: "absolute",
@@ -685,7 +612,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#ef4444",
     color: "#fff",
     fontWeight: 900,
-    cursor: "pointer",
+    cursor: "default",
   },
   emptyPhoto: {
     color: "#64748b",
@@ -733,7 +660,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid #334155",
     borderRadius: 10,
     padding: 12,
-    cursor: "pointer",
+    cursor: "default",
   },
   previewOverlay: {
     position: "fixed",
@@ -743,7 +670,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    cursor: "pointer",
+    cursor: "default",
   },
   previewImage: {
     maxWidth: "98vw",
