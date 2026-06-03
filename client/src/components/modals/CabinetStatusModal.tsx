@@ -7,9 +7,7 @@ interface CabinetStatusModalProps {
   cabinet: Cabinet;
   isOpen: boolean;
   onClose: () => void;
-  onEditPosition?: (e?: React.MouseEvent) => void;
-  canEditProgress?: boolean;
-  canManageLayout?: boolean;
+  onEditPosition?: () => void;
 }
 
 const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
@@ -17,8 +15,6 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
   isOpen,
   onClose,
   onEditPosition,
-  canEditProgress: canEditProgressFromParent,
-  canManageLayout: canManageLayoutFromParent,
 }) => {
   const {
     updateCabinetStatus,
@@ -51,14 +47,11 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
     userRole === "staff" ||
     userName.includes("staff");
 
-  // Home/FloorPlanCanvas is the source of truth for permissions.
-  // Admin + Staff can edit progress/photos/status.
-  const canEditProgress =
-    canEditProgressFromParent ?? (isAdminUser || isStaffUser);
+  // Admin + Staff can edit progress/photos/status/urgent.
+  const canEditProgress = isAdminUser || isStaffUser;
 
   // Move/Delete equipment remains Admin only.
-  const canManageLayout =
-    canManageLayoutFromParent ?? isAdminUser;
+  const canManageLayout = isAdminUser;
 
   const canToggleUrgent = isAdminUser || isStaffUser || userRole === "customer";
 
