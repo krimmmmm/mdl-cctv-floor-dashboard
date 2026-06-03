@@ -67,9 +67,14 @@ const FloorPlanCanvas: React.FC<Props> = ({
   const effectiveCanManageFiber =
     canManageFiber || isAdminUser || isStaffOnlyUser;
 
-  // Equipment Control add/remove and equipment move/delete remain Admin only.
+  // Layout / move / delete can still follow Admin-equivalent logic.
   const effectiveCanManageLayout =
     canManageLayout || isAdminUser;
+
+  // Equipment Control add/remove count must be real Admin only.
+  // Home.tsx sends canManageLayout=true only for role === "admin".
+  const effectiveCanManageEquipmentControl =
+    canManageLayout;
 
   // Progress / Status / Photo / Fiber work can be edited by Admin + staffonly.
   const effectiveCanEditProgress =
@@ -436,7 +441,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   }, [cabinets]);
 
   const handleCameraTypeCountChange = (cameraType: string, value: number) => {
-    if (!effectiveCanManageLayout) return;
+    if (!effectiveCanManageEquipmentControl) return;
     const safeValue = Math.max(0, value);
     if (cameraType === 'type1') setCameraType1Count(safeValue);
     else setCameraType2Count(safeValue);
@@ -444,7 +449,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   };
 
   const handleRackTypeCountChange = (rackType: string, value: number) => {
-    if (!effectiveCanManageLayout) return;
+    if (!effectiveCanManageEquipmentControl) return;
     const safeValue = Math.max(0, value);
     if (rackType === 'type1') setRackType1Count(safeValue);
     else setRackType2Count(safeValue);
@@ -464,7 +469,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
   };
 
   const handleCabinetCountChange = (value: number) => {
-    if (!effectiveCanManageLayout) return;
+    if (!effectiveCanManageEquipmentControl) return;
     const safeValue = Math.max(0, value);
     setCabinetCountInput(safeValue);
     if (typeof setCabinetCount === 'function') setCabinetCount(safeValue);
@@ -687,7 +692,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
       onContextMenu={(e) => e.preventDefault()}
       style={{ touchAction: 'none' }}
     >
-      {effectiveCanManageLayout && (
+      {effectiveCanManageEquipmentControl && (
         <div className="absolute top-4 left-4 z-30 bg-white rounded-2xl shadow-2xl border border-gray-200 p-5 w-80">
           <div className="text-xl font-bold text-gray-800 mb-5">Equipment Control</div>
 
@@ -780,13 +785,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
         </div>
       )}
 
-      {!effectiveCanManageLayout && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 rounded-xl bg-blue-50 border border-blue-200 px-4 py-2 shadow-lg">
-          <span className="text-blue-700 text-sm font-semibold">
-            Equipment Control Locked
-          </span>
-        </div>
-      )}
+
 
       <svg
         ref={svgRef}
