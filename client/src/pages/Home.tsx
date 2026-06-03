@@ -18,10 +18,10 @@ export default function Home() {
   const role = user?.role || 'customer';
   const isAdmin = role === 'admin' || role === 'newstaff';
   const isStaffOnly = role === 'staffonly';
-  const canViewFloorPlan = role === 'admin' || role === 'staffonly' || role === 'staff' || role === 'customer';
+  const canViewFloorPlan = role === 'admin' || role === 'newstaff' || role === 'staffonly' || role === 'staff' || role === 'customer';
   const canManageLayout = isAdmin;
-  const canManageFiber = role === 'admin' || role === 'staffonly';
-  const canEditProgress = role === 'admin' || role === 'staffonly';
+  const canManageFiber = role === 'admin' || role === 'newstaff' || role === 'staffonly';
+  const canEditProgress = role === 'admin' || role === 'newstaff' || role === 'staffonly';
   const isCustomer = role === 'customer';
 
   const handleResetFloorPlanView = () => {
