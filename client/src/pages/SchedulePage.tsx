@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 
 type TaskStatus = "planned" | "risk" | "done" | "active";
@@ -229,6 +229,21 @@ const defaultTasks: ScheduleTask[] = [
   },
 ];
 
+const SCHEDULE_MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FRAME_WEEKS = 24;
 const TOTAL_DAYS = FRAME_WEEKS * 7;
@@ -298,6 +313,13 @@ const SchedulePage: React.FC = () => {
     originalOffset: number;
   } | null>(null);
 
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({
+    x: 0,
+    scrollLeft: 0,
+  });
+
   const todayKey = getLocalDateKey(new Date());
   const todayOffset = diffDays(projectStart, todayKey);
   const projectFinish = addDays(projectStart, TOTAL_DAYS - 1);
@@ -307,12 +329,19 @@ const SchedulePage: React.FC = () => {
   const risk = tasks.filter((task) => task.status === "risk").length;
 
   const monthHeaders = useMemo(() => {
-    return Array.from({ length: 6 }, (_, index) => ({
-      label: `Month ${index + 1}`,
-      left: index * 4 * 7 * DAY_WIDTH,
-      width: 4 * 7 * DAY_WIDTH,
-    }));
-  }, []);
+    const baseDate = new Date(`${projectStart}T00:00:00`);
+
+    return Array.from({ length: 6 }, (_, index) => {
+      const monthDate = new Date(baseDate);
+      monthDate.setMonth(baseDate.getMonth() + index);
+
+      return {
+        label: `${SCHEDULE_MONTH_NAMES[monthDate.getMonth()]} ${monthDate.getFullYear()}`,
+        left: index * 4 * 7 * DAY_WIDTH,
+        width: 4 * 7 * DAY_WIDTH,
+      };
+    });
+  }, [projectStart]);
 
   const weekHeaders = useMemo(() => {
     return Array.from({ length: FRAME_WEEKS }, (_, index) => ({
@@ -359,15 +388,39 @@ const SchedulePage: React.FC = () => {
   };
 
   const onMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!dragging) return;
+    if (dragging) {
+      const deltaDays = Math.round((event.clientX - dragging.startX) / DAY_WIDTH);
+      updateTask(dragging.id, {
+        startOffsetDays: dragging.originalOffset + deltaDays,
+      });
 
-    const deltaDays = Math.round((event.clientX - dragging.startX) / DAY_WIDTH);
-    updateTask(dragging.id, {
-      startOffsetDays: dragging.originalOffset + deltaDays,
-    });
+      return;
+    }
+
+    if (isPanning && scrollRef.current) {
+      const deltaX = event.clientX - panStartRef.current.x;
+      scrollRef.current.scrollLeft = panStartRef.current.scrollLeft - deltaX;
+    }
   };
 
-  const onMouseUp = () => setDragging(null);
+  const onMouseDownToPan = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    const blockedSelector =
+      "input, button, a, select, textarea, [data-gantt-bar='true']";
+
+    if (target.closest(blockedSelector)) return;
+
+    setIsPanning(true);
+    panStartRef.current = {
+      x: event.clientX,
+      scrollLeft: scrollRef.current?.scrollLeft || 0,
+    };
+  };
+
+  const onMouseUp = () => {
+    setDragging(null);
+    setIsPanning(false);
+  };
 
   const chartWidth = TOTAL_DAYS * DAY_WIDTH;
   const chartHeight = tasks.length * ROW_HEIGHT;
@@ -472,15 +525,19 @@ const SchedulePage: React.FC = () => {
           </div>
 
           <div
-            className="overflow-auto"
+            ref={scrollRef}
+            className={`max-h-[68vh] overflow-auto select-none ${
+              isPanning ? "cursor-grabbing" : "cursor-grab"
+            }`}
+            onMouseDown={onMouseDownToPan}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
             onMouseLeave={onMouseUp}
           >
             <div style={{ minWidth: LEFT_TABLE_WIDTH + chartWidth }}>
-              <div className="sticky top-0 z-30 flex border-b border-slate-200 bg-white">
+              <div className="sticky top-0 z-50 flex border-b border-slate-200 bg-white">
                 <div
-                  className="grid shrink-0 grid-cols-[70px_1fr_160px_130px_120px] border-r border-slate-200 bg-lime-400 text-sm font-black text-slate-900"
+                  className="sticky left-0 z-40 grid shrink-0 grid-cols-[70px_1fr_160px_130px_120px] border-r border-slate-200 bg-lime-400 text-sm font-black text-slate-900 shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
                   style={{ width: LEFT_TABLE_WIDTH }}
                 >
                   <div className="flex items-center justify-center border-r border-lime-700 p-2">No.</div>
@@ -522,7 +579,7 @@ const SchedulePage: React.FC = () => {
               </div>
 
               <div className="flex">
-                <div className="shrink-0 border-r border-slate-200" style={{ width: LEFT_TABLE_WIDTH }}>
+                <div className="sticky left-0 z-20 shrink-0 border-r border-slate-200 bg-white shadow-[8px_0_14px_rgba(15,23,42,0.08)]" style={{ width: LEFT_TABLE_WIDTH }}>
                   {tasks.map((task) => (
                     <div
                       key={task.id}
@@ -614,7 +671,9 @@ const SchedulePage: React.FC = () => {
                     return (
                       <div key={task.id}>
                         <div
+                          data-gantt-bar="true"
                           onMouseDown={(event) => {
+                            event.stopPropagation();
                             setDragging({
                               id: task.id,
                               startX: event.clientX,
