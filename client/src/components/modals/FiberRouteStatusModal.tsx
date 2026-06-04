@@ -99,6 +99,12 @@ if (!isOpen) return null;
         // This prevents old uploaded photos from being cleared
         // if the parent update function replaces the route object.
         onUpdate({
+          points: route.points || [],
+          progress: route.progress || 0,
+          progressDirection: route.progressDirection || "start",
+          color: route.color || "#ef4444",
+          label: route.label || route.name || "Fiber Route",
+          status: route.status || "active",
           photo1: next[0] || "",
           photo2: next[1] || "",
           photo3: next[2] || "",
@@ -122,6 +128,12 @@ if (!isOpen) return null;
       // Send all photo fields every time.
       // This keeps the other existing photos safe.
       onUpdate({
+        points: route.points || [],
+        progress: route.progress || 0,
+        progressDirection: route.progressDirection || "start",
+        color: route.color || "#ef4444",
+        label: route.label || route.name || "Fiber Route",
+        status: route.status || "active",
         photo1: next[0] || "",
         photo2: next[1] || "",
         photo3: next[2] || "",
