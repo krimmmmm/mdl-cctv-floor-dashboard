@@ -782,6 +782,13 @@ const DashboardOverview: React.FC = () => {
           )}
 
           <Link
+            href="/schedule"
+            className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:bg-emerald-500 transition"
+          >
+            Smart Schedule
+          </Link>
+
+          <Link
             href="/floorplan"
             className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold shadow-sm hover:bg-blue-500 transition"
           >
