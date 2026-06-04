@@ -11,6 +11,7 @@ import Home from "./pages/Home";
 import DashboardOverview from "./pages/DashboardOverview";
 import Login from "./pages/Login";
 import AdminUsers from "./pages/AdminUsers";
+import SchedulePage from "./pages/SchedulePage";
 
 function Router() {
   return (
@@ -36,6 +37,12 @@ function Router() {
       <ProtectedRoute
         path="/floorplan"
         component={Home}
+        allowedRoles={["admin", "newstaff", "staffonly", "staff", "customer"]}
+      />
+
+      <ProtectedRoute
+        path="/schedule"
+        component={SchedulePage}
         allowedRoles={["admin", "newstaff", "staffonly", "staff", "customer"]}
       />
 
