@@ -323,10 +323,34 @@ const DashboardOverview: React.FC = () => {
       progress: getProgress(item, "fiber"),
     }));
 
-    return [...cameraRows, ...rackRows, ...cabinetRows, ...fiberRows].map((row) => ({
-      ...row,
-      statusLabel: getStatus(row.progress),
-    }));
+    const typeOrder: Record<string, number> = {
+      camera: 1,
+      rack: 2,
+      cabinet: 3,
+      fiber: 4,
+    };
+
+    const getSortLabel = (row: any) =>
+      String(row.name || row.label || row.id || "");
+
+    return [...cameraRows, ...rackRows, ...cabinetRows, ...fiberRows]
+      .map((row) => ({
+        ...row,
+        statusLabel: getStatus(row.progress),
+      }))
+      .sort((a, b) => {
+        const orderA = typeOrder[a.typeKey] || 999;
+        const orderB = typeOrder[b.typeKey] || 999;
+
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+
+        return getSortLabel(a).localeCompare(getSortLabel(b), undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+      });
   }, [safeCameras, safeRacks, safeCabinets, safeFiberRoutes]);
 
   const summary = useMemo(() => {
@@ -1863,48 +1887,17 @@ const OnlineUsersBox = ({
 
   const todayKey = getDateKeyFromDate(new Date());
 
-  const getSessionDateKey = (value?: string) => {
-    if (!value) return "";
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return String(value).slice(0, 10);
-    }
-
-    return getDateKeyFromDate(date);
-  };
-
-  // Login Today = unique users who logged in today.
-  const loginTodayUsernames = new Set(
-    (loginSessions || [])
-      .filter((item: any) => getSessionDateKey(item.loginAt) === todayKey)
-      .map((item: any) => item.username)
-      .filter(Boolean)
-  );
-
-  // Online = unique users who are still online from today's login sessions.
-  const onlineTodayUsernames = new Set(
-    (loginSessions || [])
-      .filter(
-        (item: any) =>
-          Boolean(item.isOnline) &&
-          getSessionDateKey(item.loginAt) === todayKey
-      )
-      .map((item: any) => item.username)
-      .filter(Boolean)
+  const loginToday = (loginSessions || []).filter(
+    (item: any) => String(item.loginAt || "").slice(0, 10) === todayKey
   );
 
   const isOnline = (username: string) =>
-    onlineTodayUsernames.has(username);
+    (onlineUsers || []).some((u: any) => u.username === username);
 
   const getLastLogin = (username: string) => {
-    const found = [...(loginSessions || [])]
-      .filter((session: any) => session.username === username)
-      .sort(
-        (a: any, b: any) =>
-          new Date(b.loginAt || 0).getTime() -
-          new Date(a.loginAt || 0).getTime()
-      )[0];
+    const found = (loginSessions || []).find(
+      (session: any) => session.username === username
+    );
 
     if (!found?.loginAt) return "-";
 
@@ -1927,11 +1920,11 @@ const OnlineUsersBox = ({
 
           <div className="flex items-center gap-2">
             <div className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-black">
-              Login Today {loginTodayUsernames.size}
+              Login Today {loginToday.length}
             </div>
 
             <div className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-black">
-              Online {onlineTodayUsernames.size}
+              Online {(onlineUsers || []).length}
             </div>
           </div>
         </div>
@@ -1952,7 +1945,7 @@ const OnlineUsersBox = ({
               </div>
 
               <span className="rounded-full bg-green-600 px-3 py-1 text-xs font-black text-white animate-pulse">
-                ONLINE TODAY
+                ONLINE
               </span>
             </div>
           </div>
