@@ -246,13 +246,14 @@ const SCHEDULE_MONTH_NAMES = [
 ];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const FRAME_WEEKS = 24;
-const TOTAL_DAYS = FRAME_WEEKS * 7;
+const FRAME_DAYS = 120;
+const TOTAL_DAYS = FRAME_DAYS;
 const SCHEDULE_DB_KEY = "__schedule_tasks__";
 const PROJECT_PLAN_DB_KEY = "__project_plan__";
 const ROW_HEIGHT = 42;
-const LEFT_TABLE_WIDTH = 720;
-const DAY_WIDTH = 16;
+const LEFT_TABLE_WIDTH = 900;
+const DAY_WIDTH = 18;
+const NOTE_WIDTH = 260;
 
 const getLocalDateKey = (date: Date) => {
   const y = date.getFullYear();
@@ -278,6 +279,13 @@ const formatThaiDate = (dateKey: string) => {
 
   const [year, month, day] = dateKey.split("-");
   return `${day}/${month}/${year}`;
+};
+
+const formatShortDate = (dateKey: string) => {
+  if (!dateKey) return "-";
+
+  const [, month, day] = dateKey.split("-");
+  return `${day}/${month}`;
 };
 
 const DatePickerButton = ({
@@ -370,7 +378,6 @@ const SchedulePage: React.FC = () => {
   });
 
   const todayKey = getLocalDateKey(new Date());
-  const todayOffset = diffDays(projectStart, todayKey);
 
   const latestTaskEndOffset = tasks.reduce(
     (max, task) => Math.max(max, task.startOffsetDays + task.durationDays - 1),
@@ -378,33 +385,50 @@ const SchedulePage: React.FC = () => {
   );
 
   const projectFinish = addDays(projectStart, latestTaskEndOffset);
+  const chartStart = diffDays(todayKey, projectStart) > 0 ? projectStart : todayKey;
+  const chartDays = Math.max(TOTAL_DAYS, diffDays(chartStart, projectFinish) + 15);
+  const projectStartOffset = diffDays(chartStart, projectStart);
+  const todayOffset = diffDays(chartStart, todayKey);
 
   const completed = tasks.filter((task) => task.status === "done").length;
   const active = tasks.filter((task) => task.status === "active").length;
   const risk = tasks.filter((task) => task.status === "risk").length;
 
-  const monthHeaders = useMemo(() => {
-    const baseDate = new Date(`${projectStart}T00:00:00`);
-
-    return Array.from({ length: 6 }, (_, index) => {
-      const monthDate = new Date(baseDate);
-      monthDate.setMonth(baseDate.getMonth() + index);
+  const dayHeaders = useMemo(() => {
+    return Array.from({ length: chartDays }, (_, index) => {
+      const dateKey = addDays(chartStart, index);
+      const dayDate = new Date(`${dateKey}T00:00:00`);
 
       return {
-        label: `${SCHEDULE_MONTH_NAMES[monthDate.getMonth()]} ${monthDate.getFullYear()}`,
-        left: index * 4 * 7 * DAY_WIDTH,
-        width: 4 * 7 * DAY_WIDTH,
+        key: dateKey,
+        day: dayDate.getDate(),
+        left: index * DAY_WIDTH,
+        width: DAY_WIDTH,
       };
     });
-  }, [projectStart]);
+  }, [chartDays, chartStart]);
 
-  const weekHeaders = useMemo(() => {
-    return Array.from({ length: FRAME_WEEKS }, (_, index) => ({
-      week: index + 1,
-      left: index * 7 * DAY_WIDTH,
-      width: 7 * DAY_WIDTH,
-    }));
-  }, []);
+  const monthHeaders = useMemo(() => {
+    const groups: { label: string; left: number; width: number }[] = [];
+
+    dayHeaders.forEach((day, index) => {
+      const date = new Date(`${day.key}T00:00:00`);
+      const label = `${SCHEDULE_MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+      const last = groups[groups.length - 1];
+
+      if (last && last.label === label) {
+        last.width += DAY_WIDTH;
+      } else {
+        groups.push({
+          label,
+          left: index * DAY_WIDTH,
+          width: DAY_WIDTH,
+        });
+      }
+    });
+
+    return groups;
+  }, [dayHeaders]);
 
   const persistTasks = (nextTasks: ScheduleTask[]) => {
     setTasks(nextTasks);
@@ -537,7 +561,8 @@ const SchedulePage: React.FC = () => {
     setIsPanning(false);
   };
 
-  const chartWidth = TOTAL_DAYS * DAY_WIDTH;
+  const chartWidth = chartDays * DAY_WIDTH + NOTE_WIDTH;
+  const chartTimelineWidth = chartDays * DAY_WIDTH;
   const chartHeight = tasks.length * ROW_HEIGHT;
 
   return (
@@ -632,7 +657,7 @@ const SchedulePage: React.FC = () => {
               </div>
 
               <div className="text-right text-sm font-bold text-slate-200">
-                <div>Frame: 6 Months / 24 Weeks</div>
+                <div>Frame: 120 Days</div>
                 <div className="mt-1 text-xs text-lime-200">
                   Start {formatThaiDate(projectStart)} · Finish {formatThaiDate(projectFinish)}
                 </div>
@@ -653,22 +678,23 @@ const SchedulePage: React.FC = () => {
             <div style={{ minWidth: LEFT_TABLE_WIDTH + chartWidth }}>
               <div className="sticky top-0 z-50 flex border-b border-slate-200 bg-white">
                 <div
-                  className="sticky left-0 z-40 grid shrink-0 grid-cols-[70px_1fr_160px_130px_120px] border-r border-slate-200 bg-lime-400 text-sm font-black text-slate-900 shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
+                  className="sticky left-0 z-40 grid shrink-0 grid-cols-[70px_1fr_160px_130px_120px_120px] border-r border-slate-200 bg-lime-400 text-sm font-black text-slate-900 shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
                   style={{ width: LEFT_TABLE_WIDTH, minHeight: 132 }}
                 >
                   <div className="flex items-center justify-center border-r border-lime-700 p-2">No.</div>
                   <div className="flex items-center justify-center border-r border-lime-700 p-2">Task</div>
                   <div className="flex items-center justify-center border-r border-lime-700 p-2">Task Owner</div>
                   <div className="flex items-center justify-center border-r border-lime-700 p-2 text-center">Duration<br />Days</div>
-                  <div className="flex items-center justify-center p-2 text-center">Start<br />Offset</div>
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2 text-center">Start<br />Offset</div>
+                  <div className="flex items-center justify-center p-2 text-center">Finish<br />Date</div>
                 </div>
 
                 <div className="relative shrink-0" style={{ width: chartWidth }}>
                   <div className="h-8 border-b border-emerald-900 bg-emerald-500 text-center text-sm font-black leading-8 text-slate-900">
-                    The Frame (Week)
+                    The Frame (Day)
                   </div>
 
-                  <div className="relative h-8 border-b border-slate-300 bg-lime-300">
+                  <div className="relative h-8 border-b border-slate-300 bg-lime-300" style={{ width: chartTimelineWidth }}>
                     {monthHeaders.map((month) => (
                       <div
                         key={month.label}
@@ -680,24 +706,28 @@ const SchedulePage: React.FC = () => {
                     ))}
                   </div>
 
-                  <div className="relative h-8 bg-lime-300">
-                    {weekHeaders.map((week) => (
+                  <div className="relative h-8 bg-lime-300" style={{ width: chartTimelineWidth }}>
+                    {dayHeaders.map((day) => (
                       <div
-                        key={week.week}
-                        className="absolute top-0 flex h-8 items-center justify-center border-r border-lime-900 text-xs font-bold"
-                        style={{ left: week.left, width: week.width }}
+                        key={day.key}
+                        className="absolute top-0 flex h-8 items-center justify-center border-r border-lime-900 text-[10px] font-bold"
+                        style={{ left: day.left, width: day.width }}
+                        title={formatThaiDate(day.key)}
                       >
-                        {week.week}
+                        {day.day}
                       </div>
                     ))}
                   </div>
 
                   <div className="relative h-9 border-t border-lime-900 bg-white">
-                    <div className="absolute left-2 top-1 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-black text-white">
+                    <div
+                      className="absolute top-1 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-black text-white"
+                      style={{ left: projectStartOffset * DAY_WIDTH + 8 }}
+                    >
                       Start {formatThaiDate(projectStart)}
                     </div>
 
-                    {todayOffset >= 0 && todayOffset <= TOTAL_DAYS && (
+                    {todayOffset >= 0 && todayOffset <= chartDays && (
                       <div
                         className="absolute top-0 z-40 h-9 border-l-4 border-red-600 animate-pulse"
                         style={{ left: todayOffset * DAY_WIDTH }}
@@ -708,7 +738,10 @@ const SchedulePage: React.FC = () => {
                       </div>
                     )}
 
-                    <div className="absolute right-2 top-1 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-black text-white">
+                    <div
+                      className="absolute top-1 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-black text-white"
+                      style={{ left: diffDays(chartStart, projectFinish) * DAY_WIDTH + 8 }}
+                    >
                       Finish {formatThaiDate(projectFinish)}
                     </div>
                   </div>
@@ -720,7 +753,7 @@ const SchedulePage: React.FC = () => {
                   {tasks.map((task) => (
                     <div
                       key={task.id}
-                      className={`grid grid-cols-[70px_1fr_160px_130px_120px] border-b border-slate-200 text-sm ${
+                      className={`grid grid-cols-[70px_1fr_160px_130px_120px_120px] border-b border-slate-200 text-sm ${
                         task.isGroup ? "bg-slate-50 font-black" : "bg-white"
                       }`}
                       style={{ height: ROW_HEIGHT }}
@@ -755,7 +788,7 @@ const SchedulePage: React.FC = () => {
                         />
                       </div>
 
-                      <div className="flex items-center justify-center px-2">
+                      <div className="flex items-center justify-center border-r border-slate-200 px-2">
                         <input
                           type="number"
                           value={task.startOffsetDays}
@@ -768,16 +801,20 @@ const SchedulePage: React.FC = () => {
                           className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-center font-black"
                         />
                       </div>
+
+                      <div className="flex items-center justify-center px-2 text-xs font-black">
+                        {formatThaiDate(addDays(projectStart, task.startOffsetDays + task.durationDays - 1))}
+                      </div>
                     </div>
                   ))}
                 </div>
 
                 <div className="relative shrink-0 bg-white" style={{ width: chartWidth, height: chartHeight }}>
-                  {weekHeaders.map((week) => (
+                  {dayHeaders.map((day) => (
                     <div
-                      key={week.week}
-                      className="absolute top-0 h-full border-r border-slate-200"
-                      style={{ left: week.left, width: week.width }}
+                      key={day.key}
+                      className="absolute top-0 h-full border-r border-slate-100"
+                      style={{ left: day.left, width: day.width }}
                     />
                   ))}
 
@@ -789,7 +826,7 @@ const SchedulePage: React.FC = () => {
                     />
                   ))}
 
-                  {todayOffset >= 0 && todayOffset <= TOTAL_DAYS && (
+                  {todayOffset >= 0 && todayOffset <= chartDays && (
                     <div
                       className="absolute top-0 z-30 h-full border-l-4 border-red-600 animate-pulse"
                       style={{ left: todayOffset * DAY_WIDTH }}
@@ -801,7 +838,9 @@ const SchedulePage: React.FC = () => {
                   )}
 
                   {tasks.map((task, index) => {
-                    const left = task.startOffsetDays * DAY_WIDTH;
+                    const taskStartDate = addDays(projectStart, task.startOffsetDays);
+                    const taskFinishDate = addDays(projectStart, task.startOffsetDays + task.durationDays - 1);
+                    const left = diffDays(chartStart, taskStartDate) * DAY_WIDTH;
                     const width = Math.max(10, task.durationDays * DAY_WIDTH);
                     const top = index * ROW_HEIGHT + 9;
 
@@ -824,18 +863,18 @@ const SchedulePage: React.FC = () => {
                             width,
                             backgroundColor: task.color,
                           }}
-                          title={`${task.name}: ${formatThaiDate(addDays(projectStart, task.startOffsetDays))} - ${formatThaiDate(addDays(projectStart, task.startOffsetDays + task.durationDays - 1))}`}
+                          title={`${task.name}: ${formatThaiDate(taskStartDate)} - ${formatThaiDate(taskFinishDate)}`}
                         >
                           <div className="truncate px-2 text-xs font-black text-slate-900">
                             {task.durationDays}d
                           </div>
 
                           <div className="absolute -left-16 top-1 text-[10px] font-black text-slate-900">
-                            {formatThaiDate(addDays(projectStart, task.startOffsetDays))}
+                            {formatShortDate(taskStartDate)}
                           </div>
 
                           <div className="absolute -right-16 top-1 text-[10px] font-black text-slate-900">
-                            {formatThaiDate(addDays(projectStart, task.startOffsetDays + task.durationDays - 1))}
+                            {formatShortDate(taskFinishDate)}
                           </div>
                         </div>
 
@@ -843,9 +882,9 @@ const SchedulePage: React.FC = () => {
                           <div
                             className="absolute z-10 rounded-xl border border-lime-500 bg-white px-3 py-1 text-xs font-black text-red-600 shadow-sm"
                             style={{
-                              left: Math.min(chartWidth - 220, left + width + 14),
+                              left: Math.min(chartWidth - NOTE_WIDTH, left + width + 78),
                               top: top - 3,
-                              maxWidth: 220,
+                              maxWidth: NOTE_WIDTH - 24,
                             }}
                           >
                             {task.note}
