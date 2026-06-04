@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
@@ -62,15 +62,61 @@ if (!isOpen) return null;
     route?.photo4 || "",
   ]);
 
+  const lastRouteIdRef = useRef<string | null>(route?.id || null);
+  const pendingLocalPhotosRef = useRef<string[] | null>(null);
+  const pendingClearTimerRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (!route?.id) return;
 
-    setLocalPhotos([
+    const incomingPhotos = [
       route.photo1 || "",
       route.photo2 || "",
       route.photo3 || "",
       route.photo4 || "",
-    ]);
+    ];
+
+    const isRouteChanged = lastRouteIdRef.current !== route.id;
+
+    if (isRouteChanged) {
+      lastRouteIdRef.current = route.id;
+      pendingLocalPhotosRef.current = null;
+
+      setLocalPhotos(incomingPhotos);
+      return;
+    }
+
+    setLocalPhotos((prev) => {
+      const pendingPhotos = pendingLocalPhotosRef.current;
+
+      // During upload/delete, Supabase realtime can briefly return a route object
+      // with empty/old photo fields. Keep the local modal photos so they do not
+      // disappear until the confirmed realtime payload arrives.
+      if (pendingPhotos) {
+        const incomingMatchesPending = incomingPhotos.every(
+          (photo, index) => photo === pendingPhotos[index]
+        );
+
+        if (incomingMatchesPending) {
+          pendingLocalPhotosRef.current = null;
+          return incomingPhotos;
+        }
+
+        return pendingPhotos;
+      }
+
+      const hasIncomingPhotos = incomingPhotos.some(Boolean);
+      const hasCurrentPhotos = prev.some(Boolean);
+
+      // Do not overwrite existing modal photos with a transient all-empty payload.
+      if (!hasIncomingPhotos && hasCurrentPhotos) {
+        return prev;
+      }
+
+      // Merge slot-by-slot so old uploaded photos are not removed while uploading
+      // another slot.
+      return incomingPhotos.map((photo, index) => photo || prev[index] || "");
+    });
   }, [
     route?.id,
     route?.photo1,
@@ -78,6 +124,14 @@ if (!isOpen) return null;
     route?.photo3,
     route?.photo4,
   ]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingClearTimerRef.current) {
+        window.clearTimeout(pendingClearTimerRef.current);
+      }
+    };
+  }, []);
 
   const photos = localPhotos;
 
@@ -94,6 +148,16 @@ if (!isOpen) return null;
       setLocalPhotos((prev) => {
         const next = [...prev];
         next[index] = photoData;
+
+        pendingLocalPhotosRef.current = next;
+
+        if (pendingClearTimerRef.current) {
+          window.clearTimeout(pendingClearTimerRef.current);
+        }
+
+        pendingClearTimerRef.current = window.setTimeout(() => {
+          pendingLocalPhotosRef.current = null;
+        }, 5000);
 
         // Send all photo fields every time.
         // This prevents old uploaded photos from being cleared
@@ -124,6 +188,16 @@ if (!isOpen) return null;
     setLocalPhotos((prev) => {
       const next = [...prev];
       next[index] = "";
+
+      pendingLocalPhotosRef.current = next;
+
+      if (pendingClearTimerRef.current) {
+        window.clearTimeout(pendingClearTimerRef.current);
+      }
+
+      pendingClearTimerRef.current = window.setTimeout(() => {
+        pendingLocalPhotosRef.current = null;
+      }, 5000);
 
       // Send all photo fields every time.
       // This keeps the other existing photos safe.
