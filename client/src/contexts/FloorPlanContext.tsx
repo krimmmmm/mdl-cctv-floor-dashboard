@@ -923,17 +923,20 @@ export const FloorPlanProvider = ({
       return;
     }
 
-    const { data: existing, error: findError } = await supabase
+    const { data: existingRows, error: findError } = await supabase
       .from("work_plans")
-      .select("id")
+      .select("id, updated_at")
       .eq("equipment_id", equipmentId)
-      .maybeSingle();
+      .order("updated_at", { ascending: false })
+      .limit(1);
 
     if (findError) {
       console.error("Find work plan error:", findError);
       alert(findError.message);
       return;
     }
+
+    const existing = Array.isArray(existingRows) ? existingRows[0] : null;
 
     if (existing?.id) {
       const { error } = await supabase
