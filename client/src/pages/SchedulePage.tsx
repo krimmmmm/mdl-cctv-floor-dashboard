@@ -280,6 +280,49 @@ const formatThaiDate = (dateKey: string) => {
   return `${day}/${month}/${year}`;
 };
 
+const DatePickerButton = ({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) => {
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const openPicker = () => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    if (typeof input.showPicker === "function") {
+      input.showPicker();
+    } else {
+      input.click();
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={openPicker}
+        className="mt-1 w-[150px] rounded-xl border border-blue-200 bg-white px-3 py-1 text-left text-sm font-black text-slate-900"
+      >
+        {formatThaiDate(value)}
+      </button>
+
+      <input
+        ref={inputRef}
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="absolute left-0 top-0 h-0 w-0 opacity-0"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+    </div>
+  );
+};
+
 const getStatusStyle = (status: TaskStatus) => {
   if (status === "done") return "bg-emerald-100 text-emerald-700 border-emerald-200";
   if (status === "active") return "bg-blue-100 text-blue-700 border-blue-200";
@@ -515,11 +558,9 @@ const SchedulePage: React.FC = () => {
               <div className="text-[11px] font-black uppercase text-blue-700">
                 Project Start
               </div>
-              <input
-                type="date"
+              <DatePickerButton
                 value={projectStart}
-                onChange={(e) => handleProjectStartChange(e.target.value)}
-                className="mt-1 rounded-xl border border-blue-200 bg-white px-3 py-1 text-sm font-bold"
+                onChange={handleProjectStartChange}
               />
             </label>
 
@@ -613,7 +654,7 @@ const SchedulePage: React.FC = () => {
               <div className="sticky top-0 z-50 flex border-b border-slate-200 bg-white">
                 <div
                   className="sticky left-0 z-40 grid shrink-0 grid-cols-[70px_1fr_160px_130px_120px] border-r border-slate-200 bg-lime-400 text-sm font-black text-slate-900 shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
-                  style={{ width: LEFT_TABLE_WIDTH, minHeight: 124 }}
+                  style={{ width: LEFT_TABLE_WIDTH, minHeight: 132 }}
                 >
                   <div className="flex items-center justify-center border-r border-lime-700 p-2">No.</div>
                   <div className="flex items-center justify-center border-r border-lime-700 p-2">Task</div>
@@ -651,11 +692,23 @@ const SchedulePage: React.FC = () => {
                     ))}
                   </div>
 
-                  <div className="relative h-7 border-t border-lime-900 bg-white">
-                    <div className="absolute left-2 top-1 rounded-full bg-slate-900 px-3 py-0.5 text-[11px] font-black text-white">
+                  <div className="relative h-9 border-t border-lime-900 bg-white">
+                    <div className="absolute left-2 top-1 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-black text-white">
                       Start {formatThaiDate(projectStart)}
                     </div>
-                    <div className="absolute right-2 top-1 rounded-full bg-slate-900 px-3 py-0.5 text-[11px] font-black text-white">
+
+                    {todayOffset >= 0 && todayOffset <= TOTAL_DAYS && (
+                      <div
+                        className="absolute top-0 z-40 h-9 border-l-4 border-red-600 animate-pulse"
+                        style={{ left: todayOffset * DAY_WIDTH }}
+                      >
+                        <div className="-ml-10 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-black text-white shadow">
+                          {formatThaiDate(todayKey)}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="absolute right-2 top-1 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-black text-white">
                       Finish {formatThaiDate(projectFinish)}
                     </div>
                   </div>
@@ -775,6 +828,14 @@ const SchedulePage: React.FC = () => {
                         >
                           <div className="truncate px-2 text-xs font-black text-slate-900">
                             {task.durationDays}d
+                          </div>
+
+                          <div className="absolute -left-16 top-1 text-[10px] font-black text-slate-900">
+                            {formatThaiDate(addDays(projectStart, task.startOffsetDays))}
+                          </div>
+
+                          <div className="absolute -right-16 top-1 text-[10px] font-black text-slate-900">
+                            {formatThaiDate(addDays(projectStart, task.startOffsetDays + task.durationDays - 1))}
                           </div>
                         </div>
 
