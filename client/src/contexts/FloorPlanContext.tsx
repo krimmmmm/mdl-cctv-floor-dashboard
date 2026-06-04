@@ -278,10 +278,25 @@ const toDbCabinet = (cabinet: any) => ({
   updated_at: new Date().toISOString(),
 });
 
+const normalizeFiberPoints = (points: any) => {
+  if (Array.isArray(points)) return points;
+
+  if (typeof points === "string") {
+    try {
+      const parsed = JSON.parse(points);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+};
+
 const toAppFiberRoute = (row: any) => ({
   id: row.id,
   name: row.name || row.label || "Fiber Route",
-  points: row.points || [],
+  points: normalizeFiberPoints(row.points),
   status: row.status || "active",
   color: row.color || "#ef4444",
   label: row.label || row.name || "Fiber Route",
@@ -591,9 +606,23 @@ export const FloorPlanProvider = ({
 
             if (!exists) return [...prev, updatedRoute];
 
-            return prev.map((route) =>
-              route.id === updatedRoute.id ? updatedRoute : route
-            );
+            return prev.map((route) => {
+              if (route.id !== updatedRoute.id) return route;
+
+              const safePoints =
+                updatedRoute.points && updatedRoute.points.length > 0
+                  ? updatedRoute.points
+                  : route.points || [];
+
+              // Merge instead of replacing the whole route object.
+              // This prevents the route line from disappearing after photo upload
+              // when realtime payload returns partial/empty points.
+              return {
+                ...route,
+                ...updatedRoute,
+                points: safePoints,
+              };
+            });
           });
         }
       )
@@ -792,7 +821,23 @@ export const FloorPlanProvider = ({
   };
 
   const updateFiberRoute = async (id: string, changes: any) => {
-    const dbChanges: any = { ...changes };
+    const currentRoute = fiberRoutes.find((route) => route.id === id);
+
+    // Preserve the route geometry every time we update photos/progress/direction.
+    // Without this, some realtime/update paths can temporarily replace the route
+    // with an object that has empty points, causing the drawn line to disappear
+    // until refresh/login reloads the full data from Supabase.
+    const preservedPoints =
+      changes.points && Array.isArray(changes.points) && changes.points.length > 0
+        ? changes.points
+        : currentRoute?.points || [];
+
+    const safeChanges = {
+      ...changes,
+      points: preservedPoints,
+    };
+
+    const dbChanges: any = { ...safeChanges };
 
     if ("progressDirection" in dbChanges) {
       dbChanges.progress_direction = dbChanges.progressDirection;
@@ -803,7 +848,13 @@ export const FloorPlanProvider = ({
 
     setFiberRoutes((prev) =>
       prev.map((route) =>
-        route.id === id ? { ...route, ...changes } : route
+        route.id === id
+          ? {
+              ...route,
+              ...safeChanges,
+              points: preservedPoints.length > 0 ? preservedPoints : route.points || [],
+            }
+          : route
       )
     );
 
@@ -815,6 +866,10 @@ export const FloorPlanProvider = ({
     if (error) {
       console.error("Update fiber route error:", error);
       alert(error.message);
+
+      // Reload current data if update fails, so UI does not stay in a broken state.
+      const { data } = await supabase.from("fiber_routes").select("*");
+      if (data) setFiberRoutes((data || []).map(toAppFiberRoute));
     }
   };
 
