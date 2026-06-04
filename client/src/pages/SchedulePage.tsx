@@ -1,5 +1,6 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
+import { useFloorPlan } from "@/contexts/FloorPlanContext";
 
 type TaskStatus = "planned" | "risk" | "done" | "active";
 
@@ -19,7 +20,7 @@ type ScheduleTask = {
 const defaultTasks: ScheduleTask[] = [
   {
     id: "order",
-    no: "3",
+    no: "1",
     name: "Order the equipment and delivery to customer site",
     owner: "AWN",
     durationDays: 90,
@@ -31,7 +32,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "camera-nvr",
-    no: "3.1",
+    no: "1.1",
     name: "CCTV Camera and NVR",
     owner: "AWN",
     durationDays: 45,
@@ -41,7 +42,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "network",
-    no: "3.2",
+    no: "1.2",
     name: "Network Switch / AP",
     owner: "AWN",
     durationDays: 45,
@@ -51,7 +52,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "cab-rack",
-    no: "3.3",
+    no: "1.3",
     name: "Outdoor Cabinet & Wall Rack",
     owner: "AWN",
     durationDays: 15,
@@ -61,7 +62,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "hdd",
-    no: "3.4",
+    no: "1.4",
     name: "SEAGATE Harddisk",
     owner: "AWN",
     durationDays: 90,
@@ -72,7 +73,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "ups",
-    no: "3.5",
+    no: "1.5",
     name: "UPS",
     owner: "AWN",
     durationDays: 15,
@@ -82,7 +83,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "kickoff",
-    no: "4",
+    no: "2",
     name: "Project Kick-off and Confirm Solutions Design",
     owner: "Customer & AWN",
     durationDays: 1,
@@ -93,7 +94,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "survey",
-    no: "5",
+    no: "3",
     name: "Site Survey and Assessment (Safety Training)",
     owner: "Customer & AWN",
     durationDays: 1,
@@ -104,7 +105,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "implementation",
-    no: "6",
+    no: "4",
     name: "Implementation",
     owner: "AWN",
     durationDays: 65,
@@ -115,7 +116,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "wiring",
-    no: "6.1",
+    no: "4.1",
     name: "CCTV installation & Wiring",
     owner: "AWN",
     durationDays: 45,
@@ -126,7 +127,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "switch-ap",
-    no: "6.2",
+    no: "4.2",
     name: "Network Switch / AP",
     owner: "AWN",
     durationDays: 5,
@@ -136,7 +137,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "outdoor-cabinet",
-    no: "6.3",
+    no: "4.3",
     name: "Outdoor Cabinet & Wall Rack",
     owner: "AWN",
     durationDays: 2,
@@ -146,7 +147,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "config",
-    no: "6.4",
+    no: "4.4",
     name: "CCTV Configuration",
     owner: "AWN",
     durationDays: 2,
@@ -156,7 +157,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "nvr",
-    no: "6.5",
+    no: "4.5",
     name: "Confirm NVR registration & record",
     owner: "AWN",
     durationDays: 2,
@@ -166,7 +167,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "camera-live",
-    no: "6.6",
+    no: "4.6",
     name: "Confirm camera live-view",
     owner: "AWN",
     durationDays: 1,
@@ -176,7 +177,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "commissioning",
-    no: "7",
+    no: "5",
     name: "Commissioning",
     owner: "Customer & AWN",
     durationDays: 1,
@@ -187,7 +188,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "uat",
-    no: "7.1",
+    no: "5.1",
     name: "User Acceptance Test",
     owner: "Customer & AWN",
     durationDays: 1,
@@ -197,7 +198,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "handover",
-    no: "7.2",
+    no: "5.2",
     name: "Training and Hand over the project",
     owner: "Customer & AWN",
     durationDays: 1,
@@ -207,7 +208,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "doc",
-    no: "7.3",
+    no: "5.3",
     name: "Project Document",
     owner: "AWN",
     durationDays: 5,
@@ -218,7 +219,7 @@ const defaultTasks: ScheduleTask[] = [
   },
   {
     id: "closure",
-    no: "8",
+    no: "6",
     name: "Project Closure and transfer to After Sales Service",
     owner: "AWN After Sales",
     durationDays: 1,
@@ -247,6 +248,8 @@ const SCHEDULE_MONTH_NAMES = [
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FRAME_WEEKS = 24;
 const TOTAL_DAYS = FRAME_WEEKS * 7;
+const SCHEDULE_DB_KEY = "__schedule_tasks__";
+const PROJECT_PLAN_DB_KEY = "__project_plan__";
 const ROW_HEIGHT = 42;
 const LEFT_TABLE_WIDTH = 720;
 const DAY_WIDTH = 16;
@@ -285,27 +288,30 @@ const getStatusStyle = (status: TaskStatus) => {
 };
 
 const SchedulePage: React.FC = () => {
-  const savedStart =
-    typeof window !== "undefined"
-      ? localStorage.getItem("mdl_schedule_start")
-      : null;
+  const { workPlans = {}, updateWorkPlan = () => {} } = useFloorPlan();
 
-  const savedTasks =
-    typeof window !== "undefined"
-      ? localStorage.getItem("mdl_schedule_tasks")
-      : null;
+  const projectPlan = workPlans[PROJECT_PLAN_DB_KEY] || {};
+  const schedulePlan = workPlans[SCHEDULE_DB_KEY] || {};
 
-  const [projectStart, setProjectStart] = useState(savedStart || "2026-06-08");
-  const [tasks, setTasks] = useState<ScheduleTask[]>(() => {
-    if (!savedTasks) return defaultTasks;
+  const [projectStart, setProjectStart] = useState(
+    projectPlan.planStart || projectPlan.date || "2026-06-08"
+  );
+  const [tasks, setTasks] = useState<ScheduleTask[]>(defaultTasks);
+
+  useEffect(() => {
+    setProjectStart(projectPlan.planStart || projectPlan.date || "2026-06-08");
+  }, [projectPlan.planStart, projectPlan.date]);
+
+  useEffect(() => {
+    if (!schedulePlan.workDetail) return;
 
     try {
-      const parsed = JSON.parse(savedTasks);
-      return Array.isArray(parsed) ? parsed : defaultTasks;
+      const parsed = JSON.parse(schedulePlan.workDetail);
+      if (Array.isArray(parsed)) setTasks(parsed);
     } catch {
-      return defaultTasks;
+      setTasks(defaultTasks);
     }
-  });
+  }, [schedulePlan.workDetail]);
 
   const [dragging, setDragging] = useState<{
     id: string;
@@ -322,7 +328,13 @@ const SchedulePage: React.FC = () => {
 
   const todayKey = getLocalDateKey(new Date());
   const todayOffset = diffDays(projectStart, todayKey);
-  const projectFinish = addDays(projectStart, TOTAL_DAYS - 1);
+
+  const latestTaskEndOffset = tasks.reduce(
+    (max, task) => Math.max(max, task.startOffsetDays + task.durationDays - 1),
+    0
+  );
+
+  const projectFinish = addDays(projectStart, latestTaskEndOffset);
 
   const completed = tasks.filter((task) => task.status === "done").length;
   const active = tasks.filter((task) => task.status === "active").length;
@@ -353,7 +365,27 @@ const SchedulePage: React.FC = () => {
 
   const persistTasks = (nextTasks: ScheduleTask[]) => {
     setTasks(nextTasks);
-    localStorage.setItem("mdl_schedule_tasks", JSON.stringify(nextTasks));
+
+    const nextLatestTaskEndOffset = nextTasks.reduce(
+      (max, task) => Math.max(max, task.startOffsetDays + task.durationDays - 1),
+      0
+    );
+    const nextFinish = addDays(projectStart, nextLatestTaskEndOffset);
+
+    updateWorkPlan(SCHEDULE_DB_KEY, {
+      equipmentName: "Smart Schedule Tasks",
+      date: projectStart,
+      planStart: projectStart,
+      finishDate: nextFinish,
+      workDetail: JSON.stringify(nextTasks),
+    });
+
+    updateWorkPlan(PROJECT_PLAN_DB_KEY, {
+      equipmentName: "Project Plan",
+      date: projectStart,
+      planStart: projectStart,
+      finishDate: nextFinish,
+    });
   };
 
   const updateTask = (id: string, changes: Partial<ScheduleTask>) => {
@@ -379,12 +411,52 @@ const SchedulePage: React.FC = () => {
 
   const handleProjectStartChange = (value: string) => {
     setProjectStart(value);
-    localStorage.setItem("mdl_schedule_start", value);
+
+    const nextFinish = addDays(value, latestTaskEndOffset);
+
+    updateWorkPlan(PROJECT_PLAN_DB_KEY, {
+      equipmentName: "Project Plan",
+      date: value,
+      planStart: value,
+      finishDate: nextFinish,
+    });
+
+    updateWorkPlan(SCHEDULE_DB_KEY, {
+      equipmentName: "Smart Schedule Tasks",
+      date: value,
+      planStart: value,
+      finishDate: nextFinish,
+      workDetail: JSON.stringify(tasks),
+    });
   };
 
   const resetSchedule = () => {
-    persistTasks(defaultTasks);
-    handleProjectStartChange("2026-06-08");
+    const resetStart = "2026-06-08";
+    const resetFinish = addDays(
+      resetStart,
+      defaultTasks.reduce(
+        (max, task) => Math.max(max, task.startOffsetDays + task.durationDays - 1),
+        0
+      )
+    );
+
+    setProjectStart(resetStart);
+    setTasks(defaultTasks);
+
+    updateWorkPlan(PROJECT_PLAN_DB_KEY, {
+      equipmentName: "Project Plan",
+      date: resetStart,
+      planStart: resetStart,
+      finishDate: resetFinish,
+    });
+
+    updateWorkPlan(SCHEDULE_DB_KEY, {
+      equipmentName: "Smart Schedule Tasks",
+      date: resetStart,
+      planStart: resetStart,
+      finishDate: resetFinish,
+      workDetail: JSON.stringify(defaultTasks),
+    });
   };
 
   const onMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -518,8 +590,11 @@ const SchedulePage: React.FC = () => {
                 </p>
               </div>
 
-              <div className="text-sm font-bold text-slate-200">
-                Frame: 6 Months / 24 Weeks
+              <div className="text-right text-sm font-bold text-slate-200">
+                <div>Frame: 6 Months / 24 Weeks</div>
+                <div className="mt-1 text-xs text-lime-200">
+                  Start {formatThaiDate(projectStart)} · Finish {formatThaiDate(projectFinish)}
+                </div>
               </div>
             </div>
           </div>
@@ -538,7 +613,7 @@ const SchedulePage: React.FC = () => {
               <div className="sticky top-0 z-50 flex border-b border-slate-200 bg-white">
                 <div
                   className="sticky left-0 z-40 grid shrink-0 grid-cols-[70px_1fr_160px_130px_120px] border-r border-slate-200 bg-lime-400 text-sm font-black text-slate-900 shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
-                  style={{ width: LEFT_TABLE_WIDTH }}
+                  style={{ width: LEFT_TABLE_WIDTH, minHeight: 124 }}
                 >
                   <div className="flex items-center justify-center border-r border-lime-700 p-2">No.</div>
                   <div className="flex items-center justify-center border-r border-lime-700 p-2">Task</div>
@@ -574,6 +649,15 @@ const SchedulePage: React.FC = () => {
                         {week.week}
                       </div>
                     ))}
+                  </div>
+
+                  <div className="relative h-7 border-t border-lime-900 bg-white">
+                    <div className="absolute left-2 top-1 rounded-full bg-slate-900 px-3 py-0.5 text-[11px] font-black text-white">
+                      Start {formatThaiDate(projectStart)}
+                    </div>
+                    <div className="absolute right-2 top-1 rounded-full bg-slate-900 px-3 py-0.5 text-[11px] font-black text-white">
+                      Finish {formatThaiDate(projectFinish)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -654,7 +738,7 @@ const SchedulePage: React.FC = () => {
 
                   {todayOffset >= 0 && todayOffset <= TOTAL_DAYS && (
                     <div
-                      className="absolute top-0 z-20 h-full border-l-4 border-red-600"
+                      className="absolute top-0 z-30 h-full border-l-4 border-red-600 animate-pulse"
                       style={{ left: todayOffset * DAY_WIDTH }}
                     >
                       <div className="-ml-14 -mt-1 rounded-full bg-red-600 px-3 py-1 text-xs font-black text-white shadow-lg">
