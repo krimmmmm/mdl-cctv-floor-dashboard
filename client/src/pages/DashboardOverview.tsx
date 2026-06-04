@@ -1863,17 +1863,48 @@ const OnlineUsersBox = ({
 
   const todayKey = getDateKeyFromDate(new Date());
 
-  const loginToday = (loginSessions || []).filter(
-    (item: any) => String(item.loginAt || "").slice(0, 10) === todayKey
+  const getSessionDateKey = (value?: string) => {
+    if (!value) return "";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return String(value).slice(0, 10);
+    }
+
+    return getDateKeyFromDate(date);
+  };
+
+  // Login Today = unique users who logged in today.
+  const loginTodayUsernames = new Set(
+    (loginSessions || [])
+      .filter((item: any) => getSessionDateKey(item.loginAt) === todayKey)
+      .map((item: any) => item.username)
+      .filter(Boolean)
+  );
+
+  // Online = unique users who are still online from today's login sessions.
+  const onlineTodayUsernames = new Set(
+    (loginSessions || [])
+      .filter(
+        (item: any) =>
+          Boolean(item.isOnline) &&
+          getSessionDateKey(item.loginAt) === todayKey
+      )
+      .map((item: any) => item.username)
+      .filter(Boolean)
   );
 
   const isOnline = (username: string) =>
-    (onlineUsers || []).some((u: any) => u.username === username);
+    onlineTodayUsernames.has(username);
 
   const getLastLogin = (username: string) => {
-    const found = (loginSessions || []).find(
-      (session: any) => session.username === username
-    );
+    const found = [...(loginSessions || [])]
+      .filter((session: any) => session.username === username)
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.loginAt || 0).getTime() -
+          new Date(a.loginAt || 0).getTime()
+      )[0];
 
     if (!found?.loginAt) return "-";
 
@@ -1896,11 +1927,11 @@ const OnlineUsersBox = ({
 
           <div className="flex items-center gap-2">
             <div className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-black">
-              Login Today {loginToday.length}
+              Login Today {loginTodayUsernames.size}
             </div>
 
             <div className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-black">
-              Online {(onlineUsers || []).length}
+              Online {onlineTodayUsernames.size}
             </div>
           </div>
         </div>
@@ -1921,7 +1952,7 @@ const OnlineUsersBox = ({
               </div>
 
               <span className="rounded-full bg-green-600 px-3 py-1 text-xs font-black text-white animate-pulse">
-                ONLINE
+                ONLINE TODAY
               </span>
             </div>
           </div>
