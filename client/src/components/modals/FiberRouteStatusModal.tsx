@@ -55,12 +55,52 @@ if (!isOpen) return null;
   const progress = Number(route.progress || 0);
   const direction = route.progressDirection || "start";
 
-  const [localPhotos, setLocalPhotos] = useState<string[]>([
-    route?.photo1 || "",
-    route?.photo2 || "",
-    route?.photo3 || "",
-    route?.photo4 || "",
-  ]);
+  const getPhotoStorageKey = (routeId?: string) =>
+    routeId ? `mdl_fiber_route_photos_${routeId}` : "";
+
+  const readCachedPhotos = (routeId?: string) => {
+    if (typeof window === "undefined" || !routeId) return ["", "", "", ""];
+
+    try {
+      const cached = localStorage.getItem(getPhotoStorageKey(routeId));
+      const parsed = cached ? JSON.parse(cached) : null;
+
+      return Array.isArray(parsed)
+        ? [parsed[0] || "", parsed[1] || "", parsed[2] || "", parsed[3] || ""]
+        : ["", "", "", ""];
+    } catch {
+      return ["", "", "", ""];
+    }
+  };
+
+  const writeCachedPhotos = (routeId: string | undefined, photos: string[]) => {
+    if (typeof window === "undefined" || !routeId) return;
+
+    localStorage.setItem(
+      getPhotoStorageKey(routeId),
+      JSON.stringify([
+        photos[0] || "",
+        photos[1] || "",
+        photos[2] || "",
+        photos[3] || "",
+      ])
+    );
+  };
+
+  const getRoutePhotos = () => {
+    const routePhotos = [
+      route?.photo1 || "",
+      route?.photo2 || "",
+      route?.photo3 || "",
+      route?.photo4 || "",
+    ];
+
+    const cachedPhotos = readCachedPhotos(route?.id);
+
+    return routePhotos.map((photo, index) => photo || cachedPhotos[index] || "");
+  };
+
+  const [localPhotos, setLocalPhotos] = useState<string[]>(getRoutePhotos);
 
   const lastRouteIdRef = useRef<string | null>(route?.id || null);
   const pendingLocalPhotosRef = useRef<string[] | null>(null);
@@ -69,11 +109,12 @@ if (!isOpen) return null;
   useEffect(() => {
     if (!route?.id) return;
 
+    const cachedPhotos = readCachedPhotos(route.id);
     const incomingPhotos = [
-      route.photo1 || "",
-      route.photo2 || "",
-      route.photo3 || "",
-      route.photo4 || "",
+      route.photo1 || cachedPhotos[0] || "",
+      route.photo2 || cachedPhotos[1] || "",
+      route.photo3 || cachedPhotos[2] || "",
+      route.photo4 || cachedPhotos[3] || "",
     ];
 
     const isRouteChanged = lastRouteIdRef.current !== route.id;
@@ -150,6 +191,8 @@ if (!isOpen) return null;
         next[index] = photoData;
 
         pendingLocalPhotosRef.current = next;
+      writeCachedPhotos(route?.id, next);
+        writeCachedPhotos(route?.id, next);
 
         if (pendingClearTimerRef.current) {
           window.clearTimeout(pendingClearTimerRef.current);
