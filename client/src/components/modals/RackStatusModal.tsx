@@ -95,6 +95,14 @@ if (!isOpen || !rack) return null;
       checked: Boolean((rack as any).fiberOptic),
     },
     {
+      key: "ups",
+      title: "UPS",
+      desc: "UPS installed and verified",
+      progressKey: "upsProgress",
+      progress: Number((rack as any).upsProgress || 0),
+      checked: Boolean((rack as any).ups),
+    },
+    {
       key: "ready",
       title: "READY",
       desc: "Rack ready for use",
