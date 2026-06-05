@@ -44,7 +44,7 @@ function Router() {
       <ProtectedRoute
         path="/schedule"
         component={SchedulePage}
-        allowedRoles={["admin"]}
+        allowedRoles={["admin", "newstaff", "staffonly", "staff", "customer"]}
       />
 
       <ProtectedRoute
