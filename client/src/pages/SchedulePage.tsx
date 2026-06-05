@@ -1,162 +1,1104 @@
-// แก้ไขไฟล์: client/src/pages/SchedulePage.tsx
-// จุดประสงค์: ทุก Role เข้า /schedule ได้ แต่แก้ไขได้เฉพาะ Admin
-
-// 1) เพิ่ม import นี้ด้านบน
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "wouter";
+import { useFloorPlan } from "@/contexts/FloorPlanContext";
 import { useAuth } from "@/contexts/AuthContext";
 
+type TaskStatus = "notstart" | "active" | "completed" | "risk";
 
-// 2) เพิ่มใน SchedulePage component หลังบรรทัด const { workPlans = {}, updateWorkPlan = () => {} } = useFloorPlan();
+type ScheduleTask = {
+  id: string;
+  no: string;
+  name: string;
+  owner: string;
+  durationDays: number;
+  startOffsetDays: number;
+  color: string;
+  status: TaskStatus;
+  note?: string;
+  isGroup?: boolean;
+};
 
-const { user } = useAuth();
+const defaultTasks: ScheduleTask[] = [
+  {
+    id: "order",
+    no: "1",
+    name: "Order the equipment and delivery to customer site",
+    owner: "AWN",
+    durationDays: 90,
+    startOffsetDays: 14,
+    color: "#facc15",
+    status: "active",
+    note: "HDD ขาดตลาด ระยะเวลารอสินค้ายังคงเดิม 90 วัน",
+    isGroup: true,
+  },
+  {
+    id: "camera-nvr",
+    no: "1.1",
+    name: "CCTV Camera and NVR",
+    owner: "AWN",
+    durationDays: 45,
+    startOffsetDays: 14,
+    color: "#fef200",
+    status: "active",
+  },
+  {
+    id: "network",
+    no: "1.2",
+    name: "Network Switch / AP",
+    owner: "AWN",
+    durationDays: 45,
+    startOffsetDays: 21,
+    color: "#fef200",
+    status: "active",
+  },
+  {
+    id: "cab-rack",
+    no: "1.3",
+    name: "Outdoor Cabinet & Wall Rack",
+    owner: "AWN",
+    durationDays: 15,
+    startOffsetDays: 28,
+    color: "#fef200",
+    status: "active",
+  },
+  {
+    id: "hdd",
+    no: "1.4",
+    name: "SEAGATE Harddisk",
+    owner: "AWN",
+    durationDays: 90,
+    startOffsetDays: 42,
+    color: "#fef200",
+    status: "risk",
+    note: "HDD Delivery",
+  },
+  {
+    id: "ups",
+    no: "1.5",
+    name: "UPS",
+    owner: "AWN",
+    durationDays: 15,
+    startOffsetDays: 70,
+    color: "#fef200",
+    status: "active",
+  },
+  {
+    id: "kickoff",
+    no: "2",
+    name: "Project Kick-off and Confirm Solutions Design",
+    owner: "Customer & AWN",
+    durationDays: 1,
+    startOffsetDays: 28,
+    color: "#0ea5e9",
+    status: "completed",
+    isGroup: true,
+  },
+  {
+    id: "survey",
+    no: "3",
+    name: "Site Survey and Assessment (Safety Training)",
+    owner: "Customer & AWN",
+    durationDays: 1,
+    startOffsetDays: 35,
+    color: "#0ea5e9",
+    status: "completed",
+    isGroup: true,
+  },
+  {
+    id: "implementation",
+    no: "4",
+    name: "Implementation",
+    owner: "AWN",
+    durationDays: 65,
+    startOffsetDays: 49,
+    color: "#fdba74",
+    status: "active",
+    isGroup: true,
+  },
+  {
+    id: "wiring",
+    no: "4.1",
+    name: "CCTV installation & Wiring",
+    owner: "AWN",
+    durationDays: 45,
+    startOffsetDays: 49,
+    color: "#bef264",
+    status: "active",
+    note: "Conduit Wiring installation",
+  },
+  {
+    id: "switch-ap",
+    no: "4.2",
+    name: "Network Switch / AP",
+    owner: "AWN",
+    durationDays: 5,
+    startOffsetDays: 91,
+    color: "#fdba74",
+    status: "active",
+  },
+  {
+    id: "outdoor-cabinet",
+    no: "4.3",
+    name: "Outdoor Cabinet & Wall Rack",
+    owner: "AWN",
+    durationDays: 2,
+    startOffsetDays: 98,
+    color: "#fdba74",
+    status: "active",
+  },
+  {
+    id: "config",
+    no: "4.4",
+    name: "CCTV Configuration",
+    owner: "AWN",
+    durationDays: 2,
+    startOffsetDays: 98,
+    color: "#fdba74",
+    status: "active",
+  },
+  {
+    id: "nvr",
+    no: "4.5",
+    name: "Confirm NVR registration & record",
+    owner: "AWN",
+    durationDays: 2,
+    startOffsetDays: 105,
+    color: "#fdba74",
+    status: "active",
+  },
+  {
+    id: "camera-live",
+    no: "4.6",
+    name: "Confirm camera live-view",
+    owner: "AWN",
+    durationDays: 1,
+    startOffsetDays: 107,
+    color: "#fdba74",
+    status: "active",
+  },
+  {
+    id: "commissioning",
+    no: "5",
+    name: "Commissioning",
+    owner: "Customer & AWN",
+    durationDays: 1,
+    startOffsetDays: 112,
+    color: "#0ea5e9",
+    status: "active",
+    isGroup: true,
+  },
+  {
+    id: "uat",
+    no: "5.1",
+    name: "User Acceptance Test",
+    owner: "Customer & AWN",
+    durationDays: 1,
+    startOffsetDays: 112,
+    color: "#0ea5e9",
+    status: "active",
+  },
+  {
+    id: "handover",
+    no: "5.2",
+    name: "Training and Hand over the project",
+    owner: "Customer & AWN",
+    durationDays: 1,
+    startOffsetDays: 113,
+    color: "#0ea5e9",
+    status: "active",
+  },
+  {
+    id: "doc",
+    no: "5.3",
+    name: "Project Document",
+    owner: "AWN",
+    durationDays: 5,
+    startOffsetDays: 114,
+    color: "#0ea5e9",
+    status: "active",
+    note: "Submit UAT Document",
+  },
+  {
+    id: "closure",
+    no: "6",
+    name: "Project Closure and transfer to After Sales Service",
+    owner: "AWN After Sales",
+    durationDays: 1,
+    startOffsetDays: 119,
+    color: "#84cc16",
+    status: "active",
+    isGroup: true,
+  },
+];
 
-const savedUser =
-  typeof window !== "undefined"
-    ? JSON.parse(localStorage.getItem("mdl_user") || "{}")
-    : {};
+const SCHEDULE_MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
-const userRole = String(user?.role || savedUser?.role || "customer")
-  .trim()
-  .toLowerCase();
+const DAY_MS = 24 * 60 * 60 * 1000;
+const FRAME_DAYS = 120;
+const TOTAL_DAYS = FRAME_DAYS;
+const SCHEDULE_DB_KEY = "__schedule_tasks__";
+const PROJECT_PLAN_DB_KEY = "__project_plan__";
+const ROW_HEIGHT = 42;
+const LEFT_TABLE_WIDTH = 1010;
+const DAY_WIDTH = 18;
+const NOTE_WIDTH = 260;
 
-const canEditSchedule = userRole === "admin";
+const getLocalDateKey = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
+const addDays = (dateKey: string, days: number) => {
+  const base = new Date(`${dateKey}T00:00:00`);
+  base.setDate(base.getDate() + days);
+  return getLocalDateKey(base);
+};
 
-// 3) แก้ function ที่เปลี่ยนข้อมูล ให้ Admin เท่านั้น
+const diffDays = (fromKey: string, toKey: string) => {
+  const from = new Date(`${fromKey}T00:00:00`);
+  const to = new Date(`${toKey}T00:00:00`);
+  return Math.floor((to.getTime() - from.getTime()) / DAY_MS);
+};
 
-const persistTasks = (nextTasks: ScheduleTask[]) => {
-  if (!canEditSchedule) return;
+const formatThaiDate = (dateKey: string) => {
+  if (!dateKey) return "-";
 
-  setTasks(nextTasks);
+  const [year, month, day] = dateKey.split("-");
+  return `${day}/${month}/${year}`;
+};
 
-  const nextLatestTaskEndOffset = nextTasks.reduce(
-    (max, task) => Math.max(max, task.startOffsetDays + task.durationDays - 1),
-    0
+const formatShortDate = (dateKey: string) => {
+  if (!dateKey) return "-";
+
+  const [, month, day] = dateKey.split("-");
+  return `${day}/${month}`;
+};
+
+const DatePickerButton = ({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) => {
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const openPicker = () => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    if (typeof input.showPicker === "function") {
+      input.showPicker();
+    } else {
+      input.click();
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={openPicker}
+        className="mt-1 w-[150px] rounded-xl border border-blue-200 bg-white px-3 py-1 text-left text-sm font-black text-slate-900"
+      >
+        {formatThaiDate(value)}
+      </button>
+
+      <input
+        ref={inputRef}
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="absolute left-0 top-0 h-0 w-0 opacity-0"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+    </div>
   );
-  const nextFinish = addDays(projectStart, nextLatestTaskEndOffset);
-
-  updateWorkPlan(SCHEDULE_DB_KEY, {
-    equipmentName: "Smart Schedule Tasks",
-    date: projectStart,
-    planStart: projectStart,
-    finishDate: nextFinish,
-    workDetail: JSON.stringify(nextTasks),
-  });
-
-  updateWorkPlan(PROJECT_PLAN_DB_KEY, {
-    equipmentName: "Project Plan",
-    date: projectStart,
-    planStart: projectStart,
-    finishDate: nextFinish,
-  });
 };
 
-const handleProjectStartChange = (value: string) => {
-  if (!canEditSchedule) return;
-
-  setProjectStart(value);
-
-  const nextFinish = addDays(value, latestTaskEndOffset);
-
-  updateWorkPlan(PROJECT_PLAN_DB_KEY, {
-    equipmentName: "Project Plan",
-    date: value,
-    planStart: value,
-    finishDate: nextFinish,
-  });
-
-  updateWorkPlan(SCHEDULE_DB_KEY, {
-    equipmentName: "Smart Schedule Tasks",
-    date: value,
-    planStart: value,
-    finishDate: nextFinish,
-    workDetail: JSON.stringify(tasks),
-  });
+const getStatusStyle = (status: TaskStatus) => {
+  if (status === "notstart")
+    return "bg-slate-100 text-slate-700 border-slate-200";
+  if (status === "completed")
+    return "bg-emerald-100 text-emerald-700 border-emerald-200";
+  if (status === "active") return "bg-blue-100 text-blue-700 border-blue-200";
+  if (status === "risk") return "bg-red-100 text-red-700 border-red-200";
+  return "bg-slate-100 text-slate-600 border-slate-200";
 };
 
-const resetSchedule = () => {
-  if (!canEditSchedule) return;
+const SchedulePage: React.FC = () => {
+  const { workPlans = {}, updateWorkPlan = () => {} } = useFloorPlan();
+  const { user } = useAuth();
 
-  // keep your existing resetSchedule code here
+  const savedUser =
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("mdl_user") || "{}")
+      : {};
+
+  const userRole = String(user?.role || savedUser?.role || "customer")
+    .trim()
+    .toLowerCase();
+
+  const canEditSchedule = userRole === "admin";
+
+  const projectPlan = workPlans[PROJECT_PLAN_DB_KEY] || {};
+  const schedulePlan = workPlans[SCHEDULE_DB_KEY] || {};
+
+  const [projectStart, setProjectStart] = useState(
+    projectPlan.planStart || projectPlan.date || "2026-06-08",
+  );
+  const [tasks, setTasks] = useState<ScheduleTask[]>(defaultTasks);
+
+  useEffect(() => {
+    setProjectStart(projectPlan.planStart || projectPlan.date || "2026-06-08");
+  }, [projectPlan.planStart, projectPlan.date]);
+
+  useEffect(() => {
+    if (!schedulePlan.workDetail) return;
+
+    try {
+      const parsed = JSON.parse(schedulePlan.workDetail);
+      if (Array.isArray(parsed)) {
+        const normalizedTasks = parsed.map((task) => ({
+          ...task,
+          status:
+            task.status === "done"
+              ? "completed"
+              : task.status === "planned"
+                ? "notstart"
+                : task.status,
+        }));
+        setTasks(normalizedTasks);
+      }
+    } catch {
+      setTasks(defaultTasks);
+    }
+  }, [schedulePlan.workDetail]);
+
+  const [dragging, setDragging] = useState<{
+    id: string;
+    startX: number;
+    originalOffset: number;
+  } | null>(null);
+
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({
+    x: 0,
+    scrollLeft: 0,
+  });
+
+  const todayKey = getLocalDateKey(new Date());
+
+  const latestTaskEndOffset = tasks.reduce(
+    (max, task) => Math.max(max, task.startOffsetDays + task.durationDays - 1),
+    0,
+  );
+
+  const projectFinish = addDays(projectStart, latestTaskEndOffset);
+
+  // Show the first month as a full month.
+  // Example: Project Start = 08/06/2026 -> timeline starts from 01/06/2026.
+  const projectStartDate = new Date(`${projectStart}T00:00:00`);
+  const chartStart = getLocalDateKey(
+    new Date(projectStartDate.getFullYear(), projectStartDate.getMonth(), 1),
+  );
+
+  const chartDays = Math.max(
+    TOTAL_DAYS,
+    diffDays(chartStart, projectFinish) + 15,
+  );
+  const projectStartOffset = diffDays(chartStart, projectStart);
+  const todayOffset = diffDays(chartStart, todayKey);
+
+  const notStart = tasks.filter((task) => task.status === "notstart").length;
+  const completed = tasks.filter((task) => task.status === "completed").length;
+  const active = tasks.filter((task) => task.status === "active").length;
+  const risk = tasks.filter((task) => task.status === "risk").length;
+
+  const dayHeaders = useMemo(() => {
+    return Array.from({ length: chartDays }, (_, index) => {
+      const dateKey = addDays(chartStart, index);
+      const dayDate = new Date(`${dateKey}T00:00:00`);
+
+      return {
+        key: dateKey,
+        day: dayDate.getDate(),
+        left: index * DAY_WIDTH,
+        width: DAY_WIDTH,
+      };
+    });
+  }, [chartDays, chartStart]);
+
+  const monthHeaders = useMemo(() => {
+    const groups: { label: string; left: number; width: number }[] = [];
+
+    dayHeaders.forEach((day, index) => {
+      const date = new Date(`${day.key}T00:00:00`);
+      const label = `${SCHEDULE_MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`;
+      const last = groups[groups.length - 1];
+
+      if (last && last.label === label) {
+        last.width += DAY_WIDTH;
+      } else {
+        groups.push({
+          label,
+          left: index * DAY_WIDTH,
+          width: DAY_WIDTH,
+        });
+      }
+    });
+
+    return groups;
+  }, [dayHeaders]);
+
+  const persistTasks = (nextTasks: ScheduleTask[]) => {
+    if (!canEditSchedule) return;
+
+    setTasks(nextTasks);
+
+    const nextLatestTaskEndOffset = nextTasks.reduce(
+      (max, task) =>
+        Math.max(max, task.startOffsetDays + task.durationDays - 1),
+      0,
+    );
+    const nextFinish = addDays(projectStart, nextLatestTaskEndOffset);
+
+    updateWorkPlan(SCHEDULE_DB_KEY, {
+      equipmentName: "Smart Schedule Tasks",
+      date: projectStart,
+      planStart: projectStart,
+      finishDate: nextFinish,
+      workDetail: JSON.stringify(nextTasks),
+    });
+
+    updateWorkPlan(PROJECT_PLAN_DB_KEY, {
+      equipmentName: "Project Plan",
+      date: projectStart,
+      planStart: projectStart,
+      finishDate: nextFinish,
+    });
+  };
+
+  const updateTask = (id: string, changes: Partial<ScheduleTask>) => {
+    persistTasks(
+      tasks.map((task) =>
+        task.id === id
+          ? {
+              ...task,
+              ...changes,
+              durationDays: Math.max(
+                1,
+                Number(changes.durationDays ?? task.durationDays),
+              ),
+              startOffsetDays: Math.max(
+                0,
+                Math.min(
+                  TOTAL_DAYS - 1,
+                  Number(changes.startOffsetDays ?? task.startOffsetDays),
+                ),
+              ),
+            }
+          : task,
+      ),
+    );
+  };
+
+  const handleProjectStartChange = (value: string) => {
+    if (!canEditSchedule) return;
+
+    setProjectStart(value);
+
+    const nextFinish = addDays(value, latestTaskEndOffset);
+
+    updateWorkPlan(PROJECT_PLAN_DB_KEY, {
+      equipmentName: "Project Plan",
+      date: value,
+      planStart: value,
+      finishDate: nextFinish,
+    });
+
+    updateWorkPlan(SCHEDULE_DB_KEY, {
+      equipmentName: "Smart Schedule Tasks",
+      date: value,
+      planStart: value,
+      finishDate: nextFinish,
+      workDetail: JSON.stringify(tasks),
+    });
+  };
+
+  const resetSchedule = () => {
+    if (!canEditSchedule) return;
+
+    const resetStart = "2026-06-08";
+    const resetFinish = addDays(
+      resetStart,
+      defaultTasks.reduce(
+        (max, task) =>
+          Math.max(max, task.startOffsetDays + task.durationDays - 1),
+        0,
+      ),
+    );
+
+    setProjectStart(resetStart);
+    setTasks(defaultTasks);
+
+    updateWorkPlan(PROJECT_PLAN_DB_KEY, {
+      equipmentName: "Project Plan",
+      date: resetStart,
+      planStart: resetStart,
+      finishDate: resetFinish,
+    });
+
+    updateWorkPlan(SCHEDULE_DB_KEY, {
+      equipmentName: "Smart Schedule Tasks",
+      date: resetStart,
+      planStart: resetStart,
+      finishDate: resetFinish,
+      workDetail: JSON.stringify(defaultTasks),
+    });
+  };
+
+  const onMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (dragging) {
+      const deltaDays = Math.round(
+        (event.clientX - dragging.startX) / DAY_WIDTH,
+      );
+      updateTask(dragging.id, {
+        startOffsetDays: dragging.originalOffset + deltaDays,
+      });
+
+      return;
+    }
+
+    if (isPanning && scrollRef.current) {
+      const deltaX = event.clientX - panStartRef.current.x;
+      scrollRef.current.scrollLeft = panStartRef.current.scrollLeft - deltaX;
+    }
+  };
+
+  const onMouseDownToPan = (event: React.MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    const blockedSelector =
+      "input, button, a, select, textarea, [data-gantt-bar='true']";
+
+    if (target.closest(blockedSelector)) return;
+
+    setIsPanning(true);
+    panStartRef.current = {
+      x: event.clientX,
+      scrollLeft: scrollRef.current?.scrollLeft || 0,
+    };
+  };
+
+  const onMouseUp = () => {
+    setDragging(null);
+    setIsPanning(false);
+  };
+
+  const chartWidth = chartDays * DAY_WIDTH + NOTE_WIDTH;
+  const chartTimelineWidth = chartDays * DAY_WIDTH;
+  const chartHeight = tasks.length * ROW_HEIGHT;
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur px-6 py-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900">
+              MDL CCTV Smart Schedule
+            </h1>
+            <p className="text-sm text-slate-500">
+              Intelligent Gantt schedule · Auto-shift by project start date ·
+              Today line
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-2">
+              <div className="text-[11px] font-black uppercase text-blue-700">
+                Project Start
+              </div>
+              <DatePickerButton
+                value={projectStart}
+                onChange={(value) =>
+                  canEditSchedule && handleProjectStartChange(value)
+                }
+              />
+            </label>
+
+            <div className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-2">
+              <div className="text-[11px] font-black uppercase text-orange-700">
+                Project Finish
+              </div>
+              <div className="mt-1 text-sm font-black">
+                {formatThaiDate(projectFinish)}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={!canEditSchedule}
+              onClick={resetSchedule}
+              className={`rounded-xl px-4 py-3 text-sm font-black text-white shadow ${
+                canEditSchedule
+                  ? "bg-slate-900 hover:bg-slate-700"
+                  : "cursor-not-allowed bg-slate-400"
+              }`}
+            >
+              Reset Schedule
+            </button>
+
+            <Link
+              href="/dashboard"
+              className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow hover:bg-blue-500"
+            >
+              ← Dashboard
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="space-y-5 p-5">
+        {!canEditSchedule && (
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700">
+            View Only Mode: หน้านี้ดูได้อย่างเดียว เฉพาะ Admin เท่านั้นที่แก้ไข Schedule ได้
+          </div>
+        )}
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="text-xs font-bold text-slate-500">Total Tasks</div>
+            <div className="mt-1 text-3xl font-black">{tasks.length}</div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+            <div className="text-xs font-bold text-slate-600">Not Start</div>
+            <div className="mt-1 text-3xl font-black text-slate-700">
+              {notStart}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
+            <div className="text-xs font-bold text-emerald-700">Completed</div>
+            <div className="mt-1 text-3xl font-black text-emerald-600">
+              {completed}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 shadow-sm">
+            <div className="text-xs font-bold text-blue-700">Active</div>
+            <div className="mt-1 text-3xl font-black text-blue-600">
+              {active}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-red-100 bg-red-50 p-4 shadow-sm">
+            <div className="text-xs font-bold text-red-700">Risk</div>
+            <div className="mt-1 text-3xl font-black text-red-600">{risk}</div>
+          </div>
+
+          <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4 shadow-sm">
+            <div className="text-xs font-bold text-violet-700">Today</div>
+            <div className="mt-1 text-xl font-black text-violet-700">
+              {formatThaiDate(todayKey)}
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-slate-200 bg-white shadow-xl overflow-hidden">
+          <div className="sticky top-0 z-[110] border-b border-slate-200 bg-slate-900 px-5 py-4 text-white">
+            <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 className="text-xl font-black">
+                  Minor Dairy Factory New CCTV Installation
+                </h2>
+                <p className="text-sm text-slate-300">
+                  Drag bars to move schedule · Edit duration/start offset in
+                  table · Today line follows current date
+                </p>
+              </div>
+
+              <div className="text-right text-sm font-bold text-slate-200">
+                <div>Frame: 120 Days</div>
+                <div className="mt-1 text-xs text-lime-200">
+                  Start {formatThaiDate(projectStart)} · Finish{" "}
+                  {formatThaiDate(projectFinish)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            ref={scrollRef}
+            className={`max-h-[68vh] overflow-auto select-none ${
+              isPanning ? "cursor-grabbing" : "cursor-grab"
+            }`}
+            onMouseDown={onMouseDownToPan}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseUp}
+          >
+            <div className="relative isolate" style={{ minWidth: LEFT_TABLE_WIDTH + chartWidth }}>
+              <div className="sticky top-0 z-[140] flex border-b border-slate-200 bg-white">
+                <div
+                  className="sticky left-0 z-[160] grid shrink-0 grid-cols-[70px_1fr_160px_110px_130px_120px_120px] border-r border-slate-200 bg-lime-400 text-sm font-black text-slate-900 shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
+                  style={{ width: LEFT_TABLE_WIDTH, minHeight: 132 }}
+                >
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2">
+                    No.
+                  </div>
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2">
+                    Task
+                  </div>
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2">
+                    Task Owner
+                  </div>
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2">
+                    Status
+                  </div>
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2 text-center">
+                    Duration
+                    <br />
+                    Days
+                  </div>
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2 text-center">
+                    Start
+                    <br />
+                    Offset
+                  </div>
+                  <div className="flex items-center justify-center p-2 text-center">
+                    Finish
+                    <br />
+                    Date
+                  </div>
+                </div>
+
+                <div
+                  className="relative shrink-0"
+                  style={{ width: chartWidth }}
+                >
+                  <div className="h-8 border-b border-emerald-900 bg-emerald-500 text-center text-sm font-black leading-8 text-slate-900">
+                    The Frame (Day)
+                  </div>
+
+                  <div
+                    className="relative h-8 border-b border-slate-300 bg-lime-300"
+                    style={{ width: chartTimelineWidth }}
+                  >
+                    {monthHeaders.map((month) => (
+                      <div
+                        key={month.label}
+                        className="absolute top-0 flex h-8 items-center justify-center border-r border-lime-900 text-xs font-black"
+                        style={{ left: month.left, width: month.width }}
+                      >
+                        {month.label}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div
+                    className="relative h-8 bg-lime-300"
+                    style={{ width: chartTimelineWidth }}
+                  >
+                    {dayHeaders.map((day) => (
+                      <div
+                        key={day.key}
+                        className="absolute top-0 flex h-8 items-center justify-center border-r border-lime-900 text-[10px] font-bold"
+                        style={{ left: day.left, width: day.width }}
+                        title={formatThaiDate(day.key)}
+                      >
+                        {day.day}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="relative h-9 border-t border-lime-900 bg-white">
+                    <div
+                      className="absolute top-1 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-black text-white"
+                      style={{ left: projectStartOffset * DAY_WIDTH + 8 }}
+                    >
+                      Start {formatThaiDate(projectStart)}
+                    </div>
+
+                    {todayOffset >= 0 && todayOffset <= chartDays && (
+                      <div
+                        className="absolute top-0 z-20 h-9 border-l-4 border-red-600 animate-pulse"
+                        style={{ left: todayOffset * DAY_WIDTH }}
+                      >
+                        <div className="-ml-10 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-black text-white shadow">
+                          {formatThaiDate(todayKey)}
+                        </div>
+                      </div>
+                    )}
+
+                    <div
+                      className="absolute top-1 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-black text-white"
+                      style={{
+                        left:
+                          diffDays(chartStart, projectFinish) * DAY_WIDTH + 8,
+                      }}
+                    >
+                      Finish {formatThaiDate(projectFinish)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex">
+                <div
+                  className="sticky left-0 z-[60] shrink-0 border-r border-slate-200 bg-white shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
+                  style={{ width: LEFT_TABLE_WIDTH }}
+                >
+                  {tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className={`grid grid-cols-[70px_1fr_160px_110px_130px_120px_120px] border-b border-slate-200 text-sm ${
+                        task.isGroup ? "bg-slate-50 font-black" : "bg-white"
+                      }`}
+                      style={{ height: ROW_HEIGHT }}
+                    >
+                      <div className="flex items-center justify-center border-r border-slate-200 px-2">
+                        {task.no}
+                      </div>
+
+                      <div className="flex items-center border-r border-slate-200 px-2">
+                        <span
+                          className={
+                            task.status === "risk" ? "text-red-600" : ""
+                          }
+                        >
+                          {task.name}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-center border-r border-slate-200 px-2">
+                        <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-black text-slate-900">
+                          {task.owner}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-center border-r border-slate-200 px-2">
+                        <select
+                          value={task.status}
+                          disabled={!canEditSchedule}
+                          onChange={(e) =>
+                            canEditSchedule &&
+                            updateTask(task.id, {
+                              status: e.target.value as TaskStatus,
+                            })
+                          }
+                          className={`w-full rounded-lg border px-2 py-1 text-xs font-black ${
+                            canEditSchedule ? "" : "cursor-not-allowed opacity-70"
+                          } ${getStatusStyle(task.status)}`}
+                        >
+                          <option value="notstart">Not Start</option>
+                          <option value="active">Active</option>
+                          <option value="completed">Completed</option>
+                          <option value="risk">Risk</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-center border-r border-slate-200 px-2">
+                        <input
+                          type="number"
+                          value={task.durationDays}
+                          min={1}
+                          disabled={!canEditSchedule}
+                          onChange={(e) =>
+                            canEditSchedule &&
+                            updateTask(task.id, {
+                              durationDays: Number(e.target.value),
+                            })
+                          }
+                          className={`w-20 rounded-lg border border-slate-200 px-2 py-1 text-center font-black ${
+                            canEditSchedule ? "" : "cursor-not-allowed bg-slate-100 text-slate-500"
+                          }`}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-center border-r border-slate-200 px-2">
+                        <input
+                          type="number"
+                          value={task.startOffsetDays}
+                          min={0}
+                          disabled={!canEditSchedule}
+                          onChange={(e) =>
+                            canEditSchedule &&
+                            updateTask(task.id, {
+                              startOffsetDays: Number(e.target.value),
+                            })
+                          }
+                          className={`w-20 rounded-lg border border-slate-200 px-2 py-1 text-center font-black ${
+                            canEditSchedule ? "" : "cursor-not-allowed bg-slate-100 text-slate-500"
+                          }`}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-center px-2 text-xs font-black">
+                        {formatThaiDate(
+                          addDays(
+                            projectStart,
+                            task.startOffsetDays + task.durationDays - 1,
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div
+                  className="relative shrink-0 bg-white"
+                  style={{ width: chartWidth, height: chartHeight }}
+                >
+                  {dayHeaders.map((day) => (
+                    <div
+                      key={day.key}
+                      className="absolute top-0 h-full border-r border-slate-100"
+                      style={{ left: day.left, width: day.width }}
+                    />
+                  ))}
+
+                  {Array.from({ length: tasks.length + 1 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="absolute left-0 w-full border-b border-slate-100"
+                      style={{ top: index * ROW_HEIGHT }}
+                    />
+                  ))}
+
+                  {todayOffset >= 0 && todayOffset <= chartDays && (
+                    <div
+                      className="absolute top-0 z-30 h-full border-l-4 border-red-600 animate-pulse"
+                      style={{ left: todayOffset * DAY_WIDTH }}
+                    >
+                      <div className="-ml-14 -mt-1 rounded-full bg-red-600 px-3 py-1 text-xs font-black text-white shadow-lg">
+                        Today {formatThaiDate(todayKey)}
+                      </div>
+                    </div>
+                  )}
+
+                  {tasks.map((task, index) => {
+                    const taskStartDate = addDays(
+                      projectStart,
+                      task.startOffsetDays,
+                    );
+                    const taskFinishDate = addDays(
+                      projectStart,
+                      task.startOffsetDays + task.durationDays - 1,
+                    );
+                    const left =
+                      diffDays(chartStart, taskStartDate) * DAY_WIDTH;
+                    const width = Math.max(10, task.durationDays * DAY_WIDTH);
+                    const top = index * ROW_HEIGHT + 9;
+
+                    return (
+                      <div key={task.id}>
+                        <div
+                          data-gantt-bar="true"
+                          onMouseDown={(event) => {
+                            if (!canEditSchedule) return;
+
+                            event.stopPropagation();
+                            setDragging({
+                              id: task.id,
+                              startX: event.clientX,
+                              originalOffset: task.startOffsetDays,
+                            });
+                          }}
+                          className={`absolute z-10 flex h-6 items-center rounded-md shadow-md ring-1 ring-black/10 ${
+                            canEditSchedule
+                              ? "cursor-grab active:cursor-grabbing"
+                              : "cursor-not-allowed"
+                          }`}
+                          style={{
+                            left,
+                            top,
+                            width,
+                            backgroundColor: task.color,
+                          }}
+                          title={`${task.name}: ${formatThaiDate(taskStartDate)} - ${formatThaiDate(taskFinishDate)}`}
+                        >
+                          <div className="truncate px-2 text-xs font-black text-slate-900">
+                            {task.durationDays}d
+                          </div>
+
+                          <div className="absolute -left-16 top-1 text-[10px] font-black text-slate-900">
+                            {formatShortDate(taskStartDate)}
+                          </div>
+
+                          <div className="absolute -right-16 top-1 text-[10px] font-black text-slate-900">
+                            {formatShortDate(taskFinishDate)}
+                          </div>
+                        </div>
+
+                        {task.note && (
+                          <div
+                            className="absolute z-10 rounded-xl border border-lime-500 bg-white px-3 py-1 text-xs font-black text-red-600 shadow-sm"
+                            style={{
+                              left: Math.min(
+                                chartWidth - NOTE_WIDTH,
+                                left + width + 78,
+                              ),
+                              top: top - 3,
+                              maxWidth: NOTE_WIDTH - 24,
+                            }}
+                          >
+                            {task.note}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="font-black text-slate-900">Smart Features</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              เปลี่ยน Project Start แล้ว Schedule ทุก Task จะเลื่อนตามอัตโนมัติ
+              โดยระยะห่างจากวันเริ่มต้นโครงการยังคงเดิม
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="font-black text-slate-900">Drag & Adjust</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              ลากแถบ Gantt เพื่อขยับแผน หรือแก้ Start Offset / Duration Days
+              จากตารางซ้ายมือได้ทันที
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="font-black text-slate-900">Today Indicator</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              เส้นสีแดงจะแสดงวันที่ปัจจุบันพร้อม Label วันที่บนเส้น
+              เพื่อเทียบกับแผนงานแบบ Real-time
+            </p>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
 };
 
-
-// 4) ปิดการแก้ไข input/select/drag เฉพาะคนที่ไม่ใช่ Admin
-
-// Duration input
-<input
-  type="number"
-  value={task.durationDays}
-  min={1}
-  disabled={!canEditSchedule}
-  onChange={(e) =>
-    canEditSchedule &&
-    updateTask(task.id, {
-      durationDays: Number(e.target.value),
-    })
-  }
-/>
-
-// Start Offset input
-<input
-  type="number"
-  value={task.startOffsetDays}
-  min={0}
-  disabled={!canEditSchedule}
-  onChange={(e) =>
-    canEditSchedule &&
-    updateTask(task.id, {
-      startOffsetDays: Number(e.target.value),
-    })
-  }
-/>
-
-// Status dropdown
-<select
-  value={task.status}
-  disabled={!canEditSchedule}
-  onChange={(e) =>
-    canEditSchedule &&
-    updateTask(task.id, {
-      status: e.target.value as TaskStatus,
-    })
-  }
->
-  <option value="notstart">Not Start</option>
-  <option value="active">Active</option>
-  <option value="done">Completed</option>
-  <option value="risk">Risk</option>
-</select>
-
-// Gantt drag
-onMouseDown={(event) => {
-  if (!canEditSchedule) return;
-  event.stopPropagation();
-  setDragging({
-    id: task.id,
-    startX: event.clientX,
-    originalOffset: task.startOffsetDays,
-  });
-}}
-
-// Reset button
-<button
-  type="button"
-  disabled={!canEditSchedule}
-  onClick={resetSchedule}
->
-  Reset Schedule
-</button>
-
-// Project Start DatePicker
-<DatePickerButton
-  value={projectStart}
-  onChange={(value) => canEditSchedule && handleProjectStartChange(value)}
-/>
-
-
-// 5) แนะนำให้แสดงข้อความบอกสิทธิ์
-{!canEditSchedule && (
-  <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700">
-    View Only Mode: หน้านี้ดูได้อย่างเดียว เฉพาะ Admin เท่านั้นที่แก้ไข Schedule ได้
-  </div>
-)}
+export default SchedulePage;
