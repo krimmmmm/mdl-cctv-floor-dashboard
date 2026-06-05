@@ -256,6 +256,27 @@ const averageOverallProgress = (
   );
 };
 
+
+const DEFAULT_EQUIPMENT_PLANS: Record<string, { start: string; finish: string }> = {
+  camera: { start: "2026-07-27", finish: "2026-09-09" },
+  rack: { start: "2026-09-17", finish: "2026-09-18" },
+  cabinet: { start: "2026-09-17", finish: "2026-09-18" },
+  fiber: { start: "2026-07-27", finish: "2026-09-09" },
+};
+
+const getDefaultEquipmentPlan = (row: any) =>
+  DEFAULT_EQUIPMENT_PLANS[row?.typeKey] || { start: "", finish: "" };
+
+const getEquipmentPlanStart = (row: any, workPlans: Record<string, any>) => {
+  const plan = workPlans[row.id] || {};
+  return plan.date || plan.planStart || row.planStartDate || getDefaultEquipmentPlan(row).start || "";
+};
+
+const getEquipmentPlanFinish = (row: any, workPlans: Record<string, any>) => {
+  const plan = workPlans[row.id] || {};
+  return plan.finishDate || row.planFinishDate || getDefaultEquipmentPlan(row).finish || "";
+};
+
 const DashboardOverview: React.FC = () => {
   const [, setLocation] = useLocation();
 
@@ -421,9 +442,7 @@ const DashboardOverview: React.FC = () => {
   const todayKey = getDateKeyFromDate(new Date());
 
   const getJobsForDate = (dateKey: string) =>
-    equipmentRows.filter(
-      (row) => row.planStartDate === dateKey || workPlans[row.id]?.date === dateKey
-    );
+    equipmentRows.filter((row) => getEquipmentPlanStart(row, workPlans) === dateKey);
 
   const hasWorkingOnDate = (dateKey: string) =>
     getJobsForDate(dateKey).some((job) => workPlans[job.id]?.isWorking);
@@ -476,7 +495,7 @@ const DashboardOverview: React.FC = () => {
     return equipmentRows
       .map((row) => {
         const plan = workPlans[row.id] || {};
-        const planDate = plan.date || row.planStartDate || "";
+        const planDate = getEquipmentPlanStart(row, workPlans);
 
         return {
           row,
@@ -1147,7 +1166,7 @@ const DashboardOverview: React.FC = () => {
                         </td>
                         <td className="p-3">
                           <DateInput
-                            value={workPlans[row.id]?.date || workPlans[row.id]?.planStart || ""}
+                            value={getEquipmentPlanStart(row, workPlans)}
                             disabled={!canEdit}
                             onSave={(isoDate) =>
                               canEdit &&
@@ -1161,7 +1180,7 @@ const DashboardOverview: React.FC = () => {
                         </td>
                         <td className="p-3">
                           <DateInput
-                            value={workPlans[row.id]?.finishDate || ""}
+                            value={getEquipmentPlanFinish(row, workPlans)}
                             disabled={!canEdit}
                             onSave={(isoDate) =>
                               canEdit &&
@@ -1645,7 +1664,7 @@ const DayJobListModal = ({
 }) => {
   const dayJobs = equipmentRows.filter((row) => {
     const plan = workPlans[row.id] || {};
-    return plan.date === dateKey || row.planStartDate === dateKey;
+    return getEquipmentPlanStart(row, workPlans) === dateKey;
   });
 
   return (
