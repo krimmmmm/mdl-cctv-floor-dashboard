@@ -257,24 +257,70 @@ const averageOverallProgress = (
 };
 
 
-const DEFAULT_EQUIPMENT_PLANS: Record<string, { start: string; finish: string }> = {
-  camera: { start: "2026-07-27", finish: "2026-09-09" },
-  rack: { start: "2026-09-17", finish: "2026-09-18" },
-  cabinet: { start: "2026-09-17", finish: "2026-09-18" },
-  fiber: { start: "2026-07-27", finish: "2026-09-09" },
+const addPlanDays = (dateKey: string, days: number) => {
+  const date = new Date(`${dateKey}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return getDateKeyFromDate(date);
 };
 
-const getDefaultEquipmentPlan = (row: any) =>
-  DEFAULT_EQUIPMENT_PLANS[row?.typeKey] || { start: "", finish: "" };
+const diffPlanDaysInclusive = (startKey: string, finishKey: string) => {
+  const start = new Date(`${startKey}T00:00:00`);
+  const finish = new Date(`${finishKey}T00:00:00`);
+  return Math.floor((finish.getTime() - start.getTime()) / 86400000) + 1;
+};
+
+const createSegmentPlan = (
+  startKey: string,
+  finishKey: string,
+  index: number,
+  total: number
+) => {
+  if (!total || total <= 0) return { start: startKey, finish: finishKey };
+
+  const totalDays = diffPlanDaysInclusive(startKey, finishKey);
+  const startOffset = Math.floor((index * totalDays) / total);
+  const endOffset = Math.floor(((index + 1) * totalDays) / total) - 1;
+
+  return {
+    start: addPlanDays(startKey, startOffset),
+    finish: addPlanDays(startKey, Math.max(startOffset, endOffset)),
+  };
+};
+
+const getCameraAutoPlan = (index: number, total: number) => {
+  const cameraPlanWindows = [
+    { start: "2026-07-25", finish: "2026-08-05" },
+    { start: "2026-08-06", finish: "2026-08-16" },
+    { start: "2026-08-17", finish: "2026-08-27" },
+    { start: "2026-08-28", finish: "2026-09-08" },
+  ];
+
+  const groupIndex = Math.min(
+    cameraPlanWindows.length - 1,
+    Math.floor((index * cameraPlanWindows.length) / Math.max(1, total))
+  );
+
+  return cameraPlanWindows[groupIndex];
+};
+
+const getRackCabinetAutoPlan = (index: number) => {
+  const start = addPlanDays("2026-07-25", index * 4);
+  const finish = addPlanDays(start, 4);
+
+  return {
+    start,
+    finish: finish > "2026-09-08" ? "2026-09-08" : finish,
+  };
+};
 
 const getEquipmentPlanStart = (row: any, workPlans: Record<string, any>) => {
   const plan = workPlans[row.id] || {};
-  return plan.date || plan.planStart || row.planStartDate || getDefaultEquipmentPlan(row).start || "";
+  return row.planStartDate || row.autoPlanStart || plan.date || plan.planStart || "";
 };
 
 const getEquipmentPlanFinish = (row: any, workPlans: Record<string, any>) => {
   const plan = workPlans[row.id] || {};
-  return plan.finishDate || row.planFinishDate || getDefaultEquipmentPlan(row).finish || "";
+  return row.planFinishDate || row.autoPlanFinish || plan.finishDate || "";
 };
 
 const DashboardOverview: React.FC = () => {
@@ -356,6 +402,18 @@ const DashboardOverview: React.FC = () => {
     const getSortLabel = (row: any) =>
       String(row.name || row.label || row.id || "");
 
+    const counters = {
+      camera: 0,
+      fiber: 0,
+      rackCabinet: 0,
+    };
+
+    const totals = {
+      camera: cameraRows.length,
+      fiber: fiberRows.length,
+      rackCabinet: rackRows.length + cabinetRows.length,
+    };
+
     return [...cameraRows, ...rackRows, ...cabinetRows, ...fiberRows]
       .map((row) => ({
         ...row,
@@ -373,6 +431,33 @@ const DashboardOverview: React.FC = () => {
           numeric: true,
           sensitivity: "base",
         });
+      })
+      .map((row) => {
+        let autoPlan = { start: "", finish: "" };
+
+        if (row.typeKey === "camera") {
+          autoPlan = getCameraAutoPlan(counters.camera, totals.camera);
+          counters.camera += 1;
+        } else if (row.typeKey === "fiber") {
+          autoPlan = createSegmentPlan(
+            "2026-06-21",
+            "2026-07-22",
+            counters.fiber,
+            totals.fiber
+          );
+          counters.fiber += 1;
+        } else if (row.typeKey === "rack" || row.typeKey === "cabinet") {
+          autoPlan = getRackCabinetAutoPlan(counters.rackCabinet);
+          counters.rackCabinet += 1;
+        }
+
+        return {
+          ...row,
+          planStartDate: autoPlan.start,
+          planFinishDate: autoPlan.finish,
+          autoPlanStart: autoPlan.start,
+          autoPlanFinish: autoPlan.finish,
+        };
       });
   }, [safeCameras, safeRacks, safeCabinets, safeFiberRoutes]);
 
