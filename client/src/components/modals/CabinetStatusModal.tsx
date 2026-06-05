@@ -103,6 +103,14 @@ if (!isOpen || !cabinet) return null;
       checked: Boolean((cabinet as any).fiberOptic),
     },
     {
+      key: "ups",
+      title: "UPS",
+      desc: "UPS installed and verified",
+      progressKey: "upsProgress",
+      progress: Number((cabinet as any).upsProgress || 0),
+      checked: Boolean((cabinet as any).ups),
+    },
+    {
       key: "ready",
       title: "READY",
       desc: "Cabinet ready for use",
