@@ -164,6 +164,7 @@ const getProgress = (item: any, type: string) => {
           "utpProgress",
           "poeSwitchProgress",
           "fiberOpticProgress",
+          "upsProgress",
           "readyProgress",
         ]
       : [
@@ -171,6 +172,7 @@ const getProgress = (item: any, type: string) => {
           "utpProgress",
           "poeSwitchProgress",
           "fiberOpticProgress",
+          "upsProgress",
           "readyProgress",
         ];
 
@@ -184,6 +186,18 @@ const getStatus = (progress: number) => {
   if (progress >= 100) return "Completed";
   if (progress > 0) return "In Progress";
   return "Not Started";
+};
+
+
+const getUpsProgress = (item: any, typeKey?: string) => {
+  if (typeKey !== "rack" && typeKey !== "cabinet") return null;
+  return Number(item.upsProgress || 0);
+};
+
+const getUpsStatus = (item: any, typeKey?: string) => {
+  const upsProgress = getUpsProgress(item, typeKey);
+  if (upsProgress === null) return "-";
+  return getStatus(upsProgress);
 };
 
 const getPhotos = (item: any) =>
@@ -212,6 +226,7 @@ const calculateRackOverallProgress = (rack: any) => {
     Number(rack.utpProgress || 0),
     Number(rack.poeSwitchProgress || 0),
     Number(rack.fiberOpticProgress || 0),
+    Number(rack.upsProgress || 0),
     Number(rack.readyProgress || 0),
   ];
 
@@ -225,6 +240,7 @@ const calculateCabinetOverallProgress = (cabinet: any) => {
     Number(cabinet.utpProgress || 0),
     Number(cabinet.poeSwitchProgress || 0),
     Number(cabinet.fiberOpticProgress || 0),
+    Number(cabinet.upsProgress || 0),
     Number(cabinet.readyProgress || 0),
   ];
 
@@ -307,6 +323,8 @@ const DashboardOverview: React.FC = () => {
       equipmentType: "Rack",
       typeKey: "rack",
       progress: getProgress(item, "rack"),
+      upsProgress: getUpsProgress(item, "rack"),
+      upsStatus: getUpsStatus(item, "rack"),
     }));
 
     const cabinetRows = safeCabinets.map((item: any) => ({
@@ -314,6 +332,8 @@ const DashboardOverview: React.FC = () => {
       equipmentType: "Cabinet",
       typeKey: "cabinet",
       progress: getProgress(item, "cabinet"),
+      upsProgress: getUpsProgress(item, "cabinet"),
+      upsStatus: getUpsStatus(item, "cabinet"),
     }));
 
     const fiberRows = safeFiberRoutes.map((item: any) => ({
@@ -398,6 +418,24 @@ const DashboardOverview: React.FC = () => {
   const cabinetStats = {
     total: safeCabinets.length,
     ready: safeCabinets.filter((c: any) => Number(c.readyProgress || 0) >= 100).length,
+  };
+
+  const upsItems = [...safeRacks, ...safeCabinets];
+  const upsStats = {
+    total: upsItems.length,
+    completed: upsItems.filter((item: any) => Number(item.upsProgress || 0) >= 100).length,
+    inProgress: upsItems.filter((item: any) => {
+      const progress = Number(item.upsProgress || 0);
+      return progress > 0 && progress < 100;
+    }).length,
+    notStarted: upsItems.filter((item: any) => Number(item.upsProgress || 0) <= 0).length,
+    overall:
+      upsItems.length > 0
+        ? Math.round(
+            upsItems.reduce((sum: number, item: any) => sum + Number(item.upsProgress || 0), 0) /
+              upsItems.length
+          )
+        : 0,
   };
 
   const fiberStats = {
@@ -679,12 +717,12 @@ const DashboardOverview: React.FC = () => {
     <div class="card purple">
       <div class="label">RACK Equipment</div>
       <div class="value">${rackStats.total}</div>
-      <div>Ready ${rackStats.ready} · Type1 ${rackStats.type1} · Type2 ${rackStats.type2}</div>
+      <div>Ready ${rackStats.ready} · Type1 ${rackStats.type1} · Type2 ${rackStats.type2} · UPS ${upsStats.completed}/${upsStats.total}</div>
     </div>
     <div class="card orange">
       <div class="label">CABINET Equipment</div>
       <div class="value">${cabinetStats.total}</div>
-      <div>Ready ${cabinetStats.ready}</div>
+      <div>Ready ${cabinetStats.ready} · UPS ${upsStats.completed}/${upsStats.total}</div>
     </div>
     <div class="card green">
       <div class="label">Fiber Optic Progress</div>
@@ -1083,6 +1121,7 @@ const DashboardOverview: React.FC = () => {
                     <th className="text-left p-3">Type</th>
                     <th className="text-left p-3">Label</th>
                     <th className="text-left p-3">Status</th>
+                    <th className="text-left p-3">UPS Status</th>
                     <th className="text-left p-3">Progress</th>
                     <th className="text-left p-3">Plan Start</th>
                     <th className="text-left p-3">Plan Finish</th>
@@ -1116,6 +1155,18 @@ const DashboardOverview: React.FC = () => {
                         </td>
                         <td className="p-3">
                           <StatusPill status={row.statusLabel} />
+                        </td>
+                        <td className="p-3">
+                          {row.upsStatus && row.upsStatus !== "-" ? (
+                            <div className="space-y-1">
+                              <StatusPill status={row.upsStatus} />
+                              <div className="text-[11px] font-black text-slate-500">
+                                UPS {Number(row.upsProgress || 0)}%
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">-</span>
+                          )}
                         </td>
                         <td className="p-3 min-w-[140px]">
                           <div className="flex items-center gap-2">
