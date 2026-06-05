@@ -380,7 +380,7 @@ const RfaOnlinePage: React.FC = () => {
   const userRole = String(user?.role || savedUser?.role || "customer").trim().toLowerCase();
   const userName = String(user?.username || savedUser?.username || "").trim();
 
-  const canSubmit = userRole === "admin" || userRole === "newstaff";
+  const canSubmit = userRole === "admin" || userRole === "newstaff" || userRole === "staff";
   const canApprove = userRole === "customer";
   const canDelete = userRole === "admin";
 
@@ -406,8 +406,8 @@ const RfaOnlinePage: React.FC = () => {
 
     if (error) {
       setDbReady(false);
-      const local = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]");
-      setRecords(local);
+      setMessage(`Supabase load failed: ${error.message}`);
+      setRecords([]);
     } else {
       setDbReady(true);
       setRecords((data || []).map(fromDb));
@@ -429,29 +429,25 @@ const RfaOnlinePage: React.FC = () => {
     return { submitted, approved, waiting, rejected };
   }, [records]);
 
-  const saveLocal = (nextRecords: RfaRecord[]) => {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(nextRecords));
-    setRecords(nextRecords);
+  const saveLocal = (_nextRecords: RfaRecord[]) => {
+    // Disabled for RFA files/signatures to prevent browser storage quota errors.
+    // RFA records should be stored in Supabase only.
+    setMessage("ไม่สามารถบันทึกลง Supabase ได้ กรุณาตรวจสอบ table rfa_requests / policy / connection");
   };
 
   const saveRecord = async (record: RfaRecord) => {
-    if (dbReady) {
-      const { error } = await supabase.from("rfa_requests").upsert(toDb(record), { onConflict: "id" });
+    const { error } = await supabase
+      .from("rfa_requests")
+      .upsert(toDb(record), { onConflict: "id" });
 
-      if (error) {
-        setDbReady(false);
-        const existing = records.filter((r) => r.id !== record.id);
-        saveLocal([record, ...existing]);
-        setMessage(`Saved locally only: ${error.message}`);
-        return;
-      }
-
-      await loadRecords();
+    if (error) {
+      setDbReady(false);
+      setMessage(`Supabase save failed: ${error.message}`);
       return;
     }
 
-    const existing = records.filter((r) => r.id !== record.id);
-    saveLocal([record, ...existing]);
+    setDbReady(true);
+    await loadRecords();
   };
 
 
@@ -669,7 +665,7 @@ const RfaOnlinePage: React.FC = () => {
               <div>
                 <h2 className="text-xl font-black">Submit RFA Online</h2>
                 <p className="text-sm text-slate-500">
-                  สำหรับ Admin / New Staff เพื่อกรอกและ Submit เอกสาร RFA พร้อมแนบไฟล์ได้ 5 ไฟล์
+                  สำหรับ Admin / Staff เพื่อกรอกและ Submit เอกสาร RFA พร้อมแนบไฟล์ได้ 5 ไฟล์
                 </p>
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-black ${canSubmit ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
