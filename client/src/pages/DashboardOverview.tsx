@@ -315,12 +315,18 @@ const getRackCabinetAutoPlan = (index: number) => {
 
 const getEquipmentPlanStart = (row: any, workPlans: Record<string, any>) => {
   const plan = workPlans[row.id] || {};
-  return row.planStartDate || row.autoPlanStart || plan.date || plan.planStart || "";
+
+  // Manual date saved in workPlans must have priority over auto plan.
+  // This makes Equipment Master Table Plan Start editable and persistent.
+  return plan.planStart || plan.date || row.planStartDate || row.autoPlanStart || "";
 };
 
 const getEquipmentPlanFinish = (row: any, workPlans: Record<string, any>) => {
   const plan = workPlans[row.id] || {};
-  return row.planFinishDate || row.autoPlanFinish || plan.finishDate || "";
+
+  // Manual finishDate saved in workPlans must have priority over auto plan.
+  // This makes Equipment Master Table Plan Finish editable and persistent.
+  return plan.finishDate || row.planFinishDate || row.autoPlanFinish || "";
 };
 
 const DashboardOverview: React.FC = () => {
@@ -893,14 +899,6 @@ const DashboardOverview: React.FC = () => {
           >
             Smart Schedule
           </Link>
-
-          <Link
-            href="/rfa"
-            className="px-4 py-2 rounded-xl bg-purple-600 text-white text-sm font-semibold shadow-sm hover:bg-purple-500 transition"
-          >
-            RFA Online
-          </Link>
-
 
           <Link
             href="/floorplan"
