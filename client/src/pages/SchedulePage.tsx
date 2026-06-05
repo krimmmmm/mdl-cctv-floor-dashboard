@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
 
-type TaskStatus = "planned" | "risk" | "done" | "active";
+type TaskStatus = "active" | "completed" | "risk";
 
 type ScheduleTask = {
   id: string;
@@ -38,7 +38,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 45,
     startOffsetDays: 14,
     color: "#fef200",
-    status: "planned",
+    status: "active",
   },
   {
     id: "network",
@@ -48,7 +48,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 45,
     startOffsetDays: 21,
     color: "#fef200",
-    status: "planned",
+    status: "active",
   },
   {
     id: "cab-rack",
@@ -58,7 +58,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 15,
     startOffsetDays: 28,
     color: "#fef200",
-    status: "planned",
+    status: "active",
   },
   {
     id: "hdd",
@@ -79,7 +79,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 15,
     startOffsetDays: 70,
     color: "#fef200",
-    status: "planned",
+    status: "active",
   },
   {
     id: "kickoff",
@@ -89,7 +89,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 1,
     startOffsetDays: 28,
     color: "#0ea5e9",
-    status: "done",
+    status: "completed",
     isGroup: true,
   },
   {
@@ -100,7 +100,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 1,
     startOffsetDays: 35,
     color: "#0ea5e9",
-    status: "done",
+    status: "completed",
     isGroup: true,
   },
   {
@@ -133,7 +133,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 5,
     startOffsetDays: 91,
     color: "#fdba74",
-    status: "planned",
+    status: "active",
   },
   {
     id: "outdoor-cabinet",
@@ -143,7 +143,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 2,
     startOffsetDays: 98,
     color: "#fdba74",
-    status: "planned",
+    status: "active",
   },
   {
     id: "config",
@@ -153,7 +153,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 2,
     startOffsetDays: 98,
     color: "#fdba74",
-    status: "planned",
+    status: "active",
   },
   {
     id: "nvr",
@@ -163,7 +163,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 2,
     startOffsetDays: 105,
     color: "#fdba74",
-    status: "planned",
+    status: "active",
   },
   {
     id: "camera-live",
@@ -173,7 +173,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 1,
     startOffsetDays: 107,
     color: "#fdba74",
-    status: "planned",
+    status: "active",
   },
   {
     id: "commissioning",
@@ -183,7 +183,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 1,
     startOffsetDays: 112,
     color: "#0ea5e9",
-    status: "planned",
+    status: "active",
     isGroup: true,
   },
   {
@@ -194,7 +194,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 1,
     startOffsetDays: 112,
     color: "#0ea5e9",
-    status: "planned",
+    status: "active",
   },
   {
     id: "handover",
@@ -204,7 +204,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 1,
     startOffsetDays: 113,
     color: "#0ea5e9",
-    status: "planned",
+    status: "active",
   },
   {
     id: "doc",
@@ -214,7 +214,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 5,
     startOffsetDays: 114,
     color: "#0ea5e9",
-    status: "planned",
+    status: "active",
     note: "Submit UAT Document",
   },
   {
@@ -225,7 +225,7 @@ const defaultTasks: ScheduleTask[] = [
     durationDays: 1,
     startOffsetDays: 119,
     color: "#84cc16",
-    status: "planned",
+    status: "active",
     isGroup: true,
   },
 ];
@@ -251,7 +251,7 @@ const TOTAL_DAYS = FRAME_DAYS;
 const SCHEDULE_DB_KEY = "__schedule_tasks__";
 const PROJECT_PLAN_DB_KEY = "__project_plan__";
 const ROW_HEIGHT = 42;
-const LEFT_TABLE_WIDTH = 900;
+const LEFT_TABLE_WIDTH = 1010;
 const DAY_WIDTH = 18;
 const NOTE_WIDTH = 260;
 
@@ -332,7 +332,8 @@ const DatePickerButton = ({
 };
 
 const getStatusStyle = (status: TaskStatus) => {
-  if (status === "done") return "bg-emerald-100 text-emerald-700 border-emerald-200";
+  if (status === "completed")
+    return "bg-emerald-100 text-emerald-700 border-emerald-200";
   if (status === "active") return "bg-blue-100 text-blue-700 border-blue-200";
   if (status === "risk") return "bg-red-100 text-red-700 border-red-200";
   return "bg-slate-100 text-slate-600 border-slate-200";
@@ -345,7 +346,7 @@ const SchedulePage: React.FC = () => {
   const schedulePlan = workPlans[SCHEDULE_DB_KEY] || {};
 
   const [projectStart, setProjectStart] = useState(
-    projectPlan.planStart || projectPlan.date || "2026-06-08"
+    projectPlan.planStart || projectPlan.date || "2026-06-08",
   );
   const [tasks, setTasks] = useState<ScheduleTask[]>(defaultTasks);
 
@@ -381,7 +382,7 @@ const SchedulePage: React.FC = () => {
 
   const latestTaskEndOffset = tasks.reduce(
     (max, task) => Math.max(max, task.startOffsetDays + task.durationDays - 1),
-    0
+    0,
   );
 
   const projectFinish = addDays(projectStart, latestTaskEndOffset);
@@ -390,14 +391,17 @@ const SchedulePage: React.FC = () => {
   // Example: Project Start = 08/06/2026 -> timeline starts from 01/06/2026.
   const projectStartDate = new Date(`${projectStart}T00:00:00`);
   const chartStart = getLocalDateKey(
-    new Date(projectStartDate.getFullYear(), projectStartDate.getMonth(), 1)
+    new Date(projectStartDate.getFullYear(), projectStartDate.getMonth(), 1),
   );
 
-  const chartDays = Math.max(TOTAL_DAYS, diffDays(chartStart, projectFinish) + 15);
+  const chartDays = Math.max(
+    TOTAL_DAYS,
+    diffDays(chartStart, projectFinish) + 15,
+  );
   const projectStartOffset = diffDays(chartStart, projectStart);
   const todayOffset = diffDays(chartStart, todayKey);
 
-  const completed = tasks.filter((task) => task.status === "done").length;
+  const completed = tasks.filter((task) => task.status === "completed").length;
   const active = tasks.filter((task) => task.status === "active").length;
   const risk = tasks.filter((task) => task.status === "risk").length;
 
@@ -441,8 +445,9 @@ const SchedulePage: React.FC = () => {
     setTasks(nextTasks);
 
     const nextLatestTaskEndOffset = nextTasks.reduce(
-      (max, task) => Math.max(max, task.startOffsetDays + task.durationDays - 1),
-      0
+      (max, task) =>
+        Math.max(max, task.startOffsetDays + task.durationDays - 1),
+      0,
     );
     const nextFinish = addDays(projectStart, nextLatestTaskEndOffset);
 
@@ -469,17 +474,20 @@ const SchedulePage: React.FC = () => {
           ? {
               ...task,
               ...changes,
-              durationDays: Math.max(1, Number(changes.durationDays ?? task.durationDays)),
+              durationDays: Math.max(
+                1,
+                Number(changes.durationDays ?? task.durationDays),
+              ),
               startOffsetDays: Math.max(
                 0,
                 Math.min(
                   TOTAL_DAYS - 1,
-                  Number(changes.startOffsetDays ?? task.startOffsetDays)
-                )
+                  Number(changes.startOffsetDays ?? task.startOffsetDays),
+                ),
               ),
             }
-          : task
-      )
+          : task,
+      ),
     );
   };
 
@@ -509,9 +517,10 @@ const SchedulePage: React.FC = () => {
     const resetFinish = addDays(
       resetStart,
       defaultTasks.reduce(
-        (max, task) => Math.max(max, task.startOffsetDays + task.durationDays - 1),
-        0
-      )
+        (max, task) =>
+          Math.max(max, task.startOffsetDays + task.durationDays - 1),
+        0,
+      ),
     );
 
     setProjectStart(resetStart);
@@ -535,7 +544,9 @@ const SchedulePage: React.FC = () => {
 
   const onMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
     if (dragging) {
-      const deltaDays = Math.round((event.clientX - dragging.startX) / DAY_WIDTH);
+      const deltaDays = Math.round(
+        (event.clientX - dragging.startX) / DAY_WIDTH,
+      );
       updateTask(dragging.id, {
         startOffsetDays: dragging.originalOffset + deltaDays,
       });
@@ -581,7 +592,8 @@ const SchedulePage: React.FC = () => {
               MDL CCTV Smart Schedule
             </h1>
             <p className="text-sm text-slate-500">
-              Intelligent Gantt schedule · Auto-shift by project start date · Today line
+              Intelligent Gantt schedule · Auto-shift by project start date ·
+              Today line
             </p>
           </div>
 
@@ -600,7 +612,9 @@ const SchedulePage: React.FC = () => {
               <div className="text-[11px] font-black uppercase text-orange-700">
                 Project Finish
               </div>
-              <div className="mt-1 text-sm font-black">{formatThaiDate(projectFinish)}</div>
+              <div className="mt-1 text-sm font-black">
+                {formatThaiDate(projectFinish)}
+              </div>
             </div>
 
             <button
@@ -630,12 +644,16 @@ const SchedulePage: React.FC = () => {
 
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 shadow-sm">
             <div className="text-xs font-bold text-emerald-700">Completed</div>
-            <div className="mt-1 text-3xl font-black text-emerald-600">{completed}</div>
+            <div className="mt-1 text-3xl font-black text-emerald-600">
+              {completed}
+            </div>
           </div>
 
           <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 shadow-sm">
             <div className="text-xs font-bold text-blue-700">Active</div>
-            <div className="mt-1 text-3xl font-black text-blue-600">{active}</div>
+            <div className="mt-1 text-3xl font-black text-blue-600">
+              {active}
+            </div>
           </div>
 
           <div className="rounded-2xl border border-red-100 bg-red-50 p-4 shadow-sm">
@@ -652,21 +670,23 @@ const SchedulePage: React.FC = () => {
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white shadow-xl overflow-hidden">
-          <div className="border-b border-slate-200 bg-slate-900 px-5 py-4 text-white">
+          <div className="sticky top-0 z-[110] border-b border-slate-200 bg-slate-900 px-5 py-4 text-white">
             <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
               <div>
                 <h2 className="text-xl font-black">
                   Minor Dairy Factory New CCTV Installation
                 </h2>
                 <p className="text-sm text-slate-300">
-                  Drag bars to move schedule · Edit duration/start offset in table · Today line follows current date
+                  Drag bars to move schedule · Edit duration/start offset in
+                  table · Today line follows current date
                 </p>
               </div>
 
               <div className="text-right text-sm font-bold text-slate-200">
                 <div>Frame: 120 Days</div>
                 <div className="mt-1 text-xs text-lime-200">
-                  Start {formatThaiDate(projectStart)} · Finish {formatThaiDate(projectFinish)}
+                  Start {formatThaiDate(projectStart)} · Finish{" "}
+                  {formatThaiDate(projectFinish)}
                 </div>
               </div>
             </div>
@@ -685,23 +705,50 @@ const SchedulePage: React.FC = () => {
             <div style={{ minWidth: LEFT_TABLE_WIDTH + chartWidth }}>
               <div className="sticky top-0 z-50 flex border-b border-slate-200 bg-white">
                 <div
-                  className="sticky left-0 z-[90] grid shrink-0 grid-cols-[70px_1fr_160px_130px_120px_120px] border-r border-slate-200 bg-lime-400 text-sm font-black text-slate-900 shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
+                  className="sticky left-0 z-[90] grid shrink-0 grid-cols-[70px_1fr_160px_110px_130px_120px_120px] border-r border-slate-200 bg-lime-400 text-sm font-black text-slate-900 shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
                   style={{ width: LEFT_TABLE_WIDTH, minHeight: 132 }}
                 >
-                  <div className="flex items-center justify-center border-r border-lime-700 p-2">No.</div>
-                  <div className="flex items-center justify-center border-r border-lime-700 p-2">Task</div>
-                  <div className="flex items-center justify-center border-r border-lime-700 p-2">Task Owner</div>
-                  <div className="flex items-center justify-center border-r border-lime-700 p-2 text-center">Duration<br />Days</div>
-                  <div className="flex items-center justify-center border-r border-lime-700 p-2 text-center">Start<br />Offset</div>
-                  <div className="flex items-center justify-center p-2 text-center">Finish<br />Date</div>
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2">
+                    No.
+                  </div>
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2">
+                    Task
+                  </div>
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2">
+                    Task Owner
+                  </div>
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2">
+                    Status
+                  </div>
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2 text-center">
+                    Duration
+                    <br />
+                    Days
+                  </div>
+                  <div className="flex items-center justify-center border-r border-lime-700 p-2 text-center">
+                    Start
+                    <br />
+                    Offset
+                  </div>
+                  <div className="flex items-center justify-center p-2 text-center">
+                    Finish
+                    <br />
+                    Date
+                  </div>
                 </div>
 
-                <div className="relative shrink-0" style={{ width: chartWidth }}>
+                <div
+                  className="relative shrink-0"
+                  style={{ width: chartWidth }}
+                >
                   <div className="h-8 border-b border-emerald-900 bg-emerald-500 text-center text-sm font-black leading-8 text-slate-900">
                     The Frame (Day)
                   </div>
 
-                  <div className="relative h-8 border-b border-slate-300 bg-lime-300" style={{ width: chartTimelineWidth }}>
+                  <div
+                    className="relative h-8 border-b border-slate-300 bg-lime-300"
+                    style={{ width: chartTimelineWidth }}
+                  >
                     {monthHeaders.map((month) => (
                       <div
                         key={month.label}
@@ -713,7 +760,10 @@ const SchedulePage: React.FC = () => {
                     ))}
                   </div>
 
-                  <div className="relative h-8 bg-lime-300" style={{ width: chartTimelineWidth }}>
+                  <div
+                    className="relative h-8 bg-lime-300"
+                    style={{ width: chartTimelineWidth }}
+                  >
                     {dayHeaders.map((day) => (
                       <div
                         key={day.key}
@@ -747,7 +797,10 @@ const SchedulePage: React.FC = () => {
 
                     <div
                       className="absolute top-1 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-black text-white"
-                      style={{ left: diffDays(chartStart, projectFinish) * DAY_WIDTH + 8 }}
+                      style={{
+                        left:
+                          diffDays(chartStart, projectFinish) * DAY_WIDTH + 8,
+                      }}
                     >
                       Finish {formatThaiDate(projectFinish)}
                     </div>
@@ -756,11 +809,14 @@ const SchedulePage: React.FC = () => {
               </div>
 
               <div className="flex">
-                <div className="sticky left-0 z-[80] shrink-0 border-r border-slate-200 bg-white shadow-[8px_0_14px_rgba(15,23,42,0.08)]" style={{ width: LEFT_TABLE_WIDTH }}>
+                <div
+                  className="sticky left-0 z-[80] shrink-0 border-r border-slate-200 bg-white shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
+                  style={{ width: LEFT_TABLE_WIDTH }}
+                >
                   {tasks.map((task) => (
                     <div
                       key={task.id}
-                      className={`grid grid-cols-[70px_1fr_160px_130px_120px_120px] border-b border-slate-200 text-sm ${
+                      className={`grid grid-cols-[70px_1fr_160px_110px_130px_120px_120px] border-b border-slate-200 text-sm ${
                         task.isGroup ? "bg-slate-50 font-black" : "bg-white"
                       }`}
                       style={{ height: ROW_HEIGHT }}
@@ -770,7 +826,11 @@ const SchedulePage: React.FC = () => {
                       </div>
 
                       <div className="flex items-center border-r border-slate-200 px-2">
-                        <span className={task.status === "risk" ? "text-red-600" : ""}>
+                        <span
+                          className={
+                            task.status === "risk" ? "text-red-600" : ""
+                          }
+                        >
                           {task.name}
                         </span>
                       </div>
@@ -779,6 +839,22 @@ const SchedulePage: React.FC = () => {
                         <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-black text-slate-900">
                           {task.owner}
                         </span>
+                      </div>
+
+                      <div className="flex items-center justify-center border-r border-slate-200 px-2">
+                        <select
+                          value={task.status}
+                          onChange={(e) =>
+                            updateTask(task.id, {
+                              status: e.target.value as TaskStatus,
+                            })
+                          }
+                          className={`w-full rounded-lg border px-2 py-1 text-xs font-black ${getStatusStyle(task.status)}`}
+                        >
+                          <option value="active">Active</option>
+                          <option value="completed">Completed</option>
+                          <option value="risk">Risk</option>
+                        </select>
                       </div>
 
                       <div className="flex items-center justify-center border-r border-slate-200 px-2">
@@ -810,13 +886,21 @@ const SchedulePage: React.FC = () => {
                       </div>
 
                       <div className="flex items-center justify-center px-2 text-xs font-black">
-                        {formatThaiDate(addDays(projectStart, task.startOffsetDays + task.durationDays - 1))}
+                        {formatThaiDate(
+                          addDays(
+                            projectStart,
+                            task.startOffsetDays + task.durationDays - 1,
+                          ),
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="relative shrink-0 bg-white" style={{ width: chartWidth, height: chartHeight }}>
+                <div
+                  className="relative shrink-0 bg-white"
+                  style={{ width: chartWidth, height: chartHeight }}
+                >
                   {dayHeaders.map((day) => (
                     <div
                       key={day.key}
@@ -845,9 +929,16 @@ const SchedulePage: React.FC = () => {
                   )}
 
                   {tasks.map((task, index) => {
-                    const taskStartDate = addDays(projectStart, task.startOffsetDays);
-                    const taskFinishDate = addDays(projectStart, task.startOffsetDays + task.durationDays - 1);
-                    const left = diffDays(chartStart, taskStartDate) * DAY_WIDTH;
+                    const taskStartDate = addDays(
+                      projectStart,
+                      task.startOffsetDays,
+                    );
+                    const taskFinishDate = addDays(
+                      projectStart,
+                      task.startOffsetDays + task.durationDays - 1,
+                    );
+                    const left =
+                      diffDays(chartStart, taskStartDate) * DAY_WIDTH;
                     const width = Math.max(10, task.durationDays * DAY_WIDTH);
                     const top = index * ROW_HEIGHT + 9;
 
@@ -889,7 +980,10 @@ const SchedulePage: React.FC = () => {
                           <div
                             className="absolute z-10 rounded-xl border border-lime-500 bg-white px-3 py-1 text-xs font-black text-red-600 shadow-sm"
                             style={{
-                              left: Math.min(chartWidth - NOTE_WIDTH, left + width + 78),
+                              left: Math.min(
+                                chartWidth - NOTE_WIDTH,
+                                left + width + 78,
+                              ),
                               top: top - 3,
                               maxWidth: NOTE_WIDTH - 24,
                             }}
@@ -910,21 +1004,24 @@ const SchedulePage: React.FC = () => {
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="font-black text-slate-900">Smart Features</h3>
             <p className="mt-2 text-sm text-slate-500">
-              เปลี่ยน Project Start แล้ว Schedule ทุก Task จะเลื่อนตามอัตโนมัติ โดยระยะห่างจากวันเริ่มต้นโครงการยังคงเดิม
+              เปลี่ยน Project Start แล้ว Schedule ทุก Task จะเลื่อนตามอัตโนมัติ
+              โดยระยะห่างจากวันเริ่มต้นโครงการยังคงเดิม
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="font-black text-slate-900">Drag & Adjust</h3>
             <p className="mt-2 text-sm text-slate-500">
-              ลากแถบ Gantt เพื่อขยับแผน หรือแก้ Start Offset / Duration Days จากตารางซ้ายมือได้ทันที
+              ลากแถบ Gantt เพื่อขยับแผน หรือแก้ Start Offset / Duration Days
+              จากตารางซ้ายมือได้ทันที
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <h3 className="font-black text-slate-900">Today Indicator</h3>
             <p className="mt-2 text-sm text-slate-500">
-              เส้นสีแดงจะแสดงวันที่ปัจจุบันพร้อม Label วันที่บนเส้น เพื่อเทียบกับแผนงานแบบ Real-time
+              เส้นสีแดงจะแสดงวันที่ปัจจุบันพร้อม Label วันที่บนเส้น
+              เพื่อเทียบกับแผนงานแบบ Real-time
             </p>
           </div>
         </section>
