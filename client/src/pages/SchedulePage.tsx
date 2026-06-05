@@ -702,10 +702,10 @@ const SchedulePage: React.FC = () => {
             onMouseUp={onMouseUp}
             onMouseLeave={onMouseUp}
           >
-            <div style={{ minWidth: LEFT_TABLE_WIDTH + chartWidth }}>
-              <div className="sticky top-0 z-50 flex border-b border-slate-200 bg-white">
+            <div className="relative isolate" style={{ minWidth: LEFT_TABLE_WIDTH + chartWidth }}>
+              <div className="sticky top-0 z-[140] flex border-b border-slate-200 bg-white">
                 <div
-                  className="sticky left-0 z-[90] grid shrink-0 grid-cols-[70px_1fr_160px_110px_130px_120px_120px] border-r border-slate-200 bg-lime-400 text-sm font-black text-slate-900 shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
+                  className="sticky left-0 z-[160] grid shrink-0 grid-cols-[70px_1fr_160px_110px_130px_120px_120px] border-r border-slate-200 bg-lime-400 text-sm font-black text-slate-900 shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
                   style={{ width: LEFT_TABLE_WIDTH, minHeight: 132 }}
                 >
                   <div className="flex items-center justify-center border-r border-lime-700 p-2">
@@ -810,7 +810,7 @@ const SchedulePage: React.FC = () => {
 
               <div className="flex">
                 <div
-                  className="sticky left-0 z-[80] shrink-0 border-r border-slate-200 bg-white shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
+                  className="sticky left-0 z-[60] shrink-0 border-r border-slate-200 bg-white shadow-[8px_0_14px_rgba(15,23,42,0.08)]"
                   style={{ width: LEFT_TABLE_WIDTH }}
                 >
                   {tasks.map((task) => (
