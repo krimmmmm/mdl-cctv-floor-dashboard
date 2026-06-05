@@ -36,10 +36,13 @@ type RfaRecord = {
   contractorNote: string;
   contractorDate: string;
   contractorTime: string;
+  contractorSignature: RfaAttachment | null;
+  contractorRfaFile: RfaAttachment | null;
   contractorAttachments: RfaAttachment[];
   customerStatus: RfaStatus;
   customerName: string;
   customerPosition: string;
+  customerSignature: RfaAttachment | null;
   customerNote: string;
   customerDate: string;
   customerTime: string;
@@ -62,8 +65,8 @@ const defaultForm: RfaRecord = {
   totalPage: "1",
   functions: ["CCTV"],
   requestTitle: "",
-  subject: "Re Design",
-  attached: "New Design",
+  subject: "Equipment",
+  attached: "Bayface",
   reference: "",
   drawingNo: "",
   specificationRef: "",
@@ -74,10 +77,13 @@ const defaultForm: RfaRecord = {
   contractorNote: "",
   contractorDate: new Date().toISOString().slice(0, 10),
   contractorTime: new Date().toTimeString().slice(0, 5),
+  contractorSignature: null,
+  contractorRfaFile: null,
   contractorAttachments: [],
   customerStatus: "submitted",
   customerName: "",
   customerPosition: "",
+  customerSignature: null,
   customerNote: "",
   customerDate: "",
   customerTime: "",
@@ -88,8 +94,29 @@ const defaultForm: RfaRecord = {
 };
 
 const functionOptions = ["CCTV", "Rack", "Power", "UTP", "Fiber", "Other Equipment"];
-const subjectOptions = ["Re Design", "Shop drawing", "Confirm Location"];
-const attachedOptions = ["New Design", "Shop drawing", "Location Photo", "Specification", "Other"];
+const subjectOptions = [
+  "Equipment",
+  "Material",
+  "Electrical System",
+  "Re Design",
+  "Shop drawing",
+  "Confirm Location",
+];
+
+const attachedOptions = [
+  "Bayface",
+  "Catalog",
+  "Fiber Routing",
+  "UTP Routing",
+  "Electrical System Connection",
+  "Single Line Diagram",
+  "Power consumption",
+  "New Design",
+  "Shop drawing",
+  "Location Photo",
+  "Specification",
+  "Other",
+];
 
 const dateDisplay = (value?: string) => {
   if (!value) return "-";
@@ -146,6 +173,24 @@ const readFiles = async (files: FileList | null, maxFiles = 5): Promise<RfaAttac
 
   return attachments;
 };
+
+
+const readSingleFile = async (files: FileList | null): Promise<RfaAttachment | null> => {
+  const selected = await readFiles(files, 1);
+  return selected[0] || null;
+};
+
+const htmlToAttachment = (
+  html: string,
+  fileName: string,
+  type = "text/html"
+): RfaAttachment => ({
+  name: fileName,
+  type,
+  size: new Blob([html], { type }).size,
+  dataUrl: `data:${type};charset=utf-8,${encodeURIComponent(html)}`,
+  uploadedAt: new Date().toISOString(),
+});
 
 const downloadDataUrl = (attachment: RfaAttachment) => {
   const link = document.createElement("a");
@@ -206,7 +251,7 @@ const buildRfaHtml = (rfa: RfaRecord, mode: "submitted" | "approved") => {
     <div class="section">
       <table>
         <tr><th colspan="2">(2) From Contractor</th><th colspan="2">Advanced Wireless Network Co.,Ltd.</th></tr>
-        <tr><td colspan="2">For Approval / Acknowledge</td><td colspan="2" class="sig">Signature:</td></tr>
+        <tr><td colspan="2">For Approval / Acknowledge</td><td colspan="2" class="sig">Signature:<br/>${rfa.contractorSignature?.dataUrl ? `<img src="${rfa.contractorSignature.dataUrl}" style="max-height:58px;max-width:220px;" />` : ""}</td></tr>
         <tr><th>Note</th><td colspan="3">${safeText(rfa.contractorNote || "-")}</td></tr>
         <tr><th>Name</th><td>${safeText(rfa.contractorName)}</td><th>Position</th><td>${safeText(rfa.contractorPosition)}</td></tr>
         <tr><th>Date</th><td>${safeText(dateDisplay(rfa.contractorDate))}</td><th>Time</th><td>${safeText(rfa.contractorTime || "-")}</td></tr>
@@ -217,7 +262,7 @@ const buildRfaHtml = (rfa: RfaRecord, mode: "submitted" | "approved") => {
       <table>
         <tr><th colspan="4">(3) From MINOR DAIRY COMPANY LIMITED</th></tr>
         <tr><td colspan="4"><span class="badge">${safeText(approvalText)}</span></td></tr>
-        <tr><td colspan="4" class="sig">Signature:</td></tr>
+        <tr><td colspan="4" class="sig">Signature:<br/>${rfa.customerSignature?.dataUrl ? `<img src="${rfa.customerSignature.dataUrl}" style="max-height:58px;max-width:220px;" />` : ""}</td></tr>
         <tr><th>Note</th><td colspan="3">${safeText(rfa.customerNote || "-")}</td></tr>
         <tr><th>Name</th><td>${safeText(rfa.customerName || "-")}</td><th>Position</th><td>${safeText(rfa.customerPosition || "-")}</td></tr>
         <tr><th>Date</th><td>${safeText(dateDisplay(rfa.customerDate))}</td><th>Time</th><td>${safeText(rfa.customerTime || "-")}</td></tr>
@@ -270,10 +315,13 @@ const fromDb = (row: any): RfaRecord => ({
   contractorNote: row.contractor_note || "",
   contractorDate: row.contractor_date || "",
   contractorTime: row.contractor_time || "",
+  contractorSignature: row.contractor_signature || null,
+  contractorRfaFile: row.contractor_rfa_file || null,
   contractorAttachments: Array.isArray(row.contractor_attachments) ? row.contractor_attachments : [],
   customerStatus: row.customer_status || "submitted",
   customerName: row.customer_name || "",
   customerPosition: row.customer_position || "",
+  customerSignature: row.customer_signature || null,
   customerNote: row.customer_note || "",
   customerDate: row.customer_date || "",
   customerTime: row.customer_time || "",
@@ -306,10 +354,13 @@ const toDb = (rfa: RfaRecord) => ({
   contractor_note: rfa.contractorNote,
   contractor_date: rfa.contractorDate || null,
   contractor_time: rfa.contractorTime || null,
+  contractor_signature: rfa.contractorSignature,
+  contractor_rfa_file: rfa.contractorRfaFile,
   contractor_attachments: rfa.contractorAttachments,
   customer_status: rfa.customerStatus,
   customer_name: rfa.customerName,
   customer_position: rfa.customerPosition,
+  customer_signature: rfa.customerSignature,
   customer_note: rfa.customerNote,
   customer_date: rfa.customerDate || null,
   customer_time: rfa.customerTime || null,
@@ -331,6 +382,7 @@ const RfaOnlinePage: React.FC = () => {
 
   const canSubmit = userRole === "admin" || userRole === "newstaff";
   const canApprove = userRole === "customer";
+  const canDelete = userRole === "admin";
 
   const [records, setRecords] = useState<RfaRecord[]>([]);
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
@@ -402,17 +454,74 @@ const RfaOnlinePage: React.FC = () => {
     saveLocal([record, ...existing]);
   };
 
+
+  const deleteRecord = async (recordId: string) => {
+    if (!canDelete) return;
+
+    const ok = window.confirm("ยืนยันการลบรายการ RFA นี้ใช่หรือไม่?");
+    if (!ok) return;
+
+    if (dbReady) {
+      const { error } = await supabase
+        .from("rfa_requests")
+        .delete()
+        .eq("id", recordId);
+
+      if (error) {
+        setMessage(`Delete failed: ${error.message}`);
+        return;
+      }
+
+      await loadRecords();
+      setMessage("ลบรายการ RFA สำเร็จ");
+      return;
+    }
+
+    saveLocal(records.filter((item) => item.id !== recordId));
+    setMessage("ลบรายการ RFA สำเร็จ");
+  };
+
+  const reviewCustomerRfa = () => {
+    if (!activeRecord) return;
+
+    const preview: RfaRecord = {
+      ...activeRecord,
+      customerName: form.customerName || activeRecord.customerName,
+      customerPosition: form.customerPosition || activeRecord.customerPosition,
+      customerSignature: form.customerSignature || activeRecord.customerSignature,
+      customerNote: form.customerNote || activeRecord.customerNote,
+      customerDate: form.customerDate || new Date().toISOString().slice(0, 10),
+      customerTime: form.customerTime || new Date().toTimeString().slice(0, 5),
+    };
+
+    const html = buildRfaHtml(preview, "approved");
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener,noreferrer");
+    window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit) return;
 
     const now = new Date().toISOString();
-    const next: RfaRecord = {
+    const nextId = form.id || crypto.randomUUID();
+    const draft: RfaRecord = {
       ...form,
-      id: form.id || crypto.randomUUID(),
+      id: nextId,
       customerStatus: "submitted",
       createdBy: form.createdBy || userName || "System",
       createdAt: form.createdAt || now,
       updatedAt: now,
+    };
+
+    const submittedHtml = buildRfaHtml(draft, "submitted");
+    const next: RfaRecord = {
+      ...draft,
+      contractorRfaFile: htmlToAttachment(
+        submittedHtml,
+        `SUBMITTED-${draft.refNo.replace(/[^\w-]+/g, "_")}.html`
+      ),
     };
 
     await saveRecord(next);
@@ -433,6 +542,7 @@ const RfaOnlinePage: React.FC = () => {
       customerStatus: status,
       customerName: form.customerName || activeRecord.customerName,
       customerPosition: form.customerPosition || activeRecord.customerPosition,
+      customerSignature: form.customerSignature || activeRecord.customerSignature,
       customerNote: form.customerNote || activeRecord.customerNote,
       customerDate: form.customerDate || now.toISOString().slice(0, 10),
       customerTime: form.customerTime || now.toTimeString().slice(0, 5),
@@ -442,7 +552,14 @@ const RfaOnlinePage: React.FC = () => {
       updatedAt: now.toISOString(),
     };
 
-    await saveRecord(next);
+    const approvedHtml = buildRfaHtml(next, "approved");
+    await saveRecord({
+      ...next,
+      contractorRfaFile: htmlToAttachment(
+        approvedHtml,
+        `${status === "approved" || status === "approved_with_note" ? "APPROVED" : "REVIEW"}-${next.refNo.replace(/[^\w-]+/g, "_")}.html`
+      ),
+    });
     setActiveRecordId(null);
     setMessage("บันทึกผล Approve สำเร็จ");
   };
@@ -472,6 +589,7 @@ const RfaOnlinePage: React.FC = () => {
       customerNote: rfa.customerNote || "",
       customerDate: rfa.customerDate || new Date().toISOString().slice(0, 10),
       customerTime: rfa.customerTime || new Date().toTimeString().slice(0, 5),
+      customerSignature: rfa.customerSignature || null,
       customerAttachments: rfa.customerAttachments || [],
     });
   };
@@ -669,6 +787,24 @@ const RfaOnlinePage: React.FC = () => {
                 <input value={form.contractorPosition} disabled={!canSubmit} onChange={(e) => updateForm("contractorPosition", e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" />
               </label>
 
+              <div className="rounded-2xl border border-dashed border-purple-200 bg-purple-50 p-4 md:col-span-2">
+                <div className="font-black text-purple-700">Contractor Signature</div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={!canSubmit}
+                  onChange={async (e) => updateForm("contractorSignature", await readSingleFile(e.target.files))}
+                  className="mt-2 block w-full text-sm"
+                />
+                {form.contractorSignature?.dataUrl && (
+                  <img
+                    src={form.contractorSignature.dataUrl}
+                    alt="Contractor signature"
+                    className="mt-3 max-h-24 rounded-xl border border-purple-100 bg-white p-2"
+                  />
+                )}
+              </div>
+
               <label className="text-sm font-bold md:col-span-2">
                 Contractor Note
                 <textarea value={form.contractorNote} disabled={!canSubmit} onChange={(e) => updateForm("contractorNote", e.target.value)} rows={2} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" />
@@ -724,7 +860,13 @@ const RfaOnlinePage: React.FC = () => {
                   </div>
                 ) : (
                   waitingRecords.map((rfa) => (
-                    <div key={rfa.id} className="rounded-2xl border border-amber-100 bg-amber-50 p-4">
+                    <div
+                      key={rfa.id}
+                      onClick={() => canApprove && openApprove(rfa)}
+                      className={`rounded-2xl border border-amber-100 bg-amber-50 p-4 ${
+                        canApprove ? "cursor-pointer hover:border-amber-300 hover:bg-amber-100" : ""
+                      }`}
+                    >
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div>
                           <div className="font-black text-slate-900">{rfa.refNo}</div>
@@ -734,12 +876,23 @@ const RfaOnlinePage: React.FC = () => {
                         </div>
 
                         <div className="flex flex-wrap gap-2">
-                          <button onClick={() => downloadRfaDocument(rfa, "submitted")} className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white">
-                            Download Submit
-                          </button>
-                          <button onClick={() => openApprove(rfa)} className="rounded-xl bg-amber-600 px-3 py-2 text-xs font-black text-white">
-                            Open Approve
-                          </button>
+                          {rfa.contractorRfaFile && (
+                            <button
+                              onClick={() => downloadDataUrl(rfa.contractorRfaFile as RfaAttachment)}
+                              className="rounded-xl bg-white px-3 py-2 text-xs font-black text-blue-700 underline"
+                            >
+                              {rfa.contractorRfaFile.name}
+                            </button>
+                          )}
+
+                          {canDelete && (
+                            <button
+                              onClick={() => deleteRecord(rfa.id)}
+                              className="rounded-xl bg-red-600 px-3 py-2 text-xs font-black text-white"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -772,6 +925,24 @@ const RfaOnlinePage: React.FC = () => {
                       <input value={form.customerPosition} disabled={!canApprove} onChange={(e) => updateForm("customerPosition", e.target.value)} className="mt-1 w-full rounded-xl border border-blue-200 px-3 py-2" />
                     </label>
 
+                    <div className="rounded-2xl border border-dashed border-blue-300 bg-white p-4 md:col-span-2">
+                      <div className="font-black text-blue-700">Customer Signature</div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={!canApprove}
+                        onChange={async (e) => updateForm("customerSignature", await readSingleFile(e.target.files))}
+                        className="mt-2 block w-full text-sm"
+                      />
+                      {form.customerSignature?.dataUrl && (
+                        <img
+                          src={form.customerSignature.dataUrl}
+                          alt="Customer signature"
+                          className="mt-3 max-h-24 rounded-xl border border-blue-100 bg-white p-2"
+                        />
+                      )}
+                    </div>
+
                     <label className="text-sm font-bold">
                       Date
                       <input type="date" value={form.customerDate} disabled={!canApprove} onChange={(e) => updateForm("customerDate", e.target.value)} className="mt-1 w-full rounded-xl border border-blue-200 px-3 py-2" />
@@ -799,7 +970,10 @@ const RfaOnlinePage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
+                  <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-5">
+                    <button disabled={!canApprove} onClick={reviewCustomerRfa} className="rounded-xl bg-slate-900 px-3 py-3 text-xs font-black text-white disabled:bg-slate-300">
+                      Review
+                    </button>
                     <button disabled={!canApprove} onClick={() => handleApprove("approved")} className="rounded-xl bg-emerald-600 px-3 py-3 text-xs font-black text-white disabled:bg-slate-300">
                       Approved
                     </button>
@@ -842,13 +1016,22 @@ const RfaOnlinePage: React.FC = () => {
                           </span>
                         </div>
 
-                        <button onClick={() => downloadRfaDocument(rfa, "approved")} className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white">
-                          Download Approved
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          {rfa.contractorRfaFile && (
+                            <button onClick={() => downloadDataUrl(rfa.contractorRfaFile as RfaAttachment)} className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white">
+                              Download Approved
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button onClick={() => deleteRecord(rfa.id)} className="rounded-xl bg-red-600 px-4 py-2 text-xs font-black text-white">
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {[...rfa.contractorAttachments, ...rfa.customerAttachments].map((file, index) => (
+                        {[...(rfa.contractorRfaFile ? [rfa.contractorRfaFile] : []), ...rfa.contractorAttachments, ...rfa.customerAttachments].map((file, index) => (
                           <button key={index} onClick={() => downloadDataUrl(file)} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700 underline">
                             {file.name}
                           </button>
