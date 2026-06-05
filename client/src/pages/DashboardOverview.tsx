@@ -2257,12 +2257,12 @@ const FiberProgressCard = ({
         />
       </div>
 
-      <div className="space-y-1 max-h-[70px] overflow-auto pr-1">
+      <div className="space-y-2 pr-1">
         {fiberRoutes.length > 0 ? (
           fiberRoutes.map((fiber) => (
             <div
               key={fiber.id}
-              className="grid grid-cols-[95px_1fr_38px] gap-2 items-center text-xs"
+              className="grid grid-cols-[110px_1fr_44px] gap-2 items-center text-xs"
             >
               <span className="truncate text-slate-600">{fiber.name || "Fiber Route"}</span>
               <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
