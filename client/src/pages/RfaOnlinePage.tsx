@@ -42,6 +42,7 @@ type RfaRecord = {
   customerStatus: RfaStatus;
   customerName: string;
   customerPosition: string;
+  customerApprovedBy: string;
   customerSignature: RfaAttachment | null;
   customerNote: string;
   customerDate: string;
@@ -83,6 +84,7 @@ const defaultForm: RfaRecord = {
   customerStatus: "submitted",
   customerName: "",
   customerPosition: "",
+  customerApprovedBy: "",
   customerSignature: null,
   customerNote: "",
   customerDate: "",
@@ -254,6 +256,7 @@ const buildRfaHtml = (rfa: RfaRecord, mode: "submitted" | "approved") => {
         <tr><td colspan="2">For Approval / Acknowledge</td><td colspan="2" class="sig">Signature:<br/>${rfa.contractorSignature?.dataUrl ? `<img src="${rfa.contractorSignature.dataUrl}" style="max-height:58px;max-width:220px;" />` : ""}</td></tr>
         <tr><th>Note</th><td colspan="3">${safeText(rfa.contractorNote || "-")}</td></tr>
         <tr><th>Name</th><td>${safeText(rfa.contractorName)}</td><th>Position</th><td>${safeText(rfa.contractorPosition)}</td></tr>
+        <tr><th>Submit User</th><td colspan="3">${safeText(rfa.createdBy || "-")}</td></tr>
         <tr><th>Date</th><td>${safeText(dateDisplay(rfa.contractorDate))}</td><th>Time</th><td>${safeText(rfa.contractorTime || "-")}</td></tr>
       </table>
     </div>
@@ -265,6 +268,7 @@ const buildRfaHtml = (rfa: RfaRecord, mode: "submitted" | "approved") => {
         <tr><td colspan="4" class="sig">Signature:<br/>${rfa.customerSignature?.dataUrl ? `<img src="${rfa.customerSignature.dataUrl}" style="max-height:58px;max-width:220px;" />` : ""}</td></tr>
         <tr><th>Note</th><td colspan="3">${safeText(rfa.customerNote || "-")}</td></tr>
         <tr><th>Name</th><td>${safeText(rfa.customerName || "-")}</td><th>Position</th><td>${safeText(rfa.customerPosition || "-")}</td></tr>
+        <tr><th>Approved User</th><td colspan="3">${safeText(rfa.customerApprovedBy || "-")}</td></tr>
         <tr><th>Date</th><td>${safeText(dateDisplay(rfa.customerDate))}</td><th>Time</th><td>${safeText(rfa.customerTime || "-")}</td></tr>
       </table>
     </div>
@@ -321,6 +325,7 @@ const fromDb = (row: any): RfaRecord => ({
   customerStatus: row.customer_status || "submitted",
   customerName: row.customer_name || "",
   customerPosition: row.customer_position || "",
+  customerApprovedBy: row.customer_approved_by || "",
   customerSignature: row.customer_signature || null,
   customerNote: row.customer_note || "",
   customerDate: row.customer_date || "",
@@ -360,6 +365,7 @@ const toDb = (rfa: RfaRecord) => ({
   customer_status: rfa.customerStatus,
   customer_name: rfa.customerName,
   customer_position: rfa.customerPosition,
+  customer_approved_by: rfa.customerApprovedBy,
   customer_signature: rfa.customerSignature,
   customer_note: rfa.customerNote,
   customer_date: rfa.customerDate || null,
@@ -484,6 +490,7 @@ const RfaOnlinePage: React.FC = () => {
       ...activeRecord,
       customerName: form.customerName || activeRecord.customerName,
       customerPosition: form.customerPosition || activeRecord.customerPosition,
+      customerApprovedBy: userName || activeRecord.customerApprovedBy,
       customerSignature: form.customerSignature || activeRecord.customerSignature,
       customerNote: form.customerNote || activeRecord.customerNote,
       customerDate: form.customerDate || new Date().toISOString().slice(0, 10),
@@ -538,6 +545,7 @@ const RfaOnlinePage: React.FC = () => {
       customerStatus: status,
       customerName: form.customerName || activeRecord.customerName,
       customerPosition: form.customerPosition || activeRecord.customerPosition,
+      customerApprovedBy: userName || activeRecord.customerApprovedBy,
       customerSignature: form.customerSignature || activeRecord.customerSignature,
       customerNote: form.customerNote || activeRecord.customerNote,
       customerDate: form.customerDate || now.toISOString().slice(0, 10),
@@ -582,6 +590,7 @@ const RfaOnlinePage: React.FC = () => {
       ...defaultForm,
       customerName: rfa.customerName || "",
       customerPosition: rfa.customerPosition || "",
+      customerApprovedBy: rfa.customerApprovedBy || "",
       customerNote: rfa.customerNote || "",
       customerDate: rfa.customerDate || new Date().toISOString().slice(0, 10),
       customerTime: rfa.customerTime || new Date().toTimeString().slice(0, 5),
@@ -869,6 +878,9 @@ const RfaOnlinePage: React.FC = () => {
                           <div className="text-xs text-slate-500">
                             {rfa.requestTitle || rfa.subject} · Submit {dateDisplay(rfa.date)}
                           </div>
+                          <div className="mt-1 text-xs font-bold text-slate-600">
+                            Submit by: {rfa.contractorName || "-"} · User: {rfa.createdBy || "-"}
+                          </div>
                         </div>
 
                         <div className="flex flex-wrap gap-2">
@@ -1006,6 +1018,12 @@ const RfaOnlinePage: React.FC = () => {
                           <div className="font-black">{rfa.refNo}</div>
                           <div className="text-xs text-slate-500">
                             {rfa.customerName || "Customer"} · {dateDisplay(rfa.customerDate)}
+                          </div>
+                          <div className="mt-1 text-xs font-bold text-slate-600">
+                            Submit by: {rfa.contractorName || "-"} · User: {rfa.createdBy || "-"}
+                          </div>
+                          <div className="mt-1 text-xs font-bold text-emerald-700">
+                            Approved by: {rfa.customerName || "-"} · User: {rfa.customerApprovedBy || "-"}
                           </div>
                           <span className={`mt-2 inline-block rounded-full border px-3 py-1 text-xs font-black ${statusClass[rfa.customerStatus]}`}>
                             {statusLabel[rfa.customerStatus]}
