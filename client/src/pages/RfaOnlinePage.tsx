@@ -48,6 +48,7 @@ type RfaRecord = {
   customerDate: string;
   customerTime: string;
   customerAttachments: RfaAttachment[];
+  readBy: string[];
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -90,6 +91,7 @@ const defaultForm: RfaRecord = {
   customerDate: "",
   customerTime: "",
   customerAttachments: [],
+  readBy: [],
   createdBy: "",
   createdAt: "",
   updatedAt: "",
@@ -256,7 +258,7 @@ const buildRfaHtml = (rfa: RfaRecord, mode: "submitted" | "approved") => {
         <tr><td colspan="2">For Approval / Acknowledge</td><td colspan="2" class="sig">Signature:<br/>${rfa.contractorSignature?.dataUrl ? `<img src="${rfa.contractorSignature.dataUrl}" style="max-height:58px;max-width:220px;" />` : ""}</td></tr>
         <tr><th>Note</th><td colspan="3">${safeText(rfa.contractorNote || "-")}</td></tr>
         <tr><th>Name</th><td>${safeText(rfa.contractorName)}</td><th>Position</th><td>${safeText(rfa.contractorPosition)}</td></tr>
-        <tr><th>Submit User</th><td colspan="3">${safeText(rfa.createdBy || "-")}</td></tr>
+        <tr><th>Submit User</th><td>${safeText(rfa.createdBy || "-")}</td><th>Submit Time</th><td>${safeText(rfa.contractorTime || "-")}</td></tr>
         <tr><th>Date</th><td>${safeText(dateDisplay(rfa.contractorDate))}</td><th>Time</th><td>${safeText(rfa.contractorTime || "-")}</td></tr>
       </table>
     </div>
@@ -268,7 +270,7 @@ const buildRfaHtml = (rfa: RfaRecord, mode: "submitted" | "approved") => {
         <tr><td colspan="4" class="sig">Signature:<br/>${rfa.customerSignature?.dataUrl ? `<img src="${rfa.customerSignature.dataUrl}" style="max-height:58px;max-width:220px;" />` : ""}</td></tr>
         <tr><th>Note</th><td colspan="3">${safeText(rfa.customerNote || "-")}</td></tr>
         <tr><th>Name</th><td>${safeText(rfa.customerName || "-")}</td><th>Position</th><td>${safeText(rfa.customerPosition || "-")}</td></tr>
-        <tr><th>Approved User</th><td colspan="3">${safeText(rfa.customerApprovedBy || "-")}</td></tr>
+        <tr><th>Approved User</th><td>${safeText(rfa.customerApprovedBy || "-")}</td><th>Approved Time</th><td>${safeText(rfa.customerTime || "-")}</td></tr>
         <tr><th>Date</th><td>${safeText(dateDisplay(rfa.customerDate))}</td><th>Time</th><td>${safeText(rfa.customerTime || "-")}</td></tr>
       </table>
     </div>
@@ -331,6 +333,7 @@ const fromDb = (row: any): RfaRecord => ({
   customerDate: row.customer_date || "",
   customerTime: row.customer_time || "",
   customerAttachments: Array.isArray(row.customer_attachments) ? row.customer_attachments : [],
+  readBy: Array.isArray(row.read_by) ? row.read_by : [],
   createdBy: row.created_by || "",
   createdAt: row.created_at || "",
   updatedAt: row.updated_at || "",
@@ -371,6 +374,7 @@ const toDb = (rfa: RfaRecord) => ({
   customer_date: rfa.customerDate || null,
   customer_time: rfa.customerTime || null,
   customer_attachments: rfa.customerAttachments,
+  read_by: rfa.readBy,
   created_by: rfa.createdBy,
   updated_at: new Date().toISOString(),
 });
@@ -584,7 +588,8 @@ const RfaOnlinePage: React.FC = () => {
     });
   };
 
-  const openApprove = (rfa: RfaRecord) => {
+  const openApprove = async (rfa: RfaRecord) => {
+    await markAsRead(rfa);
     setActiveRecordId(rfa.id);
     setForm({
       ...defaultForm,
@@ -599,6 +604,28 @@ const RfaOnlinePage: React.FC = () => {
     });
   };
 
+  const getCurrentReadKey = () => userName || userRole || "guest";
+
+  const hasUserRead = (rfa: RfaRecord) => {
+    const readKey = getCurrentReadKey();
+    return Array.isArray(rfa.readBy) && rfa.readBy.includes(readKey);
+  };
+
+  const markAsRead = async (rfa: RfaRecord) => {
+    const readKey = getCurrentReadKey();
+    if (!readKey || hasUserRead(rfa)) return;
+
+    const nextReadBy = Array.from(new Set([...(rfa.readBy || []), readKey]));
+
+    const nextRecord: RfaRecord = {
+      ...rfa,
+      readBy: nextReadBy,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await saveRecord(nextRecord);
+  };
+
   const waitingRecords = records.filter((item) => item.customerStatus === "submitted");
   const approvedRecords = records.filter(
     (item) => item.customerStatus === "approved" || item.customerStatus === "approved_with_note"
@@ -606,6 +633,16 @@ const RfaOnlinePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
+      <style>{`
+        @keyframes rfaBlinkNew {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.2; }
+        }
+        .rfa-new-blink {
+          color: #dc2626;
+          animation: rfaBlinkNew 0.9s infinite;
+        }
+      `}</style>
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-6 py-4 backdrop-blur">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -879,7 +916,14 @@ const RfaOnlinePage: React.FC = () => {
                             {rfa.requestTitle || rfa.subject} · Submit {dateDisplay(rfa.date)}
                           </div>
                           <div className="mt-1 text-xs font-bold text-slate-600">
-                            Submit by: {rfa.contractorName || "-"} · User: {rfa.createdBy || "-"}
+                            Submit by: {rfa.contractorName || "-"} · User: {rfa.createdBy || "-"} · Time: {rfa.contractorTime || "-"}
+                          </div>
+                          <div className="mt-1 text-xs font-black">
+                            {!hasUserRead(rfa) ? (
+                              <span className="rfa-new-blink">NEW · ยังไม่อ่าน</span>
+                            ) : (
+                              <span className="text-emerald-700">อ่านแล้ว</span>
+                            )}
                           </div>
                         </div>
 
@@ -1012,7 +1056,7 @@ const RfaOnlinePage: React.FC = () => {
                   </div>
                 ) : (
                   approvedRecords.map((rfa) => (
-                    <div key={rfa.id} className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                    <div key={rfa.id} onClick={() => markAsRead(rfa)} className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div>
                           <div className="font-black">{rfa.refNo}</div>
@@ -1020,10 +1064,24 @@ const RfaOnlinePage: React.FC = () => {
                             {rfa.customerName || "Customer"} · {dateDisplay(rfa.customerDate)}
                           </div>
                           <div className="mt-1 text-xs font-bold text-slate-600">
-                            Submit by: {rfa.contractorName || "-"} · User: {rfa.createdBy || "-"}
+                            Submit by: {rfa.contractorName || "-"} · User: {rfa.createdBy || "-"} · Time: {rfa.contractorTime || "-"}
+                          </div>
+                          <div className="mt-1 text-xs font-black">
+                            {!hasUserRead(rfa) ? (
+                              <span className="rfa-new-blink">NEW · ยังไม่อ่าน</span>
+                            ) : (
+                              <span className="text-emerald-700">อ่านแล้ว</span>
+                            )}
                           </div>
                           <div className="mt-1 text-xs font-bold text-emerald-700">
-                            Approved by: {rfa.customerName || "-"} · User: {rfa.customerApprovedBy || "-"}
+                            Approved by: {rfa.customerName || "-"} · User: {rfa.customerApprovedBy || "-"} · Time: {rfa.customerTime || "-"}
+                          </div>
+                          <div className="mt-1 text-xs font-black">
+                            {!hasUserRead(rfa) ? (
+                              <span className="rfa-new-blink">NEW · ยังไม่อ่าน</span>
+                            ) : (
+                              <span className="text-emerald-700">อ่านแล้ว</span>
+                            )}
                           </div>
                           <span className={`mt-2 inline-block rounded-full border px-3 py-1 text-xs font-black ${statusClass[rfa.customerStatus]}`}>
                             {statusLabel[rfa.customerStatus]}
