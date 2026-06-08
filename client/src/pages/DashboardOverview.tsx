@@ -786,17 +786,30 @@ const DashboardOverview: React.FC = () => {
     <div class="card blue">
       <div class="label">CCTV Cameras</div>
       <div class="value">${cameraStats.total}</div>
-      <div>Online ${cameraStats.online} · Type1 ${cameraStats.type1} · Type2 ${cameraStats.type2}</div>
+      <div>
+        Progress ${averageOverallProgress(safeCameras, calculateCameraOverallProgress)}%
+        · Online ${cameraStats.online}
+        · Type1 ${cameraStats.type1}
+        · Type2 ${cameraStats.type2}
+      </div>
     </div>
     <div class="card purple">
       <div class="label">RACK Equipment</div>
       <div class="value">${rackStats.total}</div>
-      <div>Ready ${rackStats.ready} · Type1 ${rackStats.type1} · Type2 ${rackStats.type2}</div>
+      <div>
+        Progress ${averageOverallProgress(safeRacks, calculateRackOverallProgress)}%
+        · Ready ${rackStats.ready}
+        · Type1 ${rackStats.type1}
+        · Type2 ${rackStats.type2}
+      </div>
     </div>
     <div class="card orange">
       <div class="label">CABINET Equipment</div>
       <div class="value">${cabinetStats.total}</div>
-      <div>Ready ${cabinetStats.ready}</div>
+      <div>
+        Progress ${averageOverallProgress(safeCabinets, calculateCabinetOverallProgress)}%
+        · Ready ${cabinetStats.ready}
+      </div>
     </div>
     <div class="card green">
       <div class="label">Fiber Optic Progress</div>
