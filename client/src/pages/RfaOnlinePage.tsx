@@ -128,6 +128,30 @@ const dateDisplay = (value?: string) => {
   return y && m && d ? `${d}/${m}/${y}` : "-";
 };
 
+const dateInputDisplay = (value?: string) => {
+  if (!value) return "";
+  const [y, m, d] = String(value).slice(0, 10).split("-");
+  return y && m && d ? `${d}/${m}/${y}` : String(value);
+};
+
+const dateInputToIso = (value: string) => {
+  const clean = value.trim();
+
+  const ddmmyyyy = clean.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyy) {
+    const [, d, m, y] = ddmmyyyy;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+
+  const iso = clean.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    const [, y, m, d] = iso;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+
+  return clean;
+};
+
 const statusLabel: Record<RfaStatus, string> = {
   submitted: "Waiting Approve",
   approved: "Approved",
@@ -727,7 +751,7 @@ const RfaOnlinePage: React.FC = () => {
 
               <label className="text-sm font-bold">
                 Date
-                <input type="date" value={form.date} disabled={!canSubmit} onChange={(e) => updateForm("date", e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" />
+                <input type="text" inputMode="numeric" placeholder="วัน/เดือน/ปี" value={dateInputDisplay(form.date)} disabled={!canSubmit} onChange={(e) => updateForm("date", dateInputToIso(e.target.value))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2" />
               </label>
 
               <label className="text-sm font-bold md:col-span-2">
@@ -997,7 +1021,7 @@ const RfaOnlinePage: React.FC = () => {
 
                     <label className="text-sm font-bold">
                       Date
-                      <input type="date" value={form.customerDate} disabled={!canApprove} onChange={(e) => updateForm("customerDate", e.target.value)} className="mt-1 w-full rounded-xl border border-blue-200 px-3 py-2" />
+                      <input type="text" inputMode="numeric" placeholder="วัน/เดือน/ปี" value={dateInputDisplay(form.customerDate)} disabled={!canApprove} onChange={(e) => updateForm("customerDate", dateInputToIso(e.target.value))} className="mt-1 w-full rounded-xl border border-blue-200 px-3 py-2" />
                     </label>
 
                     <label className="text-sm font-bold">
