@@ -1055,10 +1055,20 @@ export const FloorPlanProvider = ({
       )
     );
 
+    const routeForDb = {
+      ...currentRoute,
+      ...safeChanges,
+      points: preservedPoints,
+    };
+
     const { error } = await supabase
       .from("fiber_routes")
-      .update(dbChanges)
-      .eq("id", id);
+      .upsert(
+        toDbFiberRoute(routeForDb),
+        {
+          onConflict: "id",
+        }
+      );
 
     if (error) {
       console.error("Update fiber route error:", error);
