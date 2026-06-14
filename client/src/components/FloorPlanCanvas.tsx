@@ -395,6 +395,25 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tagName = target?.tagName?.toLowerCase();
+
+      const isTypingInField =
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'select' ||
+        Boolean(target?.isContentEditable);
+
+      /*
+        Important:
+        When typing in Route Name / Equipment Name fields,
+        Backspace and Delete must edit the text only.
+        Do not let the global Floor Plan shortcut delete the selected Fiber Route.
+      */
+      if (isTypingInField) {
+        return;
+      }
+
       if (!effectiveCanManageFiber) {
         if (e.key === 'Escape') {
           setDrawingPoints([]);
