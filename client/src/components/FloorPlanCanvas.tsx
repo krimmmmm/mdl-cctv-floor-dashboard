@@ -793,7 +793,15 @@ const FloorPlanCanvas: React.FC<Props> = ({
           transition: isDragging || isMovingEquipment ? 'none' : 'transform 0.2s ease-out',
         }}
       >
-        <image href="/floor_plan_2dcc9a6b.webp" x="0" y="0" width="1400" height="900" opacity="0.85" preserveAspectRatio="xMidYMid slice" />
+        <image
+          href={floorPlan.floorPlanUrl || "/floor_plan_2dcc9a6b.webp"}
+          x="0"
+          y="0"
+          width="1400"
+          height="900"
+          opacity="0.85"
+          preserveAspectRatio="xMidYMid slice"
+        />
         <rect width="1400" height="900" fill="#FFFFFF" opacity="0.08" />
 
         {(fiberRoutes || []).map((route) => (
