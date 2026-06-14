@@ -106,6 +106,11 @@ const FloorPlanCanvas: React.FC<Props> = ({
   const [rackType2Count, setRackType2Count] = useState(0);
   const [cabinetCountInput, setCabinetCountInput] = useState(0);
 
+  const [floorPlanScaleInput, setFloorPlanScaleInput] = useState(1);
+  const [floorPlanOffsetXInput, setFloorPlanOffsetXInput] = useState(0);
+  const [floorPlanOffsetYInput, setFloorPlanOffsetYInput] = useState(0);
+  const [isSavingAlignment, setIsSavingAlignment] = useState(false);
+
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -436,6 +441,70 @@ const FloorPlanCanvas: React.FC<Props> = ({
     setCabinetCountInput((cabinets || []).length);
   }, [cabinets]);
 
+  useEffect(() => {
+    setFloorPlanScaleInput(Number(floorPlan.floorPlanScale || 1));
+    setFloorPlanOffsetXInput(Number(floorPlan.floorPlanOffsetX || 0));
+    setFloorPlanOffsetYInput(Number(floorPlan.floorPlanOffsetY || 0));
+  }, [
+    floorPlan.floorPlanScale,
+    floorPlan.floorPlanOffsetX,
+    floorPlan.floorPlanOffsetY,
+  ]);
+
+  const handleSaveFloorPlanAlignment = async () => {
+    if (!effectiveCanManageEquipmentControl) return;
+    if (typeof floorPlan.updateFloorPlanAlignment !== "function") {
+      alert("ระบบ Save Floor Plan Alignment ยังไม่พร้อม");
+      return;
+    }
+
+    setIsSavingAlignment(true);
+
+    const success = await floorPlan.updateFloorPlanAlignment(
+      floorPlanScaleInput,
+      floorPlanOffsetXInput,
+      floorPlanOffsetYInput
+    );
+
+    setIsSavingAlignment(false);
+
+    if (success) {
+      alert("Save Floor Plan Alignment สำเร็จ");
+    }
+  };
+
+  const handleResetFloorPlanAlignment = async () => {
+    if (!effectiveCanManageEquipmentControl) return;
+    if (typeof floorPlan.resetFloorPlanAlignment !== "function") {
+      alert("ระบบ Reset Floor Plan Alignment ยังไม่พร้อม");
+      return;
+    }
+
+    setIsSavingAlignment(true);
+    const success = await floorPlan.resetFloorPlanAlignment();
+    setIsSavingAlignment(false);
+
+    if (success) {
+      setFloorPlanScaleInput(1);
+      setFloorPlanOffsetXInput(0);
+      setFloorPlanOffsetYInput(0);
+      alert("Reset Floor Plan Alignment สำเร็จ");
+    }
+  };
+
+  const adjustFloorPlanScale = (delta: number) => {
+    const nextValue = Number((Number(floorPlanScaleInput || 1) + delta).toFixed(2));
+    setFloorPlanScaleInput(Math.max(0.2, Math.min(3, nextValue)));
+  };
+
+  const adjustFloorPlanOffsetX = (delta: number) => {
+    setFloorPlanOffsetXInput(Math.round(Number(floorPlanOffsetXInput || 0) + delta));
+  };
+
+  const adjustFloorPlanOffsetY = (delta: number) => {
+    setFloorPlanOffsetYInput(Math.round(Number(floorPlanOffsetYInput || 0) + delta));
+  };
+
   const handleCameraTypeCountChange = (cameraType: string, value: number) => {
     if (!effectiveCanManageEquipmentControl) return;
     const safeValue = Math.max(0, value);
@@ -754,6 +823,185 @@ const FloorPlanCanvas: React.FC<Props> = ({
         </div>
       )}
 
+      {effectiveCanManageEquipmentControl && (
+        <div className="absolute top-4 right-4 z-30 bg-white rounded-2xl shadow-2xl border border-purple-200 p-4 w-80">
+          <div className="text-lg font-black text-gray-800 mb-3">
+            Floor Plan Alignment
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between mb-1">
+                <span className="text-xs font-bold text-gray-600">Scale</span>
+                <span className="text-xs font-black text-purple-700">
+                  {Number(floorPlanScaleInput || 1).toFixed(2)}x
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    adjustFloorPlanScale(-0.05);
+                  }}
+                  className="w-9 h-9 rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-lg font-black"
+                >
+                  -
+                </button>
+
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.2"
+                  max="3"
+                  value={floorPlanScaleInput}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onChange={(e) =>
+                    setFloorPlanScaleInput(
+                      Math.max(0.2, Math.min(3, Number(e.target.value || 1)))
+                    )
+                  }
+                  className="flex-1 border-2 border-purple-200 rounded-lg px-3 py-2 text-center text-sm font-black"
+                />
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    adjustFloorPlanScale(0.05);
+                  }}
+                  className="w-9 h-9 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-lg font-black"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between mb-1">
+                <span className="text-xs font-bold text-gray-600">Offset X</span>
+                <span className="text-xs font-black text-purple-700">
+                  {floorPlanOffsetXInput}px
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    adjustFloorPlanOffsetX(-10);
+                  }}
+                  className="w-9 h-9 rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-lg font-black"
+                >
+                  -
+                </button>
+
+                <input
+                  type="number"
+                  step="1"
+                  value={floorPlanOffsetXInput}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onChange={(e) =>
+                    setFloorPlanOffsetXInput(Math.round(Number(e.target.value || 0)))
+                  }
+                  className="flex-1 border-2 border-purple-200 rounded-lg px-3 py-2 text-center text-sm font-black"
+                />
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    adjustFloorPlanOffsetX(10);
+                  }}
+                  className="w-9 h-9 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-lg font-black"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between mb-1">
+                <span className="text-xs font-bold text-gray-600">Offset Y</span>
+                <span className="text-xs font-black text-purple-700">
+                  {floorPlanOffsetYInput}px
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    adjustFloorPlanOffsetY(-10);
+                  }}
+                  className="w-9 h-9 rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-lg font-black"
+                >
+                  -
+                </button>
+
+                <input
+                  type="number"
+                  step="1"
+                  value={floorPlanOffsetYInput}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onChange={(e) =>
+                    setFloorPlanOffsetYInput(Math.round(Number(e.target.value || 0)))
+                  }
+                  className="flex-1 border-2 border-purple-200 rounded-lg px-3 py-2 text-center text-sm font-black"
+                />
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    adjustFloorPlanOffsetY(10);
+                  }}
+                  className="w-9 h-9 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-lg font-black"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                disabled={isSavingAlignment}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSaveFloorPlanAlignment();
+                }}
+                className="rounded-xl bg-purple-600 hover:bg-purple-700 disabled:bg-slate-400 text-white px-3 py-2 text-xs font-black shadow-sm"
+              >
+                {isSavingAlignment ? "Saving..." : "Save Alignment"}
+              </button>
+
+              <button
+                type="button"
+                disabled={isSavingAlignment}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleResetFloorPlanAlignment();
+                }}
+                className="rounded-xl bg-slate-100 hover:bg-slate-200 disabled:bg-slate-200 text-slate-700 px-3 py-2 text-xs font-black border border-slate-200"
+              >
+                Reset
+              </button>
+            </div>
+
+            <p className="text-[10px] text-slate-500 leading-relaxed">
+              ปรับเฉพาะรูป Floor Plan เท่านั้น ไม่กระทบตำแหน่ง Camera / Rack / Cabinet / Fiber
+            </p>
+          </div>
+        </div>
+      )}
+
       {effectiveCanManageFiber && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
         {canvasMode === 'normal' ? (
@@ -793,15 +1041,19 @@ const FloorPlanCanvas: React.FC<Props> = ({
           transition: isDragging || isMovingEquipment ? 'none' : 'transform 0.2s ease-out',
         }}
       >
-        <image
-          href={floorPlan.floorPlanUrl || "/floor_plan_2dcc9a6b.webp"}
-          x="0"
-          y="0"
-          width="1400"
-          height="900"
-          opacity="0.85"
-          preserveAspectRatio="xMidYMid slice"
-        />
+        <g
+          transform={`translate(${floorPlan.floorPlanOffsetX || 0} ${floorPlan.floorPlanOffsetY || 0}) scale(${floorPlan.floorPlanScale || 1})`}
+        >
+          <image
+            href={floorPlan.floorPlanUrl || "/floor_plan_2dcc9a6b.webp"}
+            x="0"
+            y="0"
+            width="1400"
+            height="900"
+            opacity="0.85"
+            preserveAspectRatio="xMidYMid slice"
+          />
+        </g>
         <rect width="1400" height="900" fill="#FFFFFF" opacity="0.08" />
 
         {(fiberRoutes || []).map((route) => (
