@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import ControlPanel from '@/components/ControlPanel';
 import FloorPlanCanvas from '@/components/FloorPlanCanvas';
 import { ActivityLog } from '@/components/ActivityLog';
 import { useFloorPlan } from '@/contexts/FloorPlanContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, Shield, Eye } from 'lucide-react';
+import { Loader2, Shield, Eye, Upload } from 'lucide-react';
 import { Link } from 'wouter';
 
 /**
@@ -12,8 +13,9 @@ import { Link } from 'wouter';
  * Layout: Horizontal cards at top, full-width floor plan below
  */
 export default function Home() {
-  const { isLoading, hasDbError } = useFloorPlan();
+  const { isLoading, hasDbError, uploadFloorPlan } = useFloorPlan();
   const { user, logout } = useAuth();
+  const [isUploadingFloorPlan, setIsUploadingFloorPlan] = useState(false);
 
   const role = user?.role || 'customer';
   const isAdmin = role === 'admin';
@@ -27,6 +29,36 @@ export default function Home() {
 
   const handleResetFloorPlanView = () => {
     window.dispatchEvent(new CustomEvent('resetFloorPlanView'));
+  };
+
+  const handleFloorPlanUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAdmin) return;
+
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    const isWebpFile =
+      file.type === "image/webp" || file.name.toLowerCase().endsWith(".webp");
+
+    if (!isWebpFile) {
+      alert("รองรับเฉพาะไฟล์ .webp เท่านั้น");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("ไฟล์ Floor Plan ต้องมีขนาดไม่เกิน 5 MB");
+      return;
+    }
+
+    setIsUploadingFloorPlan(true);
+    const success = await uploadFloorPlan(file);
+    setIsUploadingFloorPlan(false);
+
+    if (success) {
+      alert("Upload Floor Plan สำเร็จ");
+    }
   };
 
   return (
@@ -80,6 +112,30 @@ export default function Home() {
             >
               ← Dashboard
             </Link>
+
+            {isAdmin && (
+              <label
+                className={`px-4 py-2 rounded-xl text-white text-sm font-semibold shadow-sm transition flex items-center gap-2 ${
+                  isUploadingFloorPlan
+                    ? "bg-slate-400 cursor-not-allowed"
+                    : "bg-purple-600 hover:bg-purple-500 cursor-pointer"
+                }`}
+              >
+                {isUploadingFloorPlan ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {isUploadingFloorPlan ? "Uploading..." : "Upload Floor Plan"}
+                <input
+                  type="file"
+                  accept=".webp,image/webp"
+                  disabled={isUploadingFloorPlan}
+                  onChange={handleFloorPlanUpload}
+                  className="hidden"
+                />
+              </label>
+            )}
 
             <button
               type="button"
