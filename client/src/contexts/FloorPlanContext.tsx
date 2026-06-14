@@ -1002,21 +1002,36 @@ export const FloorPlanProvider = ({
   const updateFiberRoute = async (id: string, changes: any) => {
     const currentRoute = fiberRoutes.find((route) => route.id === id);
 
-    // Preserve the route geometry every time we update photos/progress/direction.
-    // Without this, some realtime/update paths can temporarily replace the route
-    // with an object that has empty points, causing the drawn line to disappear
-    // until refresh/login reloads the full data from Supabase.
-    const preservedPoints =
-      changes.points && Array.isArray(changes.points) && changes.points.length > 0
-        ? changes.points
-        : currentRoute?.points || [];
+    /*
+      SAFETY RULE:
+      Do not overwrite Fiber route geometry unless the caller sends
+      a valid non-empty points array.
+
+      This prevents the fiber line from disappearing when the user only
+      updates name / progress / direction / photos and the modal happens
+      to send points: [] or an incomplete route object.
+    */
+    const hasValidIncomingPoints =
+      Array.isArray(changes.points) && changes.points.length > 0;
+
+    const preservedPoints = hasValidIncomingPoints
+      ? changes.points
+      : currentRoute?.points || [];
 
     const safeChanges = {
       ...changes,
       points: preservedPoints,
     };
 
-    const dbChanges: any = { ...safeChanges };
+    const dbChanges: any = { ...changes };
+
+    // Only update DB points when points are intentionally changed
+    // and the array is not empty.
+    if (hasValidIncomingPoints) {
+      dbChanges.points = changes.points;
+    } else {
+      delete dbChanges.points;
+    }
 
     if ("progressDirection" in dbChanges) {
       dbChanges.progress_direction = dbChanges.progressDirection;
@@ -1031,7 +1046,10 @@ export const FloorPlanProvider = ({
           ? {
               ...route,
               ...safeChanges,
-              points: preservedPoints.length > 0 ? preservedPoints : route.points || [],
+              points:
+                preservedPoints.length > 0
+                  ? preservedPoints
+                  : route.points || [],
             }
           : route
       )
