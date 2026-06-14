@@ -329,7 +329,8 @@ const toAppFiberRoute = (row: any) => ({
 
 const toDbFiberRoute = (route: any) => ({
   id: route.id,
-  name: route.name || route.label || "Fiber Route",
+  // Current Supabase table fiber_routes does not have a "name" column.
+  // Store the editable route name in "label" instead.
   points: route.points || [],
   color: route.color || "#ef4444",
   label: route.label || route.name || "Fiber Route",
@@ -1059,16 +1060,18 @@ export const FloorPlanProvider = ({
       ...currentRoute,
       ...safeChanges,
       points: preservedPoints,
+      label:
+        safeChanges.label ||
+        safeChanges.name ||
+        currentRoute?.label ||
+        currentRoute?.name ||
+        "Fiber Route",
     };
 
     const { error } = await supabase
       .from("fiber_routes")
-      .upsert(
-        toDbFiberRoute(routeForDb),
-        {
-          onConflict: "id",
-        }
-      );
+      .update(toDbFiberRoute(routeForDb))
+      .eq("id", id);
 
     if (error) {
       console.error("Update fiber route error:", error);
