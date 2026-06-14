@@ -87,8 +87,10 @@ const FloorPlanContext = createContext<any>({
   fiberRoutes: [],
   workPlans: {},
   activityLogs: [],
+  floorPlanUrl: "/floor_plan_2dcc9a6b.webp",
   isLoading: false,
   hasDbError: false,
+  uploadFloorPlan: async () => false,
 
   setCameraCountByType: () => {},
   setRackCountByType: () => {},
@@ -375,6 +377,7 @@ export const FloorPlanProvider = ({
   const [cabinets, setCabinets] = useState<any[]>([]);
   const [fiberRoutes, setFiberRoutes] = useState<any[]>([]);
   const [workPlans, setWorkPlans] = useState<Record<string, any>>({});
+  const [floorPlanUrl, setFloorPlanUrl] = useState("/floor_plan_2dcc9a6b.webp");
   const [isLoading, setIsLoading] = useState(true);
   const [hasDbError, setHasDbError] = useState(false);
 
@@ -476,6 +479,18 @@ export const FloorPlanProvider = ({
       }
 
 
+
+      const { data: floorPlanSetting, error: floorPlanError } = await supabase
+        .from("floor_plan_settings")
+        .select("floor_plan_url")
+        .eq("id", "main")
+        .maybeSingle();
+
+      if (floorPlanError) {
+        console.error("Load floor plan setting error:", floorPlanError);
+      } else if (floorPlanSetting?.floor_plan_url) {
+        setFloorPlanUrl(floorPlanSetting.floor_plan_url);
+      }
 
       const { data: workPlanData, error: workPlanError } = await supabase
         .from("work_plans")
@@ -673,14 +688,93 @@ export const FloorPlanProvider = ({
       )
       .subscribe();
 
+    const floorPlanSettingChannel = supabase
+      .channel("floor-plan-settings-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "floor_plan_settings" },
+        (payload) => {
+          const row = payload.new as any;
+
+          if (row?.id === "main" && row.floor_plan_url) {
+            setFloorPlanUrl(row.floor_plan_url);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(cameraChannel);
       supabase.removeChannel(rackChannel);
       supabase.removeChannel(cabinetChannel);
       supabase.removeChannel(fiberChannel);
       supabase.removeChannel(workPlanChannel);
+      supabase.removeChannel(floorPlanSettingChannel);
     };
   }, []);
+
+  const uploadFloorPlan = async (file: File) => {
+    if (!file) return false;
+
+    const fileName = file.name || "";
+    const isWebpFile =
+      file.type === "image/webp" || fileName.toLowerCase().endsWith(".webp");
+
+    if (!isWebpFile) {
+      alert("รองรับเฉพาะไฟล์ .webp เท่านั้น");
+      return false;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("ไฟล์ Floor Plan ต้องมีขนาดไม่เกิน 5 MB");
+      return false;
+    }
+
+    const storagePath = "main/current-floor-plan.webp";
+
+    const { error: uploadError } = await supabase.storage
+      .from("floorplan")
+      .upload(storagePath, file, {
+        cacheControl: "0",
+        contentType: "image/webp",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Upload floor plan error:", uploadError);
+      setHasDbError(true);
+      alert(uploadError.message);
+      return false;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("floorplan")
+      .getPublicUrl(storagePath);
+
+    const nextUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
+
+    const { error: settingError } = await supabase
+      .from("floor_plan_settings")
+      .upsert(
+        {
+          id: "main",
+          floor_plan_url: nextUrl,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+
+    if (settingError) {
+      console.error("Save floor plan setting error:", settingError);
+      setHasDbError(true);
+      alert(settingError.message);
+      return false;
+    }
+
+    setFloorPlanUrl(nextUrl);
+    setHasDbError(false);
+    return true;
+  };
 
   const updateCamera = (id: string, changes: any) => {
     setCameras((prev) =>
@@ -1276,8 +1370,10 @@ export const FloorPlanProvider = ({
         fiberRoutes,
         workPlans,
         activityLogs: [],
+        floorPlanUrl,
         isLoading,
         hasDbError,
+        uploadFloorPlan,
 
         updateCameraPosition,
         updateCameraStatus,
