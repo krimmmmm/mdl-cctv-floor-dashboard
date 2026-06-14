@@ -88,9 +88,14 @@ const FloorPlanContext = createContext<any>({
   workPlans: {},
   activityLogs: [],
   floorPlanUrl: "/floor_plan_2dcc9a6b.webp",
+  floorPlanScale: 1,
+  floorPlanOffsetX: 0,
+  floorPlanOffsetY: 0,
   isLoading: false,
   hasDbError: false,
   uploadFloorPlan: async () => false,
+  updateFloorPlanAlignment: async () => false,
+  resetFloorPlanAlignment: async () => false,
 
   setCameraCountByType: () => {},
   setRackCountByType: () => {},
@@ -378,6 +383,9 @@ export const FloorPlanProvider = ({
   const [fiberRoutes, setFiberRoutes] = useState<any[]>([]);
   const [workPlans, setWorkPlans] = useState<Record<string, any>>({});
   const [floorPlanUrl, setFloorPlanUrl] = useState("/floor_plan_2dcc9a6b.webp");
+  const [floorPlanScale, setFloorPlanScale] = useState(1);
+  const [floorPlanOffsetX, setFloorPlanOffsetX] = useState(0);
+  const [floorPlanOffsetY, setFloorPlanOffsetY] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [hasDbError, setHasDbError] = useState(false);
 
@@ -482,14 +490,20 @@ export const FloorPlanProvider = ({
 
       const { data: floorPlanSetting, error: floorPlanError } = await supabase
         .from("floor_plan_settings")
-        .select("floor_plan_url")
+        .select("floor_plan_url, floor_plan_scale, floor_plan_offset_x, floor_plan_offset_y")
         .eq("id", "main")
         .maybeSingle();
 
       if (floorPlanError) {
         console.error("Load floor plan setting error:", floorPlanError);
-      } else if (floorPlanSetting?.floor_plan_url) {
-        setFloorPlanUrl(floorPlanSetting.floor_plan_url);
+      } else if (floorPlanSetting) {
+        if (floorPlanSetting.floor_plan_url) {
+          setFloorPlanUrl(floorPlanSetting.floor_plan_url);
+        }
+
+        setFloorPlanScale(Number(floorPlanSetting.floor_plan_scale || 1));
+        setFloorPlanOffsetX(Number(floorPlanSetting.floor_plan_offset_x || 0));
+        setFloorPlanOffsetY(Number(floorPlanSetting.floor_plan_offset_y || 0));
       }
 
       const { data: workPlanData, error: workPlanError } = await supabase
@@ -696,8 +710,14 @@ export const FloorPlanProvider = ({
         (payload) => {
           const row = payload.new as any;
 
-          if (row?.id === "main" && row.floor_plan_url) {
-            setFloorPlanUrl(row.floor_plan_url);
+          if (row?.id === "main") {
+            if (row.floor_plan_url) {
+              setFloorPlanUrl(row.floor_plan_url);
+            }
+
+            setFloorPlanScale(Number(row.floor_plan_scale || 1));
+            setFloorPlanOffsetX(Number(row.floor_plan_offset_x || 0));
+            setFloorPlanOffsetY(Number(row.floor_plan_offset_y || 0));
           }
         }
       )
@@ -759,6 +779,9 @@ export const FloorPlanProvider = ({
         {
           id: "main",
           floor_plan_url: nextUrl,
+          floor_plan_scale: floorPlanScale,
+          floor_plan_offset_x: floorPlanOffsetX,
+          floor_plan_offset_y: floorPlanOffsetY,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "id" }
@@ -774,6 +797,55 @@ export const FloorPlanProvider = ({
     setFloorPlanUrl(nextUrl);
     setHasDbError(false);
     return true;
+  };
+
+  const updateFloorPlanAlignment = async (
+    scale: number,
+    offsetX: number,
+    offsetY: number
+  ) => {
+    const safeScale = Number.isFinite(Number(scale))
+      ? Math.max(0.2, Math.min(3, Number(scale)))
+      : 1;
+
+    const safeOffsetX = Number.isFinite(Number(offsetX))
+      ? Math.round(Number(offsetX))
+      : 0;
+
+    const safeOffsetY = Number.isFinite(Number(offsetY))
+      ? Math.round(Number(offsetY))
+      : 0;
+
+    const { error } = await supabase
+      .from("floor_plan_settings")
+      .upsert(
+        {
+          id: "main",
+          floor_plan_url: floorPlanUrl || "/floor_plan_2dcc9a6b.webp",
+          floor_plan_scale: safeScale,
+          floor_plan_offset_x: safeOffsetX,
+          floor_plan_offset_y: safeOffsetY,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+
+    if (error) {
+      console.error("Save floor plan alignment error:", error);
+      setHasDbError(true);
+      alert(error.message);
+      return false;
+    }
+
+    setFloorPlanScale(safeScale);
+    setFloorPlanOffsetX(safeOffsetX);
+    setFloorPlanOffsetY(safeOffsetY);
+    setHasDbError(false);
+    return true;
+  };
+
+  const resetFloorPlanAlignment = async () => {
+    return updateFloorPlanAlignment(1, 0, 0);
   };
 
   const updateCamera = (id: string, changes: any) => {
@@ -1371,9 +1443,14 @@ export const FloorPlanProvider = ({
         workPlans,
         activityLogs: [],
         floorPlanUrl,
+        floorPlanScale,
+        floorPlanOffsetX,
+        floorPlanOffsetY,
         isLoading,
         hasDbError,
         uploadFloorPlan,
+        updateFloorPlanAlignment,
+        resetFloorPlanAlignment,
 
         updateCameraPosition,
         updateCameraStatus,
