@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Cabinet } from "@/lib/floorPlanData";
 import { useFloorPlan } from "@/contexts/FloorPlanContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +25,7 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
   } = useFloorPlan();
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [equipmentName, setEquipmentName] = useState(cabinet?.name || "");
   const { user } = useAuth();
   const savedUser =
     typeof window !== "undefined"
@@ -58,6 +59,25 @@ const CabinetStatusModal: React.FC<CabinetStatusModalProps> = ({
   const canManageLayout = isAdminUser;
 
   const canToggleUrgent = isAdminUser || isStaffOnlyUser;
+
+
+  useEffect(() => {
+    setEquipmentName(cabinet?.name || "");
+  }, [cabinet?.id, cabinet?.name]);
+
+  const handleSaveName = () => {
+    if (!canManageLayout) return;
+
+    const nextName = equipmentName.trim();
+
+    if (!nextName) {
+      alert("กรุณาระบุชื่ออุปกรณ์");
+      return;
+    }
+
+    updateCabinetField(cabinet.id, "name", nextName);
+    alert("Save Name สำเร็จ");
+  };
 
 if (!isOpen || !cabinet) return null;
 
@@ -266,7 +286,63 @@ if (!isOpen || !cabinet) return null;
     <>
       <div style={styles.overlay} onClick={onClose}>
         <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-          <h2 style={styles.title}>{cabinet.name}</h2>
+          <h2 style={styles.title}>{cabinet.name || "Cabinet"}</h2>
+
+          <div
+            style={{
+              background: "#111827",
+              border: "1px solid #334155",
+              borderRadius: 12,
+              padding: 14,
+              marginBottom: 14,
+            }}
+          >
+            <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 800 }}>
+              Equipment ID (Read Only)
+            </div>
+            <div style={{ color: "#e5e7eb", fontSize: 13, marginBottom: 10 }}>
+              {cabinet.id}
+            </div>
+
+            <div style={{ color: "#94a3b8", fontSize: 12, fontWeight: 800, marginBottom: 6 }}>
+              Equipment Name
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                type="text"
+                value={equipmentName}
+                disabled={!canManageLayout}
+                onChange={(e) => setEquipmentName(e.target.value)}
+                style={{
+                  flex: 1,
+                  borderRadius: 10,
+                  border: "1px solid #475569",
+                  background: canManageLayout ? "#ffffff" : "#e5e7eb",
+                  color: "#111827",
+                  padding: "10px 12px",
+                  fontWeight: 800,
+                }}
+              />
+
+              <button
+                type="button"
+                disabled={!canManageLayout}
+                onClick={handleSaveName}
+                style={{
+                  border: "none",
+                  borderRadius: 10,
+                  background: canManageLayout ? "#2563eb" : "#64748b",
+                  color: "#ffffff",
+                  padding: "10px 14px",
+                  fontWeight: 900,
+                  cursor: canManageLayout ? "pointer" : "not-allowed",
+                }}
+              >
+                Save Name
+              </button>
+            </div>
+          </div>
 
           <div style={styles.typeBox}>
             <b>Type:</b> CCTV OUTDOOR STEEL CABINET
