@@ -1042,7 +1042,7 @@ const FloorPlanCanvas: React.FC<Props> = ({
         }}
       >
         <g
-          transform={`translate(${floorPlan.floorPlanOffsetX || 0} ${floorPlan.floorPlanOffsetY || 0}) scale(${floorPlan.floorPlanScale || 1})`}
+          transform={`translate(${floorPlanOffsetXInput || 0} ${floorPlanOffsetYInput || 0}) scale(${floorPlanScaleInput || 1})`}
         >
           <image
             href={floorPlan.floorPlanUrl || "/floor_plan_2dcc9a6b.webp"}
