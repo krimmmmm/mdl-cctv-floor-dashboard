@@ -66,7 +66,6 @@ const FiberRouteStatusModal: React.FC<Props> = ({
     }
 
     onUpdate({
-      points: route.points || [],
       progress: route.progress || 0,
       progressDirection: route.progressDirection || "start",
       color: route.color || "#ef4444",
@@ -223,7 +222,6 @@ if (!isOpen) return null;
         next[index] = photoData;
 
         pendingLocalPhotosRef.current = next;
-      writeCachedPhotos(route?.id, next);
         writeCachedPhotos(route?.id, next);
 
         if (pendingClearTimerRef.current) {
@@ -238,8 +236,7 @@ if (!isOpen) return null;
         // This prevents old uploaded photos from being cleared
         // if the parent update function replaces the route object.
         onUpdate({
-          points: route.points || [],
-          progress: route.progress || 0,
+              progress: route.progress || 0,
           progressDirection: route.progressDirection || "start",
           color: route.color || "#ef4444",
           name: route.name || route.label || "Fiber Route",
@@ -278,10 +275,10 @@ if (!isOpen) return null;
       // Send all photo fields every time.
       // This keeps the other existing photos safe.
       onUpdate({
-        points: route.points || [],
-        progress: route.progress || 0,
+          progress: route.progress || 0,
         progressDirection: route.progressDirection || "start",
         color: route.color || "#ef4444",
+        name: route.name || route.label || "Fiber Route",
         label: route.label || route.name || "Fiber Route",
         status: route.status || "active",
         photo1: next[0] || "",
@@ -379,8 +376,7 @@ if (!isOpen) return null;
                 onChange={(e) =>
                   canEditFiber &&
                   onUpdate({
-                    points: route.points || [],
-                    name: route.name || route.label || "Fiber Route",
+                                  name: route.name || route.label || "Fiber Route",
                     label: route.label || route.name || "Fiber Route",
                     progress: Number(e.target.value),
                     progressDirection: route.progressDirection || "start",
@@ -418,8 +414,7 @@ if (!isOpen) return null;
                   onClick={() =>
                     canEditFiber &&
                     onUpdate({
-                      points: route.points || [],
-                      name: route.name || route.label || "Fiber Route",
+                                      name: route.name || route.label || "Fiber Route",
                       label: route.label || route.name || "Fiber Route",
                       progress: route.progress || 0,
                       progressDirection: "start",
@@ -445,8 +440,7 @@ if (!isOpen) return null;
                   onClick={() =>
                     canEditFiber &&
                     onUpdate({
-                      points: route.points || [],
-                      name: route.name || route.label || "Fiber Route",
+                                      name: route.name || route.label || "Fiber Route",
                       label: route.label || route.name || "Fiber Route",
                       progress: route.progress || 0,
                       progressDirection: "end",
