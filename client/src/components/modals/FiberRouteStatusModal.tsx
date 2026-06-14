@@ -17,6 +17,7 @@ const FiberRouteStatusModal: React.FC<Props> = ({
   onDelete,
 }) => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [routeName, setRouteName] = useState(route?.name || route?.label || "");
 
   const { user } = useAuth();
   const savedUser =
@@ -49,6 +50,37 @@ const FiberRouteStatusModal: React.FC<Props> = ({
 
   // Delete Fiber route remains Admin only.
   const isAdmin = userRole === "admin" || userRole === "newstaff";
+
+  useEffect(() => {
+    setRouteName(route?.name || route?.label || "");
+  }, [route?.id, route?.name, route?.label]);
+
+  const handleSaveRouteName = () => {
+    if (!canEditFiber) return;
+
+    const nextName = routeName.trim();
+
+    if (!nextName) {
+      alert("กรุณาระบุชื่อ Route Fiber");
+      return;
+    }
+
+    onUpdate({
+      points: route.points || [],
+      progress: route.progress || 0,
+      progressDirection: route.progressDirection || "start",
+      color: route.color || "#ef4444",
+      name: nextName,
+      label: nextName,
+      status: route.status || "active",
+      photo1: route.photo1 || "",
+      photo2: route.photo2 || "",
+      photo3: route.photo3 || "",
+      photo4: route.photo4 || "",
+    });
+
+    alert("Save Route Name สำเร็จ");
+  };
 
 if (!isOpen) return null;
 
@@ -210,6 +242,7 @@ if (!isOpen) return null;
           progress: route.progress || 0,
           progressDirection: route.progressDirection || "start",
           color: route.color || "#ef4444",
+          name: route.name || route.label || "Fiber Route",
           label: route.label || route.name || "Fiber Route",
           status: route.status || "active",
           photo1: next[0] || "",
@@ -290,6 +323,43 @@ if (!isOpen) return null;
           </div>
 
           <div className="p-6 space-y-6">
+            <div className="rounded-2xl bg-gray-50 border border-gray-200 p-5">
+              <div className="text-xs font-bold text-gray-500 mb-1">
+                Route ID (Read Only)
+              </div>
+
+              <div className="font-semibold text-gray-800 mb-3 break-all">
+                {route.id}
+              </div>
+
+              <div className="text-xs font-bold text-gray-500 mb-1">
+                Route Name
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={routeName}
+                  disabled={!canEditFiber}
+                  onChange={(e) => setRouteName(e.target.value)}
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 font-semibold disabled:bg-gray-100"
+                />
+
+                <button
+                  type="button"
+                  disabled={!canEditFiber}
+                  onClick={handleSaveRouteName}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white font-bold disabled:bg-gray-400"
+                >
+                  Save Name
+                </button>
+              </div>
+
+              <div className="text-xs text-gray-500 mt-2">
+                แก้เฉพาะชื่อ Route Fiber เท่านั้น ไม่กระทบเส้นทาง Progress รูป และพิกัด
+              </div>
+            </div>
+
             <div className="rounded-2xl bg-green-50 border border-green-200 p-5">
               <div className="flex justify-between mb-3">
                 <span className="font-bold text-gray-700">
@@ -309,7 +379,17 @@ if (!isOpen) return null;
                 onChange={(e) =>
                   canEditFiber &&
                   onUpdate({
+                    points: route.points || [],
+                    name: route.name || route.label || "Fiber Route",
+                    label: route.label || route.name || "Fiber Route",
                     progress: Number(e.target.value),
+                    progressDirection: route.progressDirection || "start",
+                    color: route.color || "#ef4444",
+                    status: route.status || "active",
+                    photo1: route.photo1 || "",
+                    photo2: route.photo2 || "",
+                    photo3: route.photo3 || "",
+                    photo4: route.photo4 || "",
                   })
                 }
                 className="w-full accent-green-600"
@@ -338,7 +418,17 @@ if (!isOpen) return null;
                   onClick={() =>
                     canEditFiber &&
                     onUpdate({
+                      points: route.points || [],
+                      name: route.name || route.label || "Fiber Route",
+                      label: route.label || route.name || "Fiber Route",
+                      progress: route.progress || 0,
                       progressDirection: "start",
+                      color: route.color || "#ef4444",
+                      status: route.status || "active",
+                      photo1: route.photo1 || "",
+                      photo2: route.photo2 || "",
+                      photo3: route.photo3 || "",
+                      photo4: route.photo4 || "",
                     })
                   }
                   className={`px-4 py-3 rounded-xl border font-bold ${
@@ -355,7 +445,17 @@ if (!isOpen) return null;
                   onClick={() =>
                     canEditFiber &&
                     onUpdate({
+                      points: route.points || [],
+                      name: route.name || route.label || "Fiber Route",
+                      label: route.label || route.name || "Fiber Route",
+                      progress: route.progress || 0,
                       progressDirection: "end",
+                      color: route.color || "#ef4444",
+                      status: route.status || "active",
+                      photo1: route.photo1 || "",
+                      photo2: route.photo2 || "",
+                      photo3: route.photo3 || "",
+                      photo4: route.photo4 || "",
                     })
                   }
                   className={`px-4 py-3 rounded-xl border font-bold ${
