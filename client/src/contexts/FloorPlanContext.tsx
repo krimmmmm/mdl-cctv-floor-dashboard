@@ -329,6 +329,7 @@ const toAppFiberRoute = (row: any) => ({
 
 const toDbFiberRoute = (route: any) => ({
   id: route.id,
+  name: route.name || route.label || "Fiber Route",
   points: route.points || [],
   color: route.color || "#ef4444",
   label: route.label || route.name || "Fiber Route",
