@@ -182,11 +182,11 @@ if (!isOpen || !rack) return null;
   };
 
   const photos = [
-    (rack as any).photo1,
-    (rack as any).photo2,
-    (rack as any).photo3,
-    (rack as any).photo4,
-  ].filter(Boolean);
+    { slot: 0, url: (rack as any).photo1 },
+    { slot: 1, url: (rack as any).photo2 },
+    { slot: 2, url: (rack as any).photo3 },
+    { slot: 3, url: (rack as any).photo4 },
+  ].filter((photo) => Boolean(photo.url));
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canEditProgress) return;
@@ -363,20 +363,20 @@ if (!isOpen || !rack) return null;
 
             {photos.length > 0 ? (
               <div style={styles.photoGrid}>
-                {photos.map((photo, index) => (
-                  <div key={index} style={styles.photoWrap}>
+                {photos.map((photo) => (
+                  <div key={photo.slot} style={styles.photoWrap}>
                     <button
                       style={styles.deleteButton}
                       disabled={!canEditProgress}
-                      onClick={() => canEditProgress && deletePhoto(index)}
+                      onClick={() => canEditProgress && deletePhoto(photo.slot)}
                     >
                       ×
                     </button>
 
                     <img
-                      src={photo}
+                      src={photo.url}
                       style={styles.photo}
-                      onClick={() => setPreviewImage(photo)}
+                      onClick={() => setPreviewImage(photo.url)}
                     />
                   </div>
                 ))}
