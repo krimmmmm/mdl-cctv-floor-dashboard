@@ -52,12 +52,24 @@ export default function Home() {
       return;
     }
 
-    setIsUploadingFloorPlan(true);
-    const success = await uploadFloorPlan(file);
-    setIsUploadingFloorPlan(false);
+    if (typeof uploadFloorPlan !== "function") {
+      alert("ระบบ Upload Floor Plan ยังไม่พร้อม กรุณาอัปเดต FloorPlanContext.tsx ก่อน");
+      return;
+    }
 
-    if (success) {
-      alert("Upload Floor Plan สำเร็จ");
+    setIsUploadingFloorPlan(true);
+
+    try {
+      const success = await uploadFloorPlan(file);
+
+      if (success) {
+        alert("Upload Floor Plan สำเร็จ");
+      }
+    } catch (error: any) {
+      console.error("Upload Floor Plan failed:", error);
+      alert(error?.message || "Upload Floor Plan ไม่สำเร็จ");
+    } finally {
+      setIsUploadingFloorPlan(false);
     }
   };
 
