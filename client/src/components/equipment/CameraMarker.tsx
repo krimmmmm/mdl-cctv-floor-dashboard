@@ -54,8 +54,7 @@ const CameraMarker = ({ camera }: any) => {
             stroke="#ff00cc"
             strokeWidth="4"
             style={{
-              animation:
-                "pulse-pink 1s infinite",
+              animation: "pulse-pink 1s infinite",
             }}
           />
         )}
@@ -70,8 +69,7 @@ const CameraMarker = ({ camera }: any) => {
             stroke="#FFD700"
             strokeWidth="4"
             style={{
-              animation:
-                "pulse-yellow 1s infinite",
+              animation: "pulse-yellow 1s infinite",
             }}
           />
         )}
@@ -86,8 +84,7 @@ const CameraMarker = ({ camera }: any) => {
             stroke="#00ff66"
             strokeWidth="4"
             style={{
-              animation:
-                "pulse-green 1s infinite",
+              animation: "pulse-green 1s infinite",
             }}
           />
         )}
@@ -95,7 +92,6 @@ const CameraMarker = ({ camera }: any) => {
         {/* TYPE 1 = Yellow + Red */}
         {camera.type === "type1" && (
           <>
-            {/* Bottom Red */}
             <path
               d={`
                 M ${camera.x - 5} ${camera.y}
@@ -108,7 +104,6 @@ const CameraMarker = ({ camera }: any) => {
               stroke="red"
             />
 
-            {/* Top Yellow */}
             <rect
               x={camera.x - 5}
               y={camera.y - 5}
@@ -122,7 +117,6 @@ const CameraMarker = ({ camera }: any) => {
         {/* TYPE 2 = Yellow + Blue */}
         {camera.type === "type2" && (
           <>
-            {/* Bottom Blue */}
             <path
               d={`
                 M ${camera.x - 5} ${camera.y}
@@ -135,7 +129,6 @@ const CameraMarker = ({ camera }: any) => {
               stroke="#3F48CC"
             />
 
-            {/* Top Yellow */}
             <rect
               x={camera.x - 5}
               y={camera.y - 5}
@@ -146,12 +139,20 @@ const CameraMarker = ({ camera }: any) => {
           </>
         )}
 
-        {/* Camera Number */}
+        {/* CAMERA LABEL */}
         <text
           x={camera.x + 10}
           y={camera.y + 3}
-          fontSize="8"
-          fill="black"
+          fontSize="9"
+          fontWeight="900"
+          fill={
+            camera.type === "type1"
+              ? "#ff0000"
+              : "#2563eb"
+          }
+          stroke="white"
+          strokeWidth="0.4"
+          paintOrder="stroke"
         >
           {camera.name.replace("Camera ", "")}
         </text>
