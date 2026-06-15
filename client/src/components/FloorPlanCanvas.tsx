@@ -166,6 +166,37 @@ const FloorPlanCanvas: React.FC<Props> = ({
     const [type, id] = focus.split(':');
     if (!type || !id) return;
 
+    const focusZoom = 2.2;
+
+    /*
+      IMPORTANT:
+      Camera / Rack / Cabinet / Fiber coordinates are SVG viewBox coordinates.
+      They are NOT inside the Floor Plan image alignment <g>, so do NOT apply
+      floorPlanScale / floorPlanOffsetX / floorPlanOffsetY here.
+
+      The SVG viewBox is 1400 x 900, but the real browser viewport can be
+      wider/taller. Therefore, convert SVG coordinates to screen pixels first.
+    */
+    const getFocusPan = (svgX: number, svgY: number) => {
+      const viewportRect =
+        svgRef.current?.parentElement?.getBoundingClientRect() ||
+        svgRef.current?.getBoundingClientRect();
+
+      const viewportWidth = viewportRect?.width || 1400;
+      const viewportHeight = viewportRect?.height || 900;
+
+      const pxPerSvgX = viewportWidth / 1400;
+      const pxPerSvgY = viewportHeight / 900;
+
+      const centerX = viewportWidth / 2;
+      const centerY = viewportHeight / 2;
+
+      return {
+        x: centerX - svgX * pxPerSvgX * focusZoom,
+        y: centerY - svgY * pxPerSvgY * focusZoom,
+      };
+    };
+
     if (type === 'fiber') {
       const fiber = (fiberRoutes || []).find((route) => route.id === id);
       const firstPoint = fiber?.points?.[0];
@@ -175,36 +206,11 @@ const FloorPlanCanvas: React.FC<Props> = ({
       setSelectedFiberId(id);
       setSelectedItem(null);
 
-      const focusZoom = 2.2;
-
-      const svgRect = svgRef.current?.getBoundingClientRect();
-
-      const centerX =
-        svgRect?.width
-          ? svgRect.width / 2
-          : 700;
-
-      const centerY =
-        svgRect?.height
-          ? svgRect.height / 2
-          : 350;
-
-      const realX =
-        firstPoint.x * (floorPlanScaleInput || 1) +
-        (floorPlanOffsetXInput || 0);
-
-      const realY =
-        firstPoint.y * (floorPlanScaleInput || 1) +
-        (floorPlanOffsetYInput || 0);
-
       setZoom(focusZoom);
-
-      setPan({
-        x: centerX - realX * focusZoom,
-        y: centerY - realY * focusZoom,
-      });
+      setPan(getFocusPan(firstPoint.x, firstPoint.y));
 
       sessionStorage.removeItem("mdl_focus_equipment");
+      return;
     }
 
     let target: any = null;
@@ -250,47 +256,11 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
     if (!target) return;
 
-    const focusZoom = 2.2;
-
-    const svgRect = svgRef.current?.getBoundingClientRect();
-
-    const centerX =
-      svgRect?.width
-        ? svgRect.width / 2
-        : 700;
-
-    const centerY =
-      svgRect?.height
-        ? svgRect.height / 2
-        : 350;
-
-    const realX =
-      target.x * (floorPlanScaleInput || 1) +
-      (floorPlanOffsetXInput || 0);
-
-    const realY =
-      target.y * (floorPlanScaleInput || 1) +
-      (floorPlanOffsetYInput || 0);
-
     setZoom(focusZoom);
-
-    setPan({
-      x: centerX - realX * focusZoom,
-      y: centerY - realY * focusZoom,
-    });
+    setPan(getFocusPan(target.x, target.y));
 
     sessionStorage.removeItem("mdl_focus_equipment");
-  }, [
-    cameras,
-    racks,
-    cabinets,
-    fiberRoutes,
-    floorPlanScaleInput,
-    floorPlanOffsetXInput,
-    floorPlanOffsetYInput,
-    setLocation,
-    resetView,
-  ]);
+  }, [cameras, racks, cabinets, fiberRoutes, setLocation, resetView]);
 
   const [canvasMode, setCanvasMode] = useState<CanvasMode>('normal');
   const [drawingPoints, setDrawingPoints] = useState<Array<{ x: number; y: number }>>([]);
