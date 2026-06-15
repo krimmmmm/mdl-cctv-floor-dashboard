@@ -176,10 +176,32 @@ const FloorPlanCanvas: React.FC<Props> = ({
       setSelectedItem(null);
 
       const focusZoom = 2.2;
+
+      const svgRect = svgRef.current?.getBoundingClientRect();
+
+      const centerX =
+        svgRect?.width
+          ? svgRect.width / 2
+          : 700;
+
+      const centerY =
+        svgRect?.height
+          ? svgRect.height / 2
+          : 350;
+
+      const realX =
+        firstPoint.x * (floorPlanScaleInput || 1) +
+        (floorPlanOffsetXInput || 0);
+
+      const realY =
+        firstPoint.y * (floorPlanScaleInput || 1) +
+        (floorPlanOffsetYInput || 0);
+
       setZoom(focusZoom);
+
       setPan({
-        x: 700 - firstPoint.x * focusZoom,
-        y: 350 - firstPoint.y * focusZoom,
+        x: centerX - realX * focusZoom,
+        y: centerY - realY * focusZoom,
       });
 
       sessionStorage.removeItem("mdl_focus_equipment");
@@ -230,14 +252,45 @@ const FloorPlanCanvas: React.FC<Props> = ({
 
     const focusZoom = 2.2;
 
+    const svgRect = svgRef.current?.getBoundingClientRect();
+
+    const centerX =
+      svgRect?.width
+        ? svgRect.width / 2
+        : 700;
+
+    const centerY =
+      svgRect?.height
+        ? svgRect.height / 2
+        : 350;
+
+    const realX =
+      target.x * (floorPlanScaleInput || 1) +
+      (floorPlanOffsetXInput || 0);
+
+    const realY =
+      target.y * (floorPlanScaleInput || 1) +
+      (floorPlanOffsetYInput || 0);
+
     setZoom(focusZoom);
+
     setPan({
-      x: 700 - target.x * focusZoom,
-      y: 350 - target.y * focusZoom,
+      x: centerX - realX * focusZoom,
+      y: centerY - realY * focusZoom,
     });
 
     sessionStorage.removeItem("mdl_focus_equipment");
-  }, [cameras, racks, cabinets, fiberRoutes, setLocation, resetView]);
+  }, [
+    cameras,
+    racks,
+    cabinets,
+    fiberRoutes,
+    floorPlanScaleInput,
+    floorPlanOffsetXInput,
+    floorPlanOffsetYInput,
+    setLocation,
+    resetView,
+  ]);
 
   const [canvasMode, setCanvasMode] = useState<CanvasMode>('normal');
   const [drawingPoints, setDrawingPoints] = useState<Array<{ x: number; y: number }>>([]);
