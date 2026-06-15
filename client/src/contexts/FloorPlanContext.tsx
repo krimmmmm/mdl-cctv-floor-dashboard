@@ -407,9 +407,40 @@ export const FloorPlanProvider = ({
   };
 
   const saveRack = async (rack: any) => {
-    const { error } = await supabase
+    const payload = toDbRack(rack);
+
+    /*
+      IMPORTANT:
+      Do not use .upsert(..., { onConflict: "id" }) for racks.
+
+      Some Supabase tables can return HTTP 500 when "id" is not configured
+      as a proper UNIQUE/PRIMARY KEY constraint for PostgREST upsert.
+      This safe flow avoids on_conflict=id completely:
+        1) Check if rack id already exists
+        2) If exists -> update by id
+        3) If not exists -> insert new row
+    */
+    const { data: existingRack, error: findError } = await supabase
       .from("racks")
-      .upsert(toDbRack(rack), { onConflict: "id" });
+      .select("id")
+      .eq("id", rack.id)
+      .maybeSingle();
+
+    if (findError) {
+      console.error("Find rack error:", findError);
+      setHasDbError(true);
+      alert(findError.message);
+      return false;
+    }
+
+    const { error } = existingRack
+      ? await supabase
+          .from("racks")
+          .update(payload)
+          .eq("id", rack.id)
+      : await supabase
+          .from("racks")
+          .insert(payload);
 
     if (error) {
       console.error("Save rack error:", error);
@@ -418,6 +449,7 @@ export const FloorPlanProvider = ({
       return false;
     }
 
+    setHasDbError(false);
     return true;
   };
 
