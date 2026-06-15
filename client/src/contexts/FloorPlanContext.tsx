@@ -238,6 +238,74 @@ const toDbRack = (rack: any) => ({
   updated_at: new Date().toISOString(),
 });
 
+const toDbRackChanges = (changes: any) => {
+  const payload: any = {};
+
+  const map: Record<string, string> = {
+    name: "name",
+    x: "x",
+    y: "y",
+    type: "type",
+    status: "status",
+    installationStatus: "installation_status",
+    isUrgent: "is_urgent",
+    acPower: "ac_power",
+    utp: "utp",
+    poeSwitch: "poe_switch",
+    fiberOptic: "fiber_optic",
+    ups: "ups",
+    ready: "ready",
+    acPowerProgress: "ac_power_progress",
+    utpProgress: "utp_progress",
+    poeSwitchProgress: "poe_switch_progress",
+    fiberOpticProgress: "fiber_optic_progress",
+    upsProgress: "ups_progress",
+    readyProgress: "ready_progress",
+    photo1: "photo1",
+    photo2: "photo2",
+    photo3: "photo3",
+    photo4: "photo4",
+  };
+
+  Object.entries(changes || {}).forEach(([appKey, value]) => {
+    const dbKey = map[appKey];
+    if (!dbKey) return;
+
+    if (appKey === "installationStatus") {
+      payload[dbKey] = value || "not_started";
+      return;
+    }
+
+    if (
+      appKey === "isUrgent" ||
+      appKey === "acPower" ||
+      appKey === "utp" ||
+      appKey === "poeSwitch" ||
+      appKey === "fiberOptic" ||
+      appKey === "ups" ||
+      appKey === "ready"
+    ) {
+      payload[dbKey] = Boolean(value);
+      return;
+    }
+
+    if (
+      appKey === "x" ||
+      appKey === "y" ||
+      appKey.endsWith("Progress")
+    ) {
+      payload[dbKey] = Number(value || 0);
+      return;
+    }
+
+    payload[dbKey] = value ?? "";
+  });
+
+  payload.updated_at = new Date().toISOString();
+
+  return payload;
+};
+
 const toAppCabinet = (row: any) => ({
   id: row.id,
   name: row.name,
@@ -409,38 +477,34 @@ export const FloorPlanProvider = ({
   const saveRack = async (rack: any) => {
     const payload = toDbRack(rack);
 
-    /*
-      IMPORTANT:
-      Do not use .upsert(..., { onConflict: "id" }) for racks.
-
-      Some Supabase tables can return HTTP 500 when "id" is not configured
-      as a proper UNIQUE/PRIMARY KEY constraint for PostgREST upsert.
-      This safe flow avoids on_conflict=id completely:
-        1) Check if rack id already exists
-        2) If exists -> update by id
-        3) If not exists -> insert new row
-    */
-    const { data: existingRack, error: findError } = await supabase
+    const { error } = await supabase
       .from("racks")
-      .select("id")
-      .eq("id", rack.id)
-      .maybeSingle();
+      .upsert(payload, { onConflict: "id" });
 
-    if (findError) {
-      console.error("Find rack error:", findError);
+    if (error) {
+      console.error("Save rack error:", error);
       setHasDbError(true);
-      alert(findError.message);
+      alert(error.message);
       return false;
     }
 
-    const { error } = existingRack
-      ? await supabase
-          .from("racks")
-          .update(payload)
-          .eq("id", rack.id)
-      : await supabase
-          .from("racks")
-          .insert(payload);
+    setHasDbError(false);
+    return true;
+  };
+
+  const saveRackChanges = async (rackId: string, changes: any) => {
+    const payload = toDbRackChanges(changes);
+
+    /*
+      IMPORTANT:
+      For normal Rack updates, send ONLY changed columns.
+      Do not send full rack payload every time, because photo1-photo4 can be
+      large base64 strings and can cause Supabase/Postgres statement timeout.
+    */
+    const { error } = await supabase
+      .from("racks")
+      .update(payload)
+      .eq("id", rackId);
 
     if (error) {
       console.error("Save rack error:", error);
@@ -898,7 +962,11 @@ export const FloorPlanProvider = ({
       prev.map((rack) => {
         if (rack.id !== id) return rack;
         const updated = { ...rack, ...changes };
-        saveRack(updated);
+
+        // Save only changed fields to avoid sending large photo/base64 fields
+        // on every small progress/status update.
+        saveRackChanges(id, changes);
+
         return updated;
       })
     );
